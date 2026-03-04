@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="School Admin" />
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3426/3426653.png" />
+  <link rel="manifest" href="manifest.json" />
+  <title>School Admin</title>
+  <!-- Tailwind CSS for utility-first styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts for typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    // Tailwind configuration with custom theme colors
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Inter', 'sans-serif'] },
+          colors: {
+            primary: {
+              '50': '#f0f9ff', '100': '#e0f2fe', '200': '#bae6fd', '300': '#7dd3fc',
+              '400': '#38bdf8', '500': '#0ea5e9', '600': '#0284c7', '700': '#0369a1',
+              '800': '#075985', '900': '#0f172a', '950': '#020617',
+            },
+            slate: {
+              50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e880', 300: '#cbd5e1',
+              400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
+              800: '#1e293b', 900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Import map for esm.sh dependencies -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.1.1",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+        "react/": "https://aistudiocdn.com/react@^19.1.1/",
+        "recharts": "https://aistudiocdn.com/recharts@^3.1.2",
+        "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.1"
+      }
+    }
+    </script>
+  <!-- Style handled via Tailwind CDN -->
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="index.tsx"></script>
+  <script>
+    /**
+     * Service Worker Registration
+     * Ensures the application works offline by caching the app shell.
+     */
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW: Registered'))
+          .catch(err => console.error('SW: Registration failed:', err));
+      });
+    }
+  </script>
+</body>
+
+</html>
