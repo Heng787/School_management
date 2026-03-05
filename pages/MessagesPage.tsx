@@ -164,10 +164,10 @@ const MessageBubble: React.FC<{
                         : <IncidentCard msg={msg} isMine={isMine} />
                 ) : (
                     <div className={`rounded-2xl px-4 py-2.5 shadow-sm ${isMine
-                            ? 'bg-primary-600 text-white rounded-tr-sm'
-                            : msg.type === 'announcement'
-                                ? 'bg-blue-50 border border-blue-200 text-blue-900 rounded-tl-sm'
-                                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
+                        ? 'bg-primary-600 text-white rounded-tr-sm'
+                        : msg.type === 'announcement'
+                            ? 'bg-blue-50 border border-blue-200 text-blue-900 rounded-tl-sm'
+                            : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
                         }`}>
                         {msg.type === 'announcement' && (
                             <div className="flex items-center gap-1 mb-1">
@@ -425,6 +425,11 @@ const MessagesPage: React.FC = () => {
         deleteOldMessages();
         const interval = setInterval(load, 8000);
         const channel = subscribeToMessages(myDbId, isAdmin, (newMsg) => {
+            if (newMsg.content === '__DELETED__') {
+                // Realtime delete — remove from state immediately
+                setMessages(prev => prev.filter(m => m.id !== newMsg.id));
+                return;
+            }
             setMessages(prev => {
                 const exists = prev.find(m => m.id === newMsg.id);
                 if (exists) return prev.map(m => m.id === newMsg.id ? newMsg : m);

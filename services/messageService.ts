@@ -20,20 +20,25 @@ const fromDb = (d: any): Message => ({
 
 /**
  * Fetch all messages relevant to a user.
- * Admin always uses the fixed ADMIN_KEY ('admin') in the DB.
+ * Admin fetches ALL messages (they need visibility of all conversations).
+ * Staff fetches only messages involving them.
  */
 export async function fetchMessages(userId: string, isAdmin: boolean): Promise<Message[]> {
     const client = getSupabase();
     if (!client) return [];
 
-    const dbId = isAdmin ? ADMIN_KEY : userId;
-
-    const { data, error } = await client
+    let query = client
         .from('messages')
         .select('*')
-        .or(`sender_id.eq.${dbId},recipient_id.eq.${dbId},recipient_id.eq.all`)
         .order('created_at', { ascending: true });
 
+    if (!isAdmin) {
+        // Staff only sees their own messages + broadcasts
+        query = query.or(`sender_id.eq.${userId},recipient_id.eq.${userId},recipient_id.eq.all`);
+    }
+    // Admin fetches everything (no filter) — sees all staff conversations
+
+    const { data, error } = await query;
     if (error) {
         console.error('Failed to fetch messages:', error);
         return [];
@@ -138,21 +143,21 @@ export function subscribeToMessages(
     if (!client) return null;
 
     const dbId = isAdmin ? ADMIN_KEY : userId;
+    const channelName = isAdmin ? 'messages_admin_all' : `messages_${dbId}`;
+
+    const shouldReceive = (msg: Message) => {
+        if (isAdmin) return true; // admin sees everything
+        return msg.senderId === dbId || msg.recipientId === dbId || msg.recipientId === 'all';
+    };
 
     const channel = client
-        .channel(`messages_${dbId}`)
+        .channel(channelName)
         .on(
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'messages' },
             (payload: any) => {
                 const msg = fromDb(payload.new);
-                if (
-                    msg.senderId === dbId ||
-                    msg.recipientId === dbId ||
-                    msg.recipientId === 'all'
-                ) {
-                    onUpdate(msg);
-                }
+                if (shouldReceive(msg)) onUpdate(msg);
             }
         )
         .on(
@@ -160,13 +165,15 @@ export function subscribeToMessages(
             { event: 'UPDATE', schema: 'public', table: 'messages' },
             (payload: any) => {
                 const msg = fromDb(payload.new);
-                if (
-                    msg.senderId === dbId ||
-                    msg.recipientId === dbId ||
-                    msg.recipientId === 'all'
-                ) {
-                    onUpdate(msg);
-                }
+                if (shouldReceive(msg)) onUpdate(msg);
+            }
+        )
+        .on(
+            'postgres_changes',
+            { event: 'DELETE', schema: 'public', table: 'messages' },
+            (payload: any) => {
+                // Dispatch a delete event — pages handle removing from state
+                onUpdate({ ...fromDb(payload.old), content: '__DELETED__' });
             }
         )
         .subscribe();
