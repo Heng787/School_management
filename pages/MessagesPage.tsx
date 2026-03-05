@@ -407,10 +407,12 @@ const MessagesPage: React.FC = () => {
         setMessages(data);
         if (!activeConversation) {
             if (isAdmin) {
+                // Build a set of valid known staff IDs
+                const staffIdSet = new Set(staff.map(s => s.id));
+                // Extract conversation partner IDs — skip any non-staff IDs (e.g. old 'admin_1')
                 const ids = [...new Set(data
-                    .filter(m => m.senderId !== ADMIN_KEY || m.recipientId !== ADMIN_KEY)
-                    .map(m => m.senderId === ADMIN_KEY ? m.recipientId : m.senderId)
-                    .filter(id => id !== 'all')
+                    .map(m => staffIdSet.has(m.senderId) ? m.senderId : m.recipientId)
+                    .filter(id => id !== 'all' && staffIdSet.has(id))
                 )];
                 if (ids[0] || staff[0]?.id) setActiveConversation(ids[0] || staff[0]?.id || '');
             } else {
@@ -467,17 +469,27 @@ const MessagesPage: React.FC = () => {
         })
         : [];
 
+    // Build a set of known staff IDs for role checks
+    const staffIdSet = new Set(staff.map(s => s.id));
+
     // ── Filter conversation messages
     const conversationMessages = messages.filter(m => {
         if (isAdmin) {
             if (activeConversation === 'all') return m.type === 'announcement';
+            // Show messages where the staff member is sender OR recipient
             return m.senderId === activeConversation || m.recipientId === activeConversation;
         }
-        return m.senderId === myDbId || m.recipientId === myDbId || (m.recipientId === 'all' && m.senderId === ADMIN_KEY);
+        return m.senderId === myDbId || m.recipientId === myDbId || (m.recipientId === 'all');
     });
 
     const totalUnread = messages.filter(m => !m.isRead && m.recipientId === myDbId).length;
-    const isMine = (msg: Message) => isAdmin ? msg.senderId === ADMIN_KEY : msg.senderId === myDbId;
+
+    // isMine: admin's own messages include any message NOT sent by a staff member
+    // (handles old messages saved with 'admin_1' or similar before the fix)
+    const isMine = (msg: Message) => {
+        if (isAdmin) return !staffIdSet.has(msg.senderId); // not staff → must be admin
+        return msg.senderId === myDbId;
+    };
 
     // ── Send message
     const handleSend = async (e?: React.FormEvent) => {
