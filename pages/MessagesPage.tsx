@@ -405,22 +405,23 @@ const MessagesPage: React.FC = () => {
     const load = useCallback(async () => {
         const data = await fetchMessages(myDbId, isAdmin);
         setMessages(data);
-        if (!activeConversation) {
-            if (isAdmin) {
-                // Build a set of valid known staff IDs
-                const staffIdSet = new Set(staff.map(s => s.id));
-                // Extract conversation partner IDs — skip any non-staff IDs (e.g. old 'admin_1')
-                const ids = [...new Set(data
-                    .map(m => staffIdSet.has(m.senderId) ? m.senderId : m.recipientId)
-                    .filter(id => id !== 'all' && staffIdSet.has(id))
-                )];
-                if (ids[0] || staff[0]?.id) setActiveConversation(ids[0] || staff[0]?.id || '');
-            } else {
-                setActiveConversation(ADMIN_KEY);
-            }
+
+        if (isAdmin && staff.length > 0) {
+            const staffIdSet = new Set(staff.map(s => s.id));
+            const ids = [...new Set(data
+                .map(m => staffIdSet.has(m.senderId) ? m.senderId : m.recipientId)
+                .filter(id => id !== 'all' && staffIdSet.has(id))
+            )];
+            const defaultId = ids[0] || staff[0]?.id || '';
+            // Functional updater: only sets if currently empty (never resets user's choice)
+            setActiveConversation(prev => prev || defaultId);
+        } else if (!isAdmin) {
+            setActiveConversation(prev => prev || ADMIN_KEY);
         }
+
         setLoading(false);
-    }, [myDbId, isAdmin, staff, activeConversation]);
+    }, [myDbId, isAdmin, staff]); // ← no activeConversation dep = no stale closure reset
+
 
     useEffect(() => {
         load();
