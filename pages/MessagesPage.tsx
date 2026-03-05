@@ -3,7 +3,8 @@ import { useData } from '../context/DataContext';
 import { Message, MessageType, UserRole } from '../types';
 import {
     fetchMessages, sendMessage, markAsRead,
-    updateLeaveStatus, subscribeToMessages
+    updateLeaveStatus, subscribeToMessages,
+    deleteOldMessages, ADMIN_KEY
 } from '../services/messageService';
 
 // ─────────────────────────────────────────────
@@ -56,8 +57,8 @@ const MessageBubble: React.FC<{
                     <span className="text-xs text-slate-400 font-medium mb-1 ml-1">{msg.senderName}</span>
                 )}
                 <div className={`rounded-2xl px-4 py-3 shadow-sm ${isMine
-                        ? 'bg-primary-600 text-white rounded-tr-sm'
-                        : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
+                    ? 'bg-primary-600 text-white rounded-tr-sm'
+                    : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
                     }`}>
                     {/* Type badge */}
                     {msg.type !== 'text' && (
@@ -250,7 +251,8 @@ const QuickActionModal: React.FC<{
 const MessagesPage: React.FC = () => {
     const { currentUser, staff } = useData();
     const isAdmin = currentUser?.role === UserRole.Admin;
-    const myId = currentUser?.id || 'admin';
+    // Always use ADMIN_KEY ('admin') for DB operations when admin
+    const myDbId = isAdmin ? ADMIN_KEY : (currentUser?.id || '');
     const myName = currentUser?.name || 'Administrator';
 
     const [messages, setMessages] = useState<Message[]>([]);
@@ -262,27 +264,30 @@ const MessagesPage: React.FC = () => {
     const [announcementMode, setAnnouncementMode] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
 
-    // Load messages
+    // Load messages + clean up old ones on mount
     const load = useCallback(async () => {
-        const data = await fetchMessages(myId, isAdmin);
+        const data = await fetchMessages(myDbId, isAdmin);
         setMessages(data);
         if (!activeConversation) {
             if (isAdmin) {
-                // Default to first staff member
-                const ids = [...new Set(data.filter(m => m.senderId !== 'admin' || m.recipientId !== 'admin').map(m => m.senderId === 'admin' ? m.recipientId : m.senderId))];
+                const ids = [...new Set(data
+                    .filter(m => m.senderId !== ADMIN_KEY || m.recipientId !== ADMIN_KEY)
+                    .map(m => m.senderId === ADMIN_KEY ? m.recipientId : m.senderId)
+                    .filter(id => id !== 'all')
+                )];
                 setActiveConversation(ids[0] || staff[0]?.id || '');
             } else {
-                setActiveConversation('admin');
+                setActiveConversation(ADMIN_KEY);
             }
         }
         setLoading(false);
-    }, [myId, isAdmin, staff, activeConversation]);
+    }, [myDbId, isAdmin, staff, activeConversation]);
 
     useEffect(() => {
         load();
-        // Poll every 8 seconds + real-time subscription
+        deleteOldMessages(); // clean up messages older than 24h
         const interval = setInterval(load, 8000);
-        const channel = subscribeToMessages(myId, isAdmin, (newMsg) => {
+        const channel = subscribeToMessages(myDbId, isAdmin, (newMsg) => {
             setMessages(prev => {
                 const exists = prev.find(m => m.id === newMsg.id);
                 if (exists) return prev.map(m => m.id === newMsg.id ? newMsg : m);
@@ -293,7 +298,7 @@ const MessagesPage: React.FC = () => {
             clearInterval(interval);
             channel?.unsubscribe();
         };
-    }, [myId, isAdmin]);
+    }, [myDbId, isAdmin]);
 
     // Scroll to bottom when active conversation changes or new messages arrive
     useEffect(() => {
@@ -303,7 +308,7 @@ const MessagesPage: React.FC = () => {
     // Mark conversation messages as read
     useEffect(() => {
         if (!activeConversation) return;
-        const unread = conversationMessages.filter(m => !m.isRead && m.recipientId === myId).map(m => m.id);
+        const unread = conversationMessages.filter(m => !m.isRead && m.recipientId === myDbId).map(m => m.id);
         if (unread.length > 0) markAsRead(unread);
     }, [activeConversation, messages]);
 
@@ -330,27 +335,30 @@ const MessagesPage: React.FC = () => {
             if (activeConversation === 'all') return m.type === 'announcement';
             return (m.senderId === activeConversation || m.recipientId === activeConversation);
         } else {
+            // Staff sees: messages they sent to admin, OR admin sent to them/all
             return (
-                (m.senderId === myId && m.recipientId === 'admin') ||
-                (m.senderId === 'admin' && (m.recipientId === myId || m.recipientId === 'all'))
+                (m.senderId === myDbId) ||
+                (m.recipientId === myDbId) ||
+                (m.recipientId === 'all' && m.senderId === ADMIN_KEY)
             );
         }
     });
 
-    const totalUnread = messages.filter(m => !m.isRead && m.recipientId === myId).length;
+    const totalUnread = messages.filter(m => !m.isRead && m.recipientId === myDbId).length;
 
     // ── Send message handler
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!text.trim() || sending) return;
         setSending(true);
-        const recipient = announcementMode ? 'all' : (isAdmin ? activeConversation : 'admin');
+        const recipient = announcementMode ? 'all' : (isAdmin ? activeConversation : ADMIN_KEY);
         const newMsg = await sendMessage({
-            senderId: myId,
+            senderId: myDbId,
             senderName: myName,
             recipientId: recipient,
             type: announcementMode ? 'announcement' : 'text',
             content: text.trim(),
+            isAdmin,
         });
         if (newMsg) {
             setMessages(prev => [...prev, newMsg]);
@@ -361,12 +369,13 @@ const MessagesPage: React.FC = () => {
 
     const handleQuickSend = async (content: string, metadata: object, type: MessageType) => {
         const newMsg = await sendMessage({
-            senderId: myId,
+            senderId: myDbId,
             senderName: myName,
-            recipientId: 'admin',
+            recipientId: ADMIN_KEY,
             type,
             content,
             metadata,
+            isAdmin,
         });
         if (newMsg) setMessages(prev => [...prev, newMsg]);
     };
@@ -380,6 +389,9 @@ const MessagesPage: React.FC = () => {
     };
 
     const activeStaff = isAdmin ? staff.find(s => s.id === activeConversation) : null;
+
+    // Bubble isMine: for admin, my messages are those sent with ADMIN_KEY
+    const isMine = (msg: Message) => isAdmin ? msg.senderId === ADMIN_KEY : msg.senderId === myDbId;
 
     return (
         <div className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl shadow-card border border-slate-200 overflow-hidden">
@@ -549,7 +561,7 @@ const MessagesPage: React.FC = () => {
                                 <MessageBubble
                                     key={msg.id}
                                     msg={msg}
-                                    isMine={msg.senderId === myId}
+                                    isMine={isMine(msg)}
                                     isAdmin={isAdmin}
                                     onStatusChange={handleStatusChange}
                                 />

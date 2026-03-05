@@ -3,6 +3,9 @@ import { Message, MessageType } from '../types';
 
 const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
+// The admin's fixed recipient/sender key used in the DB
+export const ADMIN_KEY = 'admin';
+
 const fromDb = (d: any): Message => ({
     id: d.id,
     senderId: d.sender_id,
@@ -15,25 +18,22 @@ const fromDb = (d: any): Message => ({
     createdAt: d.created_at,
 });
 
-/** Fetch all messages relevant to a user (sent or received, including broadcasts) */
+/**
+ * Fetch all messages relevant to a user.
+ * Admin always uses the fixed ADMIN_KEY ('admin') in the DB.
+ */
 export async function fetchMessages(userId: string, isAdmin: boolean): Promise<Message[]> {
     const client = getSupabase();
     if (!client) return [];
 
-    let query = client
+    const dbId = isAdmin ? ADMIN_KEY : userId;
+
+    const { data, error } = await client
         .from('messages')
         .select('*')
+        .or(`sender_id.eq.${dbId},recipient_id.eq.${dbId},recipient_id.eq.all`)
         .order('created_at', { ascending: true });
 
-    if (isAdmin) {
-        // Admin sees everything
-        query = query.or(`sender_id.eq.admin,recipient_id.eq.admin,recipient_id.eq.all`);
-    } else {
-        // Staff sees their own messages + broadcasts from admin
-        query = query.or(`sender_id.eq.${userId},recipient_id.eq.${userId},recipient_id.eq.all`);
-    }
-
-    const { data, error } = await query;
     if (error) {
         console.error('Failed to fetch messages:', error);
         return [];
@@ -41,7 +41,9 @@ export async function fetchMessages(userId: string, isAdmin: boolean): Promise<M
     return (data || []).map(fromDb);
 }
 
-/** Send a new message */
+/**
+ * Send a new message. Admin always sends as ADMIN_KEY.
+ */
 export async function sendMessage(msg: {
     senderId: string;
     senderName: string;
@@ -49,15 +51,22 @@ export async function sendMessage(msg: {
     type: MessageType;
     content: string;
     metadata?: object;
+    isAdmin?: boolean;
 }): Promise<Message | null> {
     const client = getSupabase();
     if (!client) return null;
 
+    const dbSenderId = msg.isAdmin ? ADMIN_KEY : msg.senderId;
+    // If staff sends to admin, recipient is always ADMIN_KEY
+    const dbRecipientId = msg.recipientId === 'admin' || msg.recipientId === ADMIN_KEY
+        ? ADMIN_KEY
+        : msg.recipientId;
+
     const payload = {
         id: generateId(),
-        sender_id: msg.senderId,
+        sender_id: dbSenderId,
         sender_name: msg.senderName,
-        recipient_id: msg.recipientId,
+        recipient_id: dbRecipientId,
         type: msg.type,
         content: msg.content,
         metadata: msg.metadata || {},
@@ -89,30 +98,53 @@ export async function updateLeaveStatus(messageId: string, status: 'approved' | 
         .eq('id', messageId);
 }
 
+/** Delete messages older than 24 hours */
+export async function deleteOldMessages(): Promise<void> {
+    const client = getSupabase();
+    if (!client) return;
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await client.from('messages').delete().lt('created_at', cutoff);
+    if (error) console.warn('Cleanup old messages failed:', error);
+}
+
+/** Get unread count for a user */
+export async function fetchUnreadCount(userId: string, isAdmin: boolean): Promise<number> {
+    const client = getSupabase();
+    if (!client) return 0;
+    const dbId = isAdmin ? ADMIN_KEY : userId;
+    const { count, error } = await client
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', dbId)
+        .eq('is_read', false);
+    if (error) return 0;
+    return count || 0;
+}
+
 /** Subscribe to new messages (real-time) */
 export function subscribeToMessages(
     userId: string,
     isAdmin: boolean,
-    onNew: (msg: Message) => void
+    onUpdate: (msg: Message) => void
 ) {
     const client = getSupabase();
     if (!client) return null;
 
+    const dbId = isAdmin ? ADMIN_KEY : userId;
+
     const channel = client
-        .channel('messages_realtime')
+        .channel(`messages_${dbId}`)
         .on(
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'messages' },
             (payload: any) => {
                 const msg = fromDb(payload.new);
-                // Only trigger if relevant to this user
                 if (
-                    isAdmin ||
-                    msg.recipientId === userId ||
-                    msg.recipientId === 'all' ||
-                    msg.senderId === userId
+                    msg.senderId === dbId ||
+                    msg.recipientId === dbId ||
+                    msg.recipientId === 'all'
                 ) {
-                    onNew(msg);
+                    onUpdate(msg);
                 }
             }
         )
@@ -121,8 +153,12 @@ export function subscribeToMessages(
             { event: 'UPDATE', schema: 'public', table: 'messages' },
             (payload: any) => {
                 const msg = fromDb(payload.new);
-                if (isAdmin || msg.senderId === userId || msg.recipientId === userId) {
-                    onNew(msg); // refresh on update (for status changes)
+                if (
+                    msg.senderId === dbId ||
+                    msg.recipientId === dbId ||
+                    msg.recipientId === 'all'
+                ) {
+                    onUpdate(msg);
                 }
             }
         )

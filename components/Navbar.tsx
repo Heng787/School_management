@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { UserRole, Page } from '../types';
 import StudentSearch from './StudentSearch';
 import { useData } from '../context/DataContext';
+import { fetchUnreadCount, ADMIN_KEY } from '../services/messageService';
 
 interface NavbarProps {
     userRole: UserRole;
@@ -27,20 +28,35 @@ const Navbar: React.FC<NavbarProps> = ({ userRole, onLogout, navigate, onToggleS
         [Page.Reports]: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
         [Page.Schedule]: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
         [Page.Settings]: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+        [Page.Messages]: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>,
     };
+
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
-
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
+
+    // Poll unread message count every 15 seconds
+    useEffect(() => {
+        if (!currentUser) return;
+        const isAdmin = currentUser.role === UserRole.Admin;
+        const dbId = isAdmin ? ADMIN_KEY : currentUser.id;
+        const checkUnread = async () => {
+            const count = await fetchUnreadCount(dbId, isAdmin);
+            setUnreadCount(count);
+        };
+        checkUnread();
+        const interval = setInterval(checkUnread, 15000);
+        return () => clearInterval(interval);
+    }, [currentUser]);
 
     return (
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 px-4 lg:px-6 flex items-center justify-between transition-all">
@@ -84,6 +100,22 @@ const Navbar: React.FC<NavbarProps> = ({ userRole, onLogout, navigate, onToggleS
             </div>
 
             <div className="flex items-center space-x-4 lg:space-x-6">
+                {/* Messages Bell */}
+                <button
+                    onClick={() => navigate(Page.Messages)}
+                    className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+                    title="Messages"
+                >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-lg animate-pulse">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                </button>
+
                 <div className="flex items-center space-x-2 hidden md:flex">
                     <div className="relative">
                         {isOnline ? (
