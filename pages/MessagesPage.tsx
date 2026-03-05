@@ -4,7 +4,7 @@ import { Message, MessageType, UserRole } from '../types';
 import {
     fetchMessages, sendMessage, markAsRead,
     updateLeaveStatus, subscribeToMessages,
-    deleteOldMessages, ADMIN_KEY
+    deleteOldMessages, deleteMessage, ADMIN_KEY
 } from '../services/messageService';
 
 // ─────────────────────────────────────────────
@@ -19,18 +19,111 @@ const formatTime = (iso: string) => {
         d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const typeBadge: Record<MessageType, { label: string; color: string }> = {
-    text: { label: 'Message', color: 'bg-slate-100 text-slate-600' },
-    leave_request: { label: 'Leave Request', color: 'bg-amber-100 text-amber-700' },
-    sick_report: { label: 'Sick Report', color: 'bg-rose-100 text-rose-700' },
-    incident: { label: 'Incident', color: 'bg-red-100 text-red-700' },
-    announcement: { label: 'Announcement', color: 'bg-blue-100 text-blue-700' },
+const daysBetween = (start: string, end: string): number => {
+    const a = new Date(start), b = new Date(end);
+    return Math.max(1, Math.round((b.getTime() - a.getTime()) / 86400000) + 1);
 };
 
-const statusBadge: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-700',
-    approved: 'bg-emerald-100 text-emerald-700',
-    rejected: 'bg-red-100 text-red-700',
+const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+
+const statusColors: Record<string, string> = {
+    pending: 'bg-amber-100 text-amber-700 border-amber-200',
+    approved: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    rejected: 'bg-red-100 text-red-700 border-red-200',
+};
+const statusIcon: Record<string, string> = {
+    pending: '⏳', approved: '✅', rejected: '❌',
+};
+
+// ─────────────────────────────────────────────
+// Rich card for leave_request messages
+// ─────────────────────────────────────────────
+const LeaveCard: React.FC<{ msg: Message; isMine: boolean }> = ({ msg, isMine }) => {
+    const m = msg.metadata || {};
+    const days = m.startDate && m.endDate ? daysBetween(m.startDate, m.endDate) : 1;
+    const status = m.status || 'pending';
+
+    return (
+        <div className={`rounded-2xl overflow-hidden shadow-sm border ${isMine ? 'border-primary-300' : 'border-amber-200'}`}
+            style={{ maxWidth: 300 }}>
+            {/* Header strip */}
+            <div className={`px-4 py-2.5 flex items-center gap-2 ${isMine ? 'bg-primary-500' : 'bg-amber-50'}`}>
+                <span className="text-lg">📅</span>
+                <span className={`font-bold text-sm ${isMine ? 'text-white' : 'text-amber-800'}`}>
+                    Leave Request
+                </span>
+            </div>
+            {/* Body */}
+            <div className="bg-white px-4 py-3 space-y-2">
+                {m.leaveType && (
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-slate-400">Type:</span>
+                        <span className="text-xs font-bold text-slate-700">{m.leaveType}</span>
+                    </div>
+                )}
+                {m.startDate && (
+                    <div className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                        <div className="text-xs text-slate-500 font-medium">
+                            📆 {formatDate(m.startDate)}
+                            {m.endDate && m.endDate !== m.startDate && ` → ${formatDate(m.endDate)}`}
+                        </div>
+                        <div className="text-xs font-bold text-slate-700 mt-0.5">
+                            {days} {days === 1 ? 'day' : 'days'} off
+                        </div>
+                    </div>
+                )}
+                {msg.content && (
+                    <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-2">
+                        {/* strip the auto-generated prefix, show just the reason */}
+                        {msg.content.includes('Reason:')
+                            ? msg.content.split('Reason:')[1]?.trim()
+                            : msg.content}
+                    </p>
+                )}
+                <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold ${statusColors[status]}`}>
+                    <span>{statusIcon[status]}</span>
+                    <span className="uppercase tracking-wide">{status}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────
+// Rich card for incident messages
+// ─────────────────────────────────────────────
+const IncidentCard: React.FC<{ msg: Message; isMine: boolean }> = ({ msg, isMine }) => {
+    const severity = msg.metadata?.severity || 'Low';
+    const severityColor = severity === 'High'
+        ? 'bg-red-500 text-white'
+        : severity === 'Medium'
+            ? 'bg-orange-400 text-white'
+            : 'bg-yellow-400 text-slate-800';
+
+    return (
+        <div className={`rounded-2xl overflow-hidden shadow-sm border ${isMine ? 'border-primary-300' : 'border-red-200'}`}
+            style={{ maxWidth: 300 }}>
+            <div className={`px-4 py-2.5 flex items-center justify-between ${isMine ? 'bg-primary-500' : 'bg-red-50'}`}>
+                <div className="flex items-center gap-2">
+                    <span className="text-lg">⚠️</span>
+                    <span className={`font-bold text-sm ${isMine ? 'text-white' : 'text-red-800'}`}>
+                        Incident Report
+                    </span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${severityColor}`}>
+                    {severity.toUpperCase()}
+                </span>
+            </div>
+            <div className="bg-white px-4 py-3">
+                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    {msg.content.includes(']')
+                        ? msg.content.split(']')[1]?.trim()
+                        : msg.content}
+                </p>
+            </div>
+        </div>
+    );
 };
 
 // ─────────────────────────────────────────────
@@ -41,202 +134,246 @@ const MessageBubble: React.FC<{
     isMine: boolean;
     isAdmin: boolean;
     onStatusChange: (id: string, status: 'approved' | 'rejected') => void;
-}> = ({ msg, isMine, isAdmin, onStatusChange }) => {
-    const badge = typeBadge[msg.type];
+    onDelete: (id: string) => void;
+}> = ({ msg, isMine, isAdmin, onStatusChange, onDelete }) => {
+    const [hover, setHover] = useState(false);
+    const isCard = msg.type === 'leave_request' || msg.type === 'incident';
     const isPending = msg.metadata?.status === 'pending';
 
     return (
-        <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-3 group`}>
+        <div
+            className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-3`}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+        >
             {!isMine && (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-xs font-bold mr-2 shrink-0 mt-1">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-xs font-bold mr-2 shrink-0 mt-1">
                     {msg.senderName.charAt(0).toUpperCase()}
                 </div>
             )}
-            <div className={`max-w-[75%] ${isMine ? 'items-end' : 'items-start'} flex flex-col`}>
+
+            <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[80%]`}>
                 {!isMine && (
-                    <span className="text-xs text-slate-400 font-medium mb-1 ml-1">{msg.senderName}</span>
+                    <span className="text-[11px] text-slate-400 font-medium mb-1 ml-1">{msg.senderName}</span>
                 )}
-                <div className={`rounded-2xl px-4 py-3 shadow-sm ${isMine
-                    ? 'bg-primary-600 text-white rounded-tr-sm'
-                    : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
-                    }`}>
-                    {/* Type badge */}
-                    {msg.type !== 'text' && (
-                        <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mb-2 ${isMine ? 'bg-white/20 text-white' : badge.color
-                            }`}>
-                            {badge.label}
-                        </span>
-                    )}
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
 
-                    {/* Leave/sick metadata */}
-                    {msg.metadata?.startDate && (
-                        <div className={`mt-2 pt-2 border-t ${isMine ? 'border-white/20' : 'border-slate-100'} text-xs space-y-0.5`}>
-                            <div className={isMine ? 'text-white/80' : 'text-slate-500'}>
-                                📅 {msg.metadata.startDate}{msg.metadata.endDate && msg.metadata.endDate !== msg.metadata.startDate ? ` → ${msg.metadata.endDate}` : ''}
+                {/* Card or plain bubble */}
+                {isCard ? (
+                    msg.type === 'leave_request'
+                        ? <LeaveCard msg={msg} isMine={isMine} />
+                        : <IncidentCard msg={msg} isMine={isMine} />
+                ) : (
+                    <div className={`rounded-2xl px-4 py-2.5 shadow-sm ${isMine
+                            ? 'bg-primary-600 text-white rounded-tr-sm'
+                            : msg.type === 'announcement'
+                                ? 'bg-blue-50 border border-blue-200 text-blue-900 rounded-tl-sm'
+                                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'
+                        }`}>
+                        {msg.type === 'announcement' && (
+                            <div className="flex items-center gap-1 mb-1">
+                                <svg className="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6" />
+                                </svg>
+                                <span className="text-[10px] font-bold uppercase text-blue-500 tracking-wider">Announcement</span>
                             </div>
-                            {msg.metadata.leaveType && (
-                                <div className={isMine ? 'text-white/80' : 'text-slate-500'}>
-                                    🏷 {msg.metadata.leaveType}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        )}
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                )}
 
-                    {/* Status badge */}
-                    {msg.metadata?.status && (
-                        <div className="mt-2">
-                            <span className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${isMine ? 'bg-white/20 text-white' : statusBadge[msg.metadata.status]
-                                }`}>
-                                {msg.metadata.status}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Admin approve/reject buttons for pending requests */}
-                {isAdmin && !isMine && (msg.type === 'leave_request' || msg.type === 'sick_report') && isPending && (
+                {/* Admin approve/reject for pending requests */}
+                {isAdmin && !isMine && isCard && msg.type === 'leave_request' && isPending && (
                     <div className="flex gap-2 mt-1.5 ml-1">
-                        <button
-                            onClick={() => onStatusChange(msg.id, 'approved')}
-                            className="px-3 py-1 text-xs font-bold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
-                        >
+                        <button onClick={() => onStatusChange(msg.id, 'approved')}
+                            className="px-3 py-1 text-xs font-bold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors shadow-sm">
                             ✓ Approve
                         </button>
-                        <button
-                            onClick={() => onStatusChange(msg.id, 'rejected')}
-                            className="px-3 py-1 text-xs font-bold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                        >
+                        <button onClick={() => onStatusChange(msg.id, 'rejected')}
+                            className="px-3 py-1 text-xs font-bold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm">
                             ✗ Reject
                         </button>
                     </div>
                 )}
 
-                <span className={`text-[10px] text-slate-400 mt-1 ${isMine ? 'mr-1' : 'ml-1'}`}>
-                    {formatTime(msg.createdAt)}
-                    {isMine && <span className="ml-1">{msg.isRead ? '✓✓' : '✓'}</span>}
-                </span>
+                {/* Time + delete row */}
+                <div className={`flex items-center gap-2 mt-1 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className="text-[10px] text-slate-400">{formatTime(msg.createdAt)}</span>
+                    {isMine && (
+                        <span className="text-[10px] text-slate-400">{msg.isRead ? '✓✓' : '✓'}</span>
+                    )}
+                    {/* Delete / unsend button — own messages only */}
+                    {isMine && (
+                        <button
+                            onClick={() => onDelete(msg.id)}
+                            className={`transition-all text-slate-300 hover:text-red-500 ${hover ? 'opacity-100' : 'opacity-0 md:opacity-0'} md:focus:opacity-100`}
+                            title="Unsend"
+                            style={{ lineHeight: 1 }}
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
 };
 
 // ─────────────────────────────────────────────
-// Quick Action Modal (Leave / Sick / Incident)
+// Leave Request Modal (compact)
 // ─────────────────────────────────────────────
-const QuickActionModal: React.FC<{
-    type: 'leave_request' | 'sick_report' | 'incident';
+const LeaveModal: React.FC<{
     onSend: (content: string, metadata: object) => void;
     onClose: () => void;
-}> = ({ type, onSend, onClose }) => {
+}> = ({ onSend, onClose }) => {
     const today = new Date().toISOString().split('T')[0];
     const [startDate, setStartDate] = useState(today);
     const [endDate, setEndDate] = useState(today);
     const [leaveType, setLeaveType] = useState('Annual Leave');
     const [reason, setReason] = useState('');
-    const [severity, setSeverity] = useState<'Low' | 'Medium' | 'High'>('Low');
+
+    const days = daysBetween(startDate, endDate);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!reason.trim()) return;
-
-        let content = '';
-        let metadata: any = { status: 'pending' };
-
-        if (type === 'leave_request') {
-            content = `Leave Request: ${leaveType}\nDate: ${startDate}${endDate !== startDate ? ' to ' + endDate : ''}\nReason: ${reason}`;
-            metadata = { ...metadata, startDate, endDate, leaveType };
-        } else if (type === 'sick_report') {
-            content = `Sick Report – unable to attend on ${startDate}.\nReason: ${reason}`;
-            metadata = { ...metadata, startDate, endDate: startDate };
-        } else {
-            content = `Incident Report [${severity} Severity]\n${reason}`;
-            metadata = { severity };
-        }
-        onSend(content, metadata);
+        const content = `Leave Request: ${leaveType}\nDate: ${startDate}${endDate !== startDate ? ' to ' + endDate : ''}\nReason: ${reason}`;
+        onSend(content, { startDate, endDate, leaveType, status: 'pending' });
         onClose();
     };
 
-    const titles = {
-        leave_request: '📅 Request Leave',
-        sick_report: '🤒 Report Sick Day',
-        incident: '⚠️ File Incident Report',
-    };
-
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-                <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                    <h3 className="text-lg font-bold text-slate-800">{titles[type]}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md">
+                <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl">📅</span>
+                        <div>
+                            <h3 className="text-base font-bold text-slate-800">Request Leave</h3>
+                            <p className="text-xs text-slate-400">Submit to school administrator</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    {type === 'leave_request' && (
-                        <>
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1">Leave Type</label>
-                                <select value={leaveType} onChange={e => setLeaveType(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                                    <option>Annual Leave</option>
-                                    <option>Personal Leave</option>
-                                    <option>Non-Personal Leave</option>
-                                    <option>Emergency Leave</option>
-                                    <option>Maternity / Paternity Leave</option>
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Start Date</label>
-                                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">End Date</label>
-                                    <input type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)}
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
-                                </div>
-                            </div>
-                        </>
-                    )}
-                    {type === 'sick_report' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1">Absent Date</label>
-                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
-                        </div>
-                    )}
-                    {type === 'incident' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1">Severity</label>
-                            <select value={severity} onChange={e => setSeverity(e.target.value as any)}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                                <option>Low</option>
-                                <option>Medium</option>
-                                <option>High</option>
-                            </select>
-                        </div>
-                    )}
+                <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1">
-                            {type === 'incident' ? 'Incident Description' : 'Reason / Details'}
-                        </label>
-                        <textarea
-                            value={reason}
-                            onChange={e => setReason(e.target.value)}
-                            placeholder="Provide details..."
-                            rows={3}
-                            required
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none resize-none"
-                        />
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Leave Type</label>
+                        <select value={leaveType} onChange={e => setLeaveType(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none bg-slate-50">
+                            <option>Annual Leave</option>
+                            <option>Personal Leave</option>
+                            <option>Non-Personal Leave</option>
+                            <option>Emergency Leave</option>
+                            <option>Maternity / Paternity Leave</option>
+                        </select>
                     </div>
-                    <div className="flex justify-end gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Start Date</label>
+                            <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); if (e.target.value > endDate) setEndDate(e.target.value); }}
+                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none bg-slate-50" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">End Date</label>
+                            <input type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)}
+                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none bg-slate-50" />
+                        </div>
+                    </div>
+                    {/* Duration badge */}
+                    <div className="bg-primary-50 border border-primary-100 rounded-xl px-4 py-2 flex items-center gap-2">
+                        <span className="text-primary-600 text-sm font-bold">{days} {days === 1 ? 'day' : 'days'} off</span>
+                        <span className="text-xs text-primary-400">· {formatDate(startDate)}{startDate !== endDate ? ` → ${formatDate(endDate)}` : ''}</span>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Reason / Details</label>
+                        <textarea value={reason} onChange={e => setReason(e.target.value)} required
+                            placeholder="Explain the reason for your leave..." rows={3}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none resize-none bg-slate-50" />
+                    </div>
+                    <div className="flex gap-3 pb-2">
+                        <button type="button" onClick={onClose}
+                            className="flex-1 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" className="px-5 py-2 text-sm font-bold bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-lg shadow-primary-200">
+                        <button type="submit"
+                            className="flex-1 py-2.5 text-sm font-bold bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-200">
                             Send Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────
+// Incident Report Modal (compact)
+// ─────────────────────────────────────────────
+const IncidentModal: React.FC<{
+    onSend: (content: string, metadata: object) => void;
+    onClose: () => void;
+}> = ({ onSend, onClose }) => {
+    const [severity, setSeverity] = useState<'Low' | 'Medium' | 'High'>('Low');
+    const [description, setDescription] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!description.trim()) return;
+        const content = `Incident Report [${severity}]\n${description}`;
+        onSend(content, { severity });
+        onClose();
+    };
+
+    const severityStyles: Record<string, string> = {
+        Low: 'border-yellow-400 bg-yellow-50 text-yellow-800',
+        Medium: 'border-orange-400 bg-orange-50 text-orange-800',
+        High: 'border-red-500 bg-red-50 text-red-800',
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md">
+                <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl">⚠️</span>
+                        <div>
+                            <h3 className="text-base font-bold text-slate-800">Incident Report</h3>
+                            <p className="text-xs text-slate-400">Report to school administrator</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wide">Severity Level</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['Low', 'Medium', 'High'] as const).map(s => (
+                                <button key={s} type="button" onClick={() => setSeverity(s)}
+                                    className={`py-2 rounded-xl border-2 text-xs font-bold transition-all ${severity === s ? severityStyles[s] + ' scale-[1.02]' : 'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                                    {s === 'Low' ? '🟡' : s === 'Medium' ? '🟠' : '🔴'} {s}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">What Happened?</label>
+                        <textarea value={description} onChange={e => setDescription(e.target.value)} required
+                            placeholder="Describe the incident clearly and in detail..." rows={4}
+                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-red-400 focus:outline-none resize-none bg-slate-50" />
+                    </div>
+                    <div className="flex gap-3 pb-2">
+                        <button type="button" onClick={onClose}
+                            className="flex-1 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                            className="flex-1 py-2.5 text-sm font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-200">
+                            File Report
                         </button>
                     </div>
                 </form>
@@ -251,21 +388,20 @@ const QuickActionModal: React.FC<{
 const MessagesPage: React.FC = () => {
     const { currentUser, staff } = useData();
     const isAdmin = currentUser?.role === UserRole.Admin;
-    // Always use ADMIN_KEY ('admin') for DB operations when admin
     const myDbId = isAdmin ? ADMIN_KEY : (currentUser?.id || '');
     const myName = currentUser?.name || 'Administrator';
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeConversation, setActiveConversation] = useState<string>('');
-    const [mobileShowChat, setMobileShowChat] = useState(false); // mobile: false=sidebar, true=chat
+    const [mobileShowChat, setMobileShowChat] = useState(!isAdmin); // staff goes straight to chat
     const [text, setText] = useState('');
     const [sending, setSending] = useState(false);
-    const [modal, setModal] = useState<null | 'leave_request' | 'sick_report' | 'incident'>(null);
+    const [modal, setModal] = useState<null | 'leave' | 'incident'>(null);
     const [announcementMode, setAnnouncementMode] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
 
-    // Load messages + clean up old ones on mount
+    // Load messages
     const load = useCallback(async () => {
         const data = await fetchMessages(myDbId, isAdmin);
         setMessages(data);
@@ -276,10 +412,7 @@ const MessagesPage: React.FC = () => {
                     .map(m => m.senderId === ADMIN_KEY ? m.recipientId : m.senderId)
                     .filter(id => id !== 'all')
                 )];
-                // On desktop auto-select first, on mobile stay on sidebar
-                if (ids[0] || staff[0]?.id) {
-                    setActiveConversation(ids[0] || staff[0]?.id || '');
-                }
+                if (ids[0] || staff[0]?.id) setActiveConversation(ids[0] || staff[0]?.id || '');
             } else {
                 setActiveConversation(ADMIN_KEY);
             }
@@ -289,7 +422,7 @@ const MessagesPage: React.FC = () => {
 
     useEffect(() => {
         load();
-        deleteOldMessages(); // clean up messages older than 24h
+        deleteOldMessages();
         const interval = setInterval(load, 8000);
         const channel = subscribeToMessages(myDbId, isAdmin, (newMsg) => {
             setMessages(prev => {
@@ -298,30 +431,26 @@ const MessagesPage: React.FC = () => {
                 return [...prev, newMsg];
             });
         });
-        return () => {
-            clearInterval(interval);
-            channel?.unsubscribe();
-        };
+        return () => { clearInterval(interval); channel?.unsubscribe(); };
     }, [myDbId, isAdmin]);
 
-    // Scroll to bottom when active conversation changes or new messages arrive
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, activeConversation]);
 
-    // Mark conversation messages as read
+    // Mark as read
     useEffect(() => {
         if (!activeConversation) return;
-        const unread = conversationMessages.filter(m => !m.isRead && m.recipientId === myDbId).map(m => m.id);
+        const unread = conversationMessages
+            .filter(m => !m.isRead && m.recipientId === myDbId)
+            .map(m => m.id);
         if (unread.length > 0) markAsRead(unread);
     }, [activeConversation, messages]);
 
     // ── Conversation list for admin sidebar
     const staffConversations = isAdmin
         ? staff.map(s => {
-            const msgs = messages.filter(m =>
-                m.senderId === s.id || m.recipientId === s.id
-            );
+            const msgs = messages.filter(m => m.senderId === s.id || m.recipientId === s.id);
             const lastMsg = msgs[msgs.length - 1];
             const unread = msgs.filter(m => !m.isRead && m.senderId === s.id).length;
             return { id: s.id, name: s.name, role: s.role, lastMsg, unread };
@@ -333,261 +462,211 @@ const MessagesPage: React.FC = () => {
         })
         : [];
 
-    // ── Filter messages for active conversation
+    // ── Filter conversation messages
     const conversationMessages = messages.filter(m => {
         if (isAdmin) {
             if (activeConversation === 'all') return m.type === 'announcement';
-            return (m.senderId === activeConversation || m.recipientId === activeConversation);
-        } else {
-            // Staff sees: messages they sent to admin, OR admin sent to them/all
-            return (
-                (m.senderId === myDbId) ||
-                (m.recipientId === myDbId) ||
-                (m.recipientId === 'all' && m.senderId === ADMIN_KEY)
-            );
+            return m.senderId === activeConversation || m.recipientId === activeConversation;
         }
+        return m.senderId === myDbId || m.recipientId === myDbId || (m.recipientId === 'all' && m.senderId === ADMIN_KEY);
     });
 
     const totalUnread = messages.filter(m => !m.isRead && m.recipientId === myDbId).length;
+    const isMine = (msg: Message) => isAdmin ? msg.senderId === ADMIN_KEY : msg.senderId === myDbId;
 
-    // ── Send message handler
+    // ── Send message
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!text.trim() || sending) return;
         setSending(true);
         const recipient = announcementMode ? 'all' : (isAdmin ? activeConversation : ADMIN_KEY);
         const newMsg = await sendMessage({
-            senderId: myDbId,
-            senderName: myName,
-            recipientId: recipient,
+            senderId: myDbId, senderName: myName, recipientId: recipient,
             type: announcementMode ? 'announcement' : 'text',
-            content: text.trim(),
-            isAdmin,
+            content: text.trim(), isAdmin,
         });
-        if (newMsg) {
-            setMessages(prev => [...prev, newMsg]);
-            setText('');
-        }
+        if (newMsg) { setMessages(prev => [...prev, newMsg]); setText(''); }
         setSending(false);
     };
 
+    // ── Quick send (leave / incident)
     const handleQuickSend = async (content: string, metadata: object, type: MessageType) => {
         const newMsg = await sendMessage({
-            senderId: myDbId,
-            senderName: myName,
-            recipientId: ADMIN_KEY,
-            type,
-            content,
-            metadata,
-            isAdmin,
+            senderId: myDbId, senderName: myName, recipientId: ADMIN_KEY,
+            type, content, metadata, isAdmin,
         });
         if (newMsg) setMessages(prev => [...prev, newMsg]);
     };
 
+    // ── Approve / Reject
     const handleStatusChange = async (id: string, status: 'approved' | 'rejected') => {
         await updateLeaveStatus(id, status);
-        setMessages(prev => prev.map(m => m.id === id
-            ? { ...m, metadata: { ...m.metadata, status } }
-            : m
-        ));
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, metadata: { ...m.metadata, status } } : m));
+    };
+
+    // ── Delete / unsend
+    const handleDelete = async (id: string) => {
+        await deleteMessage(id);
+        setMessages(prev => prev.filter(m => m.id !== id));
     };
 
     const activeStaff = isAdmin ? staff.find(s => s.id === activeConversation) : null;
 
-    // Bubble isMine: for admin, my messages are those sent with ADMIN_KEY
-    const isMine = (msg: Message) => isAdmin ? msg.senderId === ADMIN_KEY : msg.senderId === myDbId;
-
     return (
         <div className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl shadow-card border border-slate-200 overflow-hidden">
 
-            {/* ── Left: Conversation List / Quick Actions ── */}
-            {/* On mobile: only show when mobileShowChat=false. On desktop: always show */}
-            <div className={`
-                w-full md:w-72 shrink-0 border-r border-slate-200 flex flex-col bg-slate-50
-                ${mobileShowChat ? 'hidden md:flex' : 'flex'}
-            `}>
-                <div className="p-4 border-b border-slate-200">
-                    <h2 className="text-lg font-bold text-slate-800">
-                        {isAdmin ? 'Messages' : 'Staff Inbox'}
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                        {isAdmin ? `${totalUnread} unread` : 'Your conversation with admin'}
-                    </p>
-                </div>
-
-                {isAdmin ? (
-                    // Admin: List of staff to chat with
+            {/* ══ LEFT: Admin conversation list ══ */}
+            {isAdmin && (
+                <div className={`w-full md:w-72 shrink-0 border-r border-slate-200 flex flex-col bg-slate-50 ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
+                    <div className="p-4 border-b border-slate-200">
+                        <h2 className="text-base font-bold text-slate-800">Messages</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">{totalUnread > 0 ? `${totalUnread} unread` : 'All caught up'}</p>
+                    </div>
                     <div className="flex-1 overflow-y-auto">
-                        {/* Announcement broadcast button */}
+                        {/* Announce to all */}
                         <button
                             onClick={() => { setActiveConversation('all'); setAnnouncementMode(true); setMobileShowChat(true); }}
-                            className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 transition-colors ${activeConversation === 'all' ? 'bg-blue-50' : 'hover:bg-white'}`}
-                        >
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 transition-colors ${activeConversation === 'all' ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-white'}`}>
+                            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                                 </svg>
                             </div>
-                            <div className="text-left">
-                                <p className="text-sm font-bold text-slate-700">Announce to All</p>
-                                <p className="text-xs text-slate-400">Broadcast to all staff</p>
+                            <div className="text-left min-w-0">
+                                <p className="text-sm font-semibold text-slate-700">Announce to All</p>
+                                <p className="text-xs text-slate-400 truncate">Broadcast to all staff</p>
                             </div>
                         </button>
 
                         {staffConversations.map(conv => (
-                            <button
-                                key={conv.id}
+                            <button key={conv.id}
                                 onClick={() => { setActiveConversation(conv.id); setAnnouncementMode(false); setMobileShowChat(true); }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 transition-colors ${activeConversation === conv.id ? 'bg-primary-50 border-l-2 border-l-primary-500' : 'hover:bg-white'}`}
-                            >
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                                className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 transition-colors ${activeConversation === conv.id ? 'bg-primary-50 border-l-2 border-l-primary-500' : 'hover:bg-white'}`}>
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-900 flex items-center justify-center text-white text-sm font-bold shrink-0">
                                     {conv.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0 text-left">
                                     <div className="flex items-center justify-between">
                                         <p className="text-sm font-semibold text-slate-700 truncate">{conv.name}</p>
                                         {conv.unread > 0 && (
-                                            <span className="ml-1 min-w-[18px] h-[18px] bg-primary-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                                            <span className="ml-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                                                 {conv.unread}
                                             </span>
                                         )}
                                     </div>
                                     <p className="text-xs text-slate-400 truncate">
-                                        {conv.lastMsg ? conv.lastMsg.content.slice(0, 35) + (conv.lastMsg.content.length > 35 ? '…' : '') : 'No messages yet'}
+                                        {conv.lastMsg
+                                            ? (conv.lastMsg.type === 'leave_request' ? '📅 Leave request'
+                                                : conv.lastMsg.type === 'incident' ? '⚠️ Incident report'
+                                                    : conv.lastMsg.content.slice(0, 30) + (conv.lastMsg.content.length > 30 ? '…' : ''))
+                                            : 'No messages yet'}
                                     </p>
                                 </div>
                             </button>
                         ))}
-
-                        {staffConversations.length === 0 && (
-                            <div className="p-6 text-center text-slate-400 text-sm">No staff found</div>
-                        )}
                     </div>
-                ) : (
-                    // Staff: Quick action buttons
-                    <div className="flex-1 p-4 space-y-3">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Quick Actions</p>
+                </div>
+            )}
 
-                        <button
-                            onClick={() => { setModal('leave_request'); setMobileShowChat(true); }}
-                            className="w-full flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors text-left"
-                        >
-                            <span className="text-xl">📅</span>
-                            <div>
-                                <p className="text-sm font-bold text-amber-800">Request Leave</p>
-                                <p className="text-xs text-amber-600">Annual, personal, etc.</p>
-                            </div>
+            {/* ══ RIGHT: Chat panel ══ */}
+            <div className={`flex-1 flex flex-col min-w-0 w-full ${isAdmin && !mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
+
+                {/* ── Chat Header ── */}
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-white/90 backdrop-blur-sm">
+                    {/* Back button (mobile admin only) */}
+                    {isAdmin && (
+                        <button onClick={() => setMobileShowChat(false)}
+                            className="md:hidden p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors mr-1 shrink-0">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                            </svg>
                         </button>
+                    )}
 
-                        <button
-                            onClick={() => { setModal('sick_report'); setMobileShowChat(true); }}
-                            className="w-full flex items-center gap-3 p-3 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors text-left"
-                        >
-                            <span className="text-xl">🤒</span>
-                            <div>
-                                <p className="text-sm font-bold text-rose-800">Report Sick Day</p>
-                                <p className="text-xs text-rose-600">Can't come in today</p>
-                            </div>
-                        </button>
+                    {/* Contact avatar */}
+                    {activeConversation === 'all' ? (
+                        <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                            <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6" />
+                            </svg>
+                        </div>
+                    ) : isAdmin && activeStaff ? (
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-900 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                            {activeStaff.name.charAt(0).toUpperCase()}
+                        </div>
+                    ) : (
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0">A</div>
+                    )}
 
-                        <button
-                            onClick={() => { setModal('incident'); setMobileShowChat(true); }}
-                            className="w-full flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors text-left"
-                        >
-                            <span className="text-xl">⚠️</span>
-                            <div>
-                                <p className="text-sm font-bold text-red-800">File Incident Report</p>
-                                <p className="text-xs text-red-600">Safety or serious issues</p>
-                            </div>
-                        </button>
+                    {/* Contact name */}
+                    <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 text-sm leading-tight">
+                            {activeConversation === 'all' ? 'All Staff Announcement'
+                                : isAdmin && activeStaff ? activeStaff.name
+                                    : 'Administrator'}
+                        </p>
+                        <p className="text-xs text-slate-400 leading-tight">
+                            {activeConversation === 'all' ? `${staff.length} staff members`
+                                : isAdmin && activeStaff ? activeStaff.role
+                                    : '● School Admin'}
+                        </p>
+                    </div>
 
-                        <div className="mt-6 pt-4 border-t border-slate-200">
+                    {/* Staff quick-action buttons — compact pills in header */}
+                    {!isAdmin && (
+                        <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => setMobileShowChat(true)}
-                                className="w-full text-xs text-slate-400 text-center hover:text-primary-600 transition-colors py-2"
+                                onClick={() => setModal('leave')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-100 transition-colors"
+                                title="Request Leave"
                             >
-                                💬 Tap to type a message to admin
+                                <span>📅</span>
+                                <span className="hidden sm:inline">Leave</span>
+                            </button>
+                            <button
+                                onClick={() => setModal('incident')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
+                                title="File Incident Report"
+                            >
+                                <span>⚠️</span>
+                                <span className="hidden sm:inline">Incident</span>
                             </button>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
 
-            {/* ── Right: Chat Window ── */}
-            {/* On mobile: only show when mobileShowChat=true. On desktop: always show */}
-            <div className={`flex-1 flex flex-col min-w-0 w-full ${!mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
-                {/* Chat Header */}
-                <div className="flex items-center gap-3 px-4 md:px-6 py-4 border-b border-slate-100 bg-white/80 backdrop-blur-sm">
-                    {/* Mobile back button */}
-                    <button
-                        onClick={() => setMobileShowChat(false)}
-                        className="md:hidden p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors mr-1 shrink-0"
-                        aria-label="Back to conversations"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    {activeConversation === 'all' ? (
-                        <>
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="font-bold text-slate-800">All Staff Announcement</p>
-                                <p className="text-xs text-slate-400">Visible to all {staff.length} staff members</p>
-                            </div>
-                        </>
-                    ) : isAdmin && activeStaff ? (
-                        <>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-bold">
-                                {activeStaff.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <p className="font-bold text-slate-800">{activeStaff.name}</p>
-                                <p className="text-xs text-slate-400 capitalize">{activeStaff.role}</p>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold">A</div>
-                            <div>
-                                <p className="font-bold text-slate-800">Administrator</p>
-                                <p className="text-xs text-emerald-500 font-medium">● School Admin</p>
-                            </div>
-                        </>
+                    {/* Admin: announcement mode badge */}
+                    {isAdmin && activeConversation === 'all' && (
+                        <span className="text-[10px] font-bold px-2 py-1 bg-blue-100 text-blue-600 rounded-lg border border-blue-200">
+                            BROADCAST
+                        </span>
                     )}
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1 bg-slate-50/50">
+                {/* ── Messages ── */}
+                <div className="flex-1 overflow-y-auto px-4 py-4 bg-slate-50/40">
                     {loading ? (
                         <div className="flex items-center justify-center h-full">
-                            <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="w-7 h-7 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : conversationMessages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
-                            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
-                                <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+                            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+                                <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="font-semibold text-slate-500">No messages yet</p>
-                                <p className="text-xs text-slate-400 mt-1">Start the conversation below</p>
+                                <p className="font-semibold text-slate-400 text-sm">No messages yet</p>
+                                {!isAdmin && <p className="text-xs text-slate-300 mt-1">Send a message or request below</p>}
                             </div>
                         </div>
                     ) : (
                         <>
                             {conversationMessages.map(msg => (
-                                <MessageBubble
-                                    key={msg.id}
-                                    msg={msg}
-                                    isMine={isMine(msg)}
-                                    isAdmin={isAdmin}
+                                <MessageBubble key={msg.id} msg={msg}
+                                    isMine={isMine(msg)} isAdmin={isAdmin}
                                     onStatusChange={handleStatusChange}
+                                    onDelete={handleDelete}
                                 />
                             ))}
                             <div ref={bottomRef} />
@@ -595,44 +674,45 @@ const MessagesPage: React.FC = () => {
                     )}
                 </div>
 
-                {/* Input */}
-                <form onSubmit={handleSend} className="px-4 py-4 border-t border-slate-200 bg-white">
+                {/* ── Input ── */}
+                <form onSubmit={handleSend} className="px-3 py-3 border-t border-slate-100 bg-white">
                     {announcementMode && (
                         <div className="mb-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
-                            <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <span className="text-xs font-medium text-blue-700">Announcement mode — this message will be sent to all staff</span>
+                            <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span className="text-xs font-medium text-blue-700">Broadcast to all staff</span>
                         </div>
                     )}
-                    <div className="flex items-end gap-3">
+                    <div className="flex items-end gap-2">
                         <textarea
                             value={text}
                             onChange={e => setText(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                            placeholder={announcementMode ? 'Type your announcement...' : 'Type a message... (Enter to send, Shift+Enter for newline)'}
+                            placeholder="Type a message…"
                             rows={1}
-                            className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none resize-none max-h-32"
-                            style={{ height: 'auto' }}
+                            className="flex-1 px-4 py-2.5 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none resize-none max-h-28 bg-slate-50"
                         />
-                        <button
-                            type="submit"
-                            disabled={!text.trim() || sending}
-                            className="w-11 h-11 bg-primary-600 text-white rounded-xl flex items-center justify-center hover:bg-primary-700 transition-colors disabled:opacity-40 shadow-lg shadow-primary-200 shrink-0"
-                        >
+                        <button type="submit" disabled={!text.trim() || sending}
+                            className="w-10 h-10 bg-primary-600 text-white rounded-2xl flex items-center justify-center hover:bg-primary-700 transition-colors disabled:opacity-40 shadow-lg shadow-primary-200 shrink-0">
                             {sending
                                 ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                                : <svg className="w-4 h-4 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                             }
                         </button>
                     </div>
                 </form>
             </div>
 
-            {/* Quick Action Modal */}
-            {modal && (
-                <QuickActionModal
-                    type={modal}
+            {/* ── Modals ── */}
+            {modal === 'leave' && (
+                <LeaveModal
                     onClose={() => setModal(null)}
-                    onSend={(content, metadata) => handleQuickSend(content, metadata, modal)}
+                    onSend={(content, metadata) => handleQuickSend(content, metadata, 'leave_request')}
+                />
+            )}
+            {modal === 'incident' && (
+                <IncidentModal
+                    onClose={() => setModal(null)}
+                    onSend={(content, metadata) => handleQuickSend(content, metadata, 'incident')}
                 />
             )}
         </div>

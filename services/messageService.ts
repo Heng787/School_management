@@ -88,6 +88,13 @@ export async function markAsRead(messageIds: string[]): Promise<void> {
     await client.from('messages').update({ is_read: true }).in('id', messageIds);
 }
 
+/** Delete (unsend) a message */
+export async function deleteMessage(messageId: string): Promise<void> {
+    const client = getSupabase();
+    if (!client) return;
+    await client.from('messages').delete().eq('id', messageId);
+}
+
 /** Update leave request status (admin only) */
 export async function updateLeaveStatus(messageId: string, status: 'approved' | 'rejected'): Promise<void> {
     const client = getSupabase();
