@@ -86,7 +86,7 @@ const DataManager: React.FC = () => {
             adminPassword,
             exportDate: new Date().toISOString()
         };
-        
+
         const jsonString = JSON.stringify(fullData, null, 2);
         const fileName = `school_admin_backup_${new Date().toISOString().split('T')[0]}.json`;
 
@@ -131,7 +131,7 @@ const DataManager: React.FC = () => {
             try {
                 const text = await file.text();
                 const data = JSON.parse(text);
-                
+
                 // Basic validation
                 if (!data || typeof data !== 'object') {
                     throw new Error('Invalid backup file format: Root must be an object.');
@@ -154,7 +154,7 @@ const DataManager: React.FC = () => {
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-semibold text-gray-700 mb-2">Data Management</h2>
             <p className="text-sm text-gray-500 mb-8">Take control of your database by exporting backups or restoring from a previous file.</p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-6 rounded-2xl border border-blue-100 bg-blue-50/50 flex flex-col justify-between">
                     <div>
@@ -166,7 +166,7 @@ const DataManager: React.FC = () => {
                         <h3 className="text-lg font-bold text-blue-900 mb-1">Backup Database</h3>
                         <p className="text-sm text-blue-700/70 mb-6">Download a copy of all your records. This will open a window asking you where to save the file on your computer.</p>
                     </div>
-                    <button 
+                    <button
                         onClick={handleExport}
                         className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
                     >
@@ -184,7 +184,7 @@ const DataManager: React.FC = () => {
                         <h3 className="text-lg font-bold text-amber-900 mb-1">Restore Database</h3>
                         <p className="text-sm text-amber-700/70 mb-6">Upload a previously saved backup file to restore all student and staff data.</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isImporting}
                         className="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
@@ -281,7 +281,7 @@ const LevelManager: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-xl font-semibold text-gray-700 mb-2">School Levels (Grades)</h2>
             <p className="text-sm text-gray-500 mb-6">Manage the grade levels available in your school.</p>
-            
+
             <div className="space-y-4">
                 <div className="flex gap-2">
                     <input
@@ -365,7 +365,7 @@ const SessionManager: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-xl font-semibold text-gray-700 mb-2">School Sessions (Time Slots)</h2>
             <p className="text-sm text-gray-500 mb-6">Define the time slots available for your school's classes.</p>
-            
+
             <div className="space-y-4">
                 <div className="flex flex-col gap-3">
                     <input
@@ -376,8 +376,8 @@ const SessionManager: React.FC = () => {
                         className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-black"
                     />
                     <div className="flex gap-2">
-                        <select 
-                            value={newType} 
+                        <select
+                            value={newType}
                             onChange={(e) => setNewType(e.target.value as 'weekday' | 'weekend')}
                             className="flex-grow px-4 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-black"
                         >
@@ -400,7 +400,7 @@ const SessionManager: React.FC = () => {
                             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">{slot.type}</span>
                         </div>
                         <button onClick={() => deleteTimeSlot(slot.id)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                         </button>
@@ -479,12 +479,12 @@ const SubjectManager: React.FC = () => {
             deleteSubject(subject);
         }
     };
-    
+
     return (
         <div className="bg-white p-6 rounded-lg shadow-sm">
             <h2 className="text-xl font-semibold text-gray-700 mb-2">Manage Subjects</h2>
             <p className="text-sm text-gray-500 mb-6">Maintain the list of academic subjects taught at CES.</p>
-            
+
             <div className="space-y-4">
                 <div className="flex gap-2">
                     <input
@@ -910,7 +910,7 @@ create trigger on_room_statuses_change after insert or update or delete on publi
                                 <h3 className="text-sm font-bold text-slate-700">{script.title}</h3>
                                 <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{script.date}</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => copyToClipboard(script.sql)}
                                 className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center"
                             >
@@ -939,7 +939,14 @@ interface SettingsPageProps {
 const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
     const { adminPassword, setAdminPassword, triggerSync, lastSyncedAt, isSyncing } = useData();
     const isAdmin = userRole === UserRole.Admin;
-    const [activeTab, setActiveTab] = useState<'account' | 'levels' | 'sessions' | 'subjects' | 'data' | 'sync' | 'offline' | 'scripts'>('account');
+    // Read sub-tab from URL on mount (e.g. /settings/levels → 'levels')
+    const getInitialSettingsTab = () => {
+        const parts = window.location.pathname.split('/');
+        const sub = parts[2]?.toLowerCase();
+        const valid = ['account', 'levels', 'sessions', 'subjects', 'data', 'sync', 'scripts', 'offline'];
+        return (valid.includes(sub) ? sub : 'account') as 'account' | 'levels' | 'sessions' | 'subjects' | 'data' | 'sync' | 'offline' | 'scripts';
+    };
+    const [activeTab, setActiveTab] = useState<'account' | 'levels' | 'sessions' | 'subjects' | 'data' | 'sync' | 'offline' | 'scripts'>(getInitialSettingsTab);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -999,18 +1006,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
     return (
         <div className="container mx-auto max-w-4xl px-4 py-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-8 tracking-tight">Settings</h1>
-            
+
             <div className="flex flex-col md:flex-row gap-8 items-start">
                 <div className="w-full md:w-64 shrink-0 space-y-2">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                                activeTab === tab.id 
-                                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 translate-x-1' 
+                            onClick={() => {
+                                setActiveTab(tab.id as any);
+                                window.history.replaceState({}, '', `/settings/${tab.id}`);
+                                document.title = `Settings / ${tab.label} | SchoolAdmin`;
+                            }}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${activeTab === tab.id
+                                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 translate-x-1'
                                     : 'bg-white text-gray-600 hover:bg-gray-50 border border-transparent border-b-slate-100'
-                            }`}
+                                }`}
                         >
                             {tab.icon}
                             <span className="font-semibold">{tab.label}</span>
@@ -1049,9 +1059,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                                     />
                                 </div>
 
-                                 <div className="pt-2 border-t border-gray-50">
+                                <div className="pt-2 border-t border-gray-50">
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="new-password">
-                                       New Admin Password
+                                        New Admin Password
                                     </label>
                                     <input
                                         type="password"
@@ -1063,7 +1073,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                                     />
                                 </div>
 
-                                 <div>
+                                <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="confirm-password">
                                         Confirm New Password
                                     </label>
@@ -1076,7 +1086,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                                         required
                                     />
                                 </div>
-                                
+
                                 {error && (
                                     <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm flex items-center space-x-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.283a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
@@ -1091,12 +1101,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                                 )}
 
                                 <div className="flex justify-end pt-4">
-                                     <button
+                                    <button
                                         type="submit"
                                         className="bg-primary-600 text-white px-8 py-3 rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary-100 font-bold active:scale-95"
                                     >
                                         Save Changes
-                                     </button>
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -1109,7 +1119,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                     {activeTab === 'sync' && (
                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 animate-in fade-in slide-in-from-right-2 duration-300 space-y-6">
                             <h2 className="text-xl font-semibold text-gray-700">Cloud Sync Status</h2>
-                            
+
                             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
                                 <div>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Supabase Endpoint</p>
@@ -1117,7 +1127,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                                         {process.env.SUPABASE_URL || 'https://okhkcrolpvnxokujcans.supabase.co'}
                                     </p>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                                     <div>
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Last Synced</p>
@@ -1140,7 +1150,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                                             {navigator.onLine ? 'Connected (Online)' : 'Disconnected (Offline)'}
                                         </p>
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => window.location.reload()}
                                         className="text-xs text-primary-600 font-bold hover:underline"
                                     >
@@ -1153,18 +1163,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onLogout, userRole }) => {
                                 <div className="p-6 rounded-2xl border border-blue-100 bg-blue-50/50">
                                     <h3 className="font-bold text-blue-900 mb-2">Force Cloud Sync</h3>
                                     <p className="text-xs text-blue-700 mb-4">Manually push all local changes to Supabase right now.</p>
-                                    <button 
+                                    <button
                                         onClick={() => triggerSync()}
                                         className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition-all"
                                     >
                                         Sync Now
                                     </button>
                                 </div>
-                                
+
                                 <div className="p-6 rounded-2xl border border-red-100 bg-red-50/50">
                                     <h3 className="font-bold text-red-900 mb-2">Reset Local Cache</h3>
                                     <p className="text-xs text-red-700 mb-4">Wipe local data and re-fetch everything from Supabase. Use this if sync is stuck.</p>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             if (window.confirm('This will reload the app and clear local data. Any unsynced changes will be lost. Continue?')) {
                                                 apiService.clearLocalCache();

@@ -613,7 +613,14 @@ const AttendanceReport: React.FC = () => {
 
 
 const ReportsPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'marks' | 'attendance' | 'export'>('marks');
+    const getInitialReportsTab = () => {
+        const parts = window.location.pathname.split('/');
+        const sub = parts[2]?.toLowerCase();
+        if (sub === 'attendance') return 'attendance';
+        if (sub === 'export') return 'export';
+        return 'marks';
+    };
+    const [activeTab, setActiveTab] = useState<'marks' | 'attendance' | 'export'>(getInitialReportsTab as any);
 
     return (
         <div className="max-w-7xl mx-auto pb-10">
@@ -624,19 +631,31 @@ const ReportsPage: React.FC = () => {
                 </div>
                 <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                     <button
-                        onClick={() => setActiveTab('marks')}
+                        onClick={() => {
+                            setActiveTab('marks');
+                            window.history.replaceState({}, '', '/reports/marks');
+                            document.title = 'Reports / Marks | SchoolAdmin';
+                        }}
                         className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'marks' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Marks Entry
                     </button>
                     <button
-                        onClick={() => setActiveTab('attendance')}
+                        onClick={() => {
+                            setActiveTab('attendance');
+                            window.history.replaceState({}, '', '/reports/attendance');
+                            document.title = 'Reports / Attendance | SchoolAdmin';
+                        }}
                         className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'attendance' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Attendance
                     </button>
                     <button
-                        onClick={() => setActiveTab('export')}
+                        onClick={() => {
+                            setActiveTab('export');
+                            window.history.replaceState({}, '', '/reports/export');
+                            document.title = 'Reports / Export | SchoolAdmin';
+                        }}
                         className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'export' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Export Data
