@@ -7,6 +7,7 @@ import { parseStaffCSV } from '../utils/csvParser';
 import ImportResultsModal from '../components/ImportResultsModal';
 import StaffPermissionModal from '../components/StaffPermissionModal';
 import InviteStaffModal from '../components/InviteStaffModal';
+import AllStaffPermissionModal from '../components/AllStaffPermissionModal';
 
 // Inlined Modal Component
 interface StaffModalProps {
@@ -130,6 +131,7 @@ const StaffPage: React.FC = () => {
     const [importResults, setImportResults] = useState<any | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
+    const [isAllPermissionModalOpen, setIsAllPermissionModalOpen] = useState(false);
 
     // Filter staff logic
     const filteredStaff = useMemo(() => {
@@ -342,6 +344,16 @@ const StaffPage: React.FC = () => {
                     <button onClick={() => setActiveTab('all')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'all' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
                     <button onClick={() => setActiveTab('teaching')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'teaching' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Teaching</button>
                     <button onClick={() => setActiveTab('support')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'support' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Support</button>
+
+                    <div className="w-px bg-gray-300 mx-2 my-1"></div>
+
+                    <button
+                        onClick={() => setIsAllPermissionModalOpen(true)}
+                        className="px-4 py-2 rounded-md text-sm font-semibold text-amber-600 hover:bg-white hover:shadow-sm transition-all flex items-center space-x-1"
+                    >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Permission History
+                    </button>
                 </div>
                 <div className="relative flex-grow max-w-md">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -486,6 +498,7 @@ const StaffPage: React.FC = () => {
             {permissionStaff && <StaffPermissionModal staff={permissionStaff} onClose={() => setPermissionStaff(null)} />}
             {inviteStaff && <InviteStaffModal staff={inviteStaff} onClose={() => setInviteStaff(null)} />}
             {isImportModalOpen && <ImportResultsModal results={importResults} onClose={() => setIsImportModalOpen(false)} />}
+            {isAllPermissionModalOpen && <AllStaffPermissionModal onClose={() => setIsAllPermissionModalOpen(false)} />}
         </div>
     );
 };
