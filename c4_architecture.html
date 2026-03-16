@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>C4 Architecture Diagrams</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #f0f4ff;
+      color: #1e293b;
+      padding: 40px 24px 60px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 48px;
+      color: #1e3a8a;
+    }
+    .diagram-block {
+      background: white;
+      border-radius: 20px;
+      padding: 36px 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.07);
+      margin-bottom: 40px;
+    }
+    .diagram-block h2 {
+      font-size: 1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 24px;
+      border-left: 4px solid #3b82f6;
+      padding-left: 12px;
+    }
+    .mermaid { text-align: center; overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+  <h1>🏫 School Management System — C4 Diagrams</h1>
+
+  <!-- ── Level 1: System Context ── -->
+  <div class="diagram-block">
+    <h2>Level 1 · System Context</h2>
+    <div class="mermaid">
+graph TD
+    A["👨‍💼 School Admin"] --> APP
+    B["👩‍🏫 Teacher"]       --> APP
+    C["👩‍💻 Office Worker"] --> APP
+    D["👮 Guard"]           --> APP
+    E["🧹 Cleaner"]         --> APP
+
+    APP["🖥️ SchoolAdmin Website"]
+
+    APP -->|"Reads / Writes data"| DB["🗄️ Supabase\nCloud Database"]
+    APP -->|"Caches offline"| LS["💾 Browser\nlocalStorage"]
+
+    style APP fill:#1e3a8a,color:#fff,stroke:#3b82f6,stroke-width:2px
+    style DB  fill:#0f766e,color:#fff,stroke:#14b8a6,stroke-width:2px
+    style LS  fill:#c2410c,color:#fff,stroke:#f97316,stroke-width:2px
+    </div>
+  </div>
+
+  <!-- ── Level 2: Containers ── -->
+  <div class="diagram-block">
+    <h2>Level 2 · Containers</h2>
+    <div class="mermaid">
+graph TD
+    U["👤 User"] --> PAGES
+
+    subgraph SPA ["🖥️ React SPA"]
+        PAGES["📄 Pages\nDashboard · Students · Staff\nClasses · Reports · Schedule\nSettings · Messages"]
+        PAGES --> BRAIN["🧠 DataContext\nGlobal state · updates screen instantly"]
+    end
+
+    BRAIN --> SERVICES
+
+    subgraph SVC ["📡 Services Layer"]
+        SERVICES["studentService · staffService · classService\nmessageService · configService · logService\nsyncService · core.ts · mappers.ts"]
+    end
+
+    SERVICES --> LOCAL["💾 localStorage\nOffline cache + dirty-flag queue"]
+    SERVICES --> CLOUD["🗄️ Supabase PostgreSQL\n13 tables · RLS · Realtime"]
+
+    style SPA   fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style SVC   fill:#f5f3ff,stroke:#a855f7,stroke-width:2px
+    style LOCAL fill:#fff7ed,stroke:#f97316,stroke-width:2px
+    style CLOUD fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
+    </div>
+  </div>
+
+  <!-- ── Level 3: ERD ── -->
+  <div class="diagram-block">
+    <h2>Level 3 · Database Schema (ERD)</h2>
+    <div class="mermaid">
+erDiagram
+    students ||--o{ enrollments       : "enrolled in"
+    students ||--o{ grades            : "has grades"
+    students ||--o{ attendance        : "has attendance"
+    classes  ||--o{ enrollments       : "has students"
+    staff    ||--o{ classes           : "teaches"
+    staff    ||--o{ staff_permissions : "takes leave"
+    staff    ||--o{ daily_logs        : "creates logs"
+    staff    ||--o{ incident_reports  : "files reports"
+    staff    ||--o{ room_statuses     : "updates rooms"
+
+    students {
+        text id PK
+        text name
+        text sex
+        date dob
+        text status
+        jsonb tuition
+    }
+    staff {
+        text id PK
+        text name
+        text role
+        text subject
+        text contact
+        date hire_date
+    }
+    classes {
+        text id PK
+        text name
+        text teacher_id FK
+        text level
+        text schedule
+    }
+    enrollments {
+        text id PK
+        text student_id FK
+        text class_id FK
+        text academic_year
+    }
+    grades {
+        text id PK
+        text student_id FK
+        text subject
+        numeric score
+        text term
+    }
+    attendance {
+        text id PK
+        text student_id FK
+        date date
+        text status
+    }
+    staff_permissions {
+        text id PK
+        text staff_id FK
+        text type
+        date start_date
+        date end_date
+    }
+    daily_logs {
+        text id PK
+        text staff_id FK
+        text type
+        text person_name
+        timestamptz timestamp
+    }
+    incident_reports {
+        text id PK
+        text staff_id FK
+        text title
+        text severity
+    }
+    room_statuses {
+        text id PK
+        text room_name
+        text status
+        text last_updated_by FK
+    }
+    messages {
+        text id PK
+        text sender_id
+        text recipient_id
+        text type
+        jsonb metadata
+        boolean is_read
+    }
+    school_events {
+        text id PK
+        text title
+        date date
+        text type
+    }
+    settings {
+        text id PK
+        jsonb data
+    }
+    config {
+        text key PK
+        jsonb value
+    }
+    audit_log {
+        uuid id PK
+        text table_name
+        text record_id
+        text action
+        jsonb old_data
+        jsonb new_data
+    }
+    </div>
+  </div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      fontFamily: 'Nunito, sans-serif',
+      fontSize: '14px',
+      primaryColor: '#3b82f6',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#93c5fd',
+      lineColor: '#94a3b8',
+    },
+    flowchart: { curve: 'basis', padding: 24 },
+    er: { layoutDirection: 'TB', minEntityWidth: 120 }
+  });
+</script>
+</body>
+</html>
