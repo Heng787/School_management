@@ -344,12 +344,12 @@ const ClassesPage = () => {
                         {levels.map(level => <option key={level} value={level}>{level}</option>)}
                     </select>
 
-                    <div className="relative w-full sm:w-64" ref={teacherDropdownRef}>
-                        <button onClick={() => setIsTeacherDropdownOpen(!isTeacherDropdownOpen)} className={`${selectClasses} text-left flex justify-between items-center`}>
-                            <span className="truncate">
+                    <div className="relative w-full" ref={teacherDropdownRef}>
+                        <button onClick={() => setIsTeacherDropdownOpen(!isTeacherDropdownOpen)} className={`${selectClasses} h-11 text-left flex justify-between items-center bg-white`}>
+                            <span className="truncate pr-2">
                                 {selectedTeacherIds.length === 0 ? 'All Teachers' : `${selectedTeacherIds.length} teachers selected`}
                             </span>
-                            <svg className="h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <svg className="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform duration-200" style={{ transform: isTeacherDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                             </svg>
                         </button>
