@@ -514,9 +514,9 @@ const MessagesPage = () => {
         const filteredStaff = staff.filter(s => {
             if (isAdmin) return true;
             if (s.id === currentUser?.id) return false;
-            // Teachers see other teachers/assistant teachers
-            if (currentUser?.role === UserRole.Teacher) {
-                return s.role === UserRole.Teacher || s.role === 'Assistant Teacher';
+            // Teachers and Office Workers see each other
+            if (currentUser?.role === UserRole.Teacher || currentUser?.role === UserRole.OfficeWorker) {
+                return s.role === UserRole.Teacher || s.role === 'Assistant Teacher' || s.role === UserRole.OfficeWorker;
             }
             return false;
         });
@@ -547,7 +547,7 @@ const MessagesPage = () => {
     }, [isAdmin, staff, messages, currentUser?.role, currentUser?.id, searchQuery]);
 
     const filteredStaffConversations = staffConversations;
-    const isMultiRecipient = isAdmin || currentUser?.role === UserRole.Teacher;
+    const isMultiRecipient = isAdmin || currentUser?.role === UserRole.Teacher || currentUser?.role === UserRole.OfficeWorker;
 
     // Build a set of known staff IDs for role checks
     const staffIdSet = new Set(staff.map(s => s.id));
@@ -663,7 +663,7 @@ const MessagesPage = () => {
                 <div className={`w-full md:w-72 shrink-0 border-r border-slate-200 flex flex-col bg-slate-50 ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
                     <div className="p-4 border-b border-slate-200 shadow-sm z-10 space-y-3">
                         <div>
-                            <h2 className="text-base font-bold text-slate-800">{isAdmin ? 'Messages' : 'Contacts'}</h2>
+                            <h2 className="text-base font-bold text-slate-800">Messages</h2>
                             <p className="text-xs text-slate-400 mt-0.5">{totalUnread > 0 ? `${totalUnread} unread` : '✨ All caught up'}</p>
                         </div>
                         <div className="relative">
@@ -802,6 +802,18 @@ const MessagesPage = () => {
                         </span>
                     )}
                 </div>
+
+                {/* Floating New Message button for mobile (only if currently in chat) */}
+                {!isAdmin && isMultiRecipient && mobileShowChat && (
+                    <button 
+                        onClick={() => setMobileShowChat(false)}
+                        className="md:hidden fixed bottom-24 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-2xl flex items-center justify-center z-50 animate-bounce transition-transform active:scale-95"
+                    >
+                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                )}
 
                 {/* ── Messages ── */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 bg-slate-50/40">
