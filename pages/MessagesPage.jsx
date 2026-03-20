@@ -681,19 +681,21 @@ const MessagesPage = () => {
                     </div>
                     <div className="flex-1 overflow-y-auto">
                         {/* Announce to all */}
-                        <button
-                            onClick={() => { setActiveConversation('all'); setAnnouncementMode(true); setMobileShowChat(true); }}
-                            className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 transition-colors ${activeConversation === 'all' ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-white'}`}>
-                            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                                </svg>
-                            </div>
-                            <div className="text-left min-w-0">
-                                <p className="text-sm font-semibold text-slate-700">Announce to All</p>
-                                <p className="text-xs text-slate-400 truncate">Broadcast to all staff</p>
-                            </div>
-                        </button>
+                        {isAdmin && (
+                            <button
+                                onClick={() => { setActiveConversation('all'); setAnnouncementMode(true); setMobileShowChat(true); }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 transition-colors ${activeConversation === 'all' ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-white'}`}>
+                                <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                                    <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                                    </svg>
+                                </div>
+                                <div className="text-left min-w-0">
+                                    <p className="text-sm font-semibold text-slate-700">Announce to All</p>
+                                    <p className="text-xs text-slate-400 truncate">Broadcast to all staff</p>
+                                </div>
+                            </button>
+                        )}
 
                         {filteredStaffConversations.map(conv => (
                             <button key={conv.id}
