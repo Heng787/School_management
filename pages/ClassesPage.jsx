@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useData } from '../context/DataContext';
-import { StaffRole } from '../types';
+import { StaffRole, UserRole } from '../types';
 import ClassModal from '../components/ClassModal';
 import { generateSingleClassCSV, generateBulkClassCSV } from '../utils/reportGenerator';
 import { parseClassCSV } from '../utils/csvParser';
