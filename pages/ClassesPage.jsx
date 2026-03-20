@@ -15,6 +15,7 @@ import { LevelManager, SessionManager, SubjectManager } from '../components/Clas
 const ClassesPage = () => {
     // --- 1. GLOBAL DATA & STATE ---
     const { classes, staff, students, timeSlots, levels, deleteClass, addClasses, highlightedClassId, setHighlightedClassId, enrollments, currentUser } = useData();
+    const isAdmin = currentUser?.role === 'Admin';
 
     // --- 2. LOCAL UI STATE ---
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -255,7 +256,7 @@ const ClassesPage = () => {
                     <p className="text-slate-500 text-sm mt-1">Manage schedules, room assignments, and enrollment.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    {selectedClassIds.size > 0 && (
+                    {selectedClassIds.size > 0 && isAdmin && (
                         <button
                             onClick={handleExportSelected}
                             className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-900 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm animate-in fade-in zoom-in duration-200"
@@ -264,44 +265,48 @@ const ClassesPage = () => {
                             <span>Export ({selectedClassIds.size})</span>
                         </button>
                     )}
-                    <button
-                        onClick={handleDownloadTemplate}
-                        className="bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        Template
-                    </button>
-                    <button
-                        onClick={handleImportClick}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                        Import
-                    </button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept=".csv"
-                        className="hidden"
-                    />
-                    <button
-                        onClick={() => setIsConfigOpen(!isConfigOpen)}
-                        className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm font-medium shadow-sm ${isConfigOpen ? 'bg-slate-800 text-white hover:bg-slate-900 ring-2 ring-slate-200' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>{isConfigOpen ? 'Close Config' : 'Manage Class Settings'}</span>
-                    </button>
-                    <button
-                        onClick={(e) => handleOpenModal(e)}
-                        className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                        Add Class
-                    </button>
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={handleDownloadTemplate}
+                                className="bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Template
+                            </button>
+                            <button
+                                onClick={handleImportClick}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                Import
+                            </button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept=".csv"
+                                className="hidden"
+                            />
+                            <button
+                                onClick={() => setIsConfigOpen(!isConfigOpen)}
+                                className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-sm font-medium shadow-sm ${isConfigOpen ? 'bg-slate-800 text-white hover:bg-slate-900 ring-2 ring-slate-200' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span>{isConfigOpen ? 'Close Config' : 'Manage Class Settings'}</span>
+                            </button>
+                            <button
+                                onClick={(e) => handleOpenModal(e)}
+                                className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                Add Class
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -428,6 +433,7 @@ const ClassesPage = () => {
                                                 >
                                                 {/* Left Section (Grouped Info) */}
                                                 <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                    {isAdmin && (
                                                     <div className="flex items-center h-full">
                                                         <input
                                                             type="checkbox"
@@ -437,6 +443,7 @@ const ClassesPage = () => {
                                                             className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                                                         />
                                                     </div>
+                                                    )}
 
                                                     <div className="flex items-center gap-4">
                                                         <div className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl shrink-0 hidden sm:block border border-indigo-100">
@@ -478,7 +485,8 @@ const ClassesPage = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Actions */}
+                                                {/* Actions - Admin only */}
+                                                {isAdmin && (
                                                 <div onClick={e => e.stopPropagation()} className={`hidden sm:flex items-center justify-end gap-1 w-auto pl-4 transition-opacity relative z-20 ${deletingClassId === cls.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                                                     {deletingClassId === cls.id ? (
                                                         <div className="flex items-center space-x-2 animate-in fade-in zoom-in duration-200">
@@ -510,8 +518,10 @@ const ClassesPage = () => {
                                                         </>
                                                     )}
                                                 </div>
+                                                )}
 
-                                                {/* Mobile Actions (Always visible) */}
+                                                {/* Mobile Actions - Admin only */}
+                                                {isAdmin && (
                                                 <div onClick={e => e.stopPropagation()} className="sm:hidden flex items-center justify-end gap-3 mt-3 pt-3 border-t border-slate-50">
                                                     {deletingClassId === cls.id ? (
                                                         <div className="flex items-center space-x-2 w-full justify-between animate-in fade-in zoom-in duration-200">
@@ -533,6 +543,7 @@ const ClassesPage = () => {
                                                         </>
                                                     )}
                                                 </div>
+                                                )}
                                                 </div>
 
                                                 {/* Expansion Panel */}
