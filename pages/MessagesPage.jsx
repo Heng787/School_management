@@ -533,7 +533,7 @@ const MessagesPage = () => {
             const adminMsgs = messages.filter(m => m.senderId === ADMIN_KEY || m.recipientId === ADMIN_KEY);
             const lastMsg = adminMsgs[adminMsgs.length - 1];
             const unread = adminMsgs.filter(m => !m.isRead && m.senderId === ADMIN_KEY).length;
-            contacts.unshift({ id: ADMIN_KEY, name: 'School Office', role: 'Support', lastMsg, unread });
+            contacts.unshift({ id: ADMIN_KEY, name: 'Administrator', role: 'Support', lastMsg, unread });
         }
 
         return contacts.sort((a, b) => {
