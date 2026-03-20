@@ -127,7 +127,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
                     </div>
                     <div className="flex flex-col -space-y-0.5">
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
-                            {isOnline ? (isSyncing ? 'Syncing...' : 'Cloud Synced') : 'Offline Mode'}
+                            {isOnline ? (isSyncing ? 'Saving...' : 'Saved Locally') : 'Local Mode'}
                         </span>
                         {isOnline && lastSyncedAt && (
                             <span className="text-[8px] text-slate-400 font-medium">
@@ -163,7 +163,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
                                 {userRole === UserRole.Admin && (
                                     <>
                                         <button
-                                            onClick={() => { navigate('settings'); setIsProfileOpen(false); }}
+                                            onClick={() => { navigate(Page.Settings); setIsProfileOpen(false); }}
                                             className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center space-x-3 transition-colors"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

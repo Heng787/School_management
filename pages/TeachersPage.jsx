@@ -20,18 +20,33 @@ const StaffModal = ({ staffData, onClose }) => {
         name: '',
         role: '',
         subject: '',
-        contact: '',
+        email: '',
+        phone: '',
         hireDate: new Date().toISOString().split('T')[0],
     });
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (staffData) {
+            let initialEmail = '';
+            let initialPhone = '';
+            if (staffData.contact) {
+                if (staffData.contact.includes('|')) {
+                    const parts = staffData.contact.split('|').map(s => s.trim());
+                    initialPhone = parts[0] || '';
+                    initialEmail = parts[1] || '';
+                } else if (staffData.contact.includes('@')) {
+                    initialEmail = staffData.contact;
+                } else {
+                    initialPhone = staffData.contact;
+                }
+            }
             setFormData({
                 name: staffData.name,
                 role: staffData.role,
                 subject: staffData.subject || '',
-                contact: staffData.contact,
+                email: initialEmail,
+                phone: initialPhone,
                 hireDate: staffData.hireDate,
             });
         }
@@ -54,15 +69,24 @@ const StaffModal = ({ staffData, onClose }) => {
         setError('');
 
         const isTeacherRole = formData.role === StaffRole.Teacher || formData.role === StaffRole.AssistantTeacher;
-        if (!formData.name || !formData.contact) {
-            setError('Please fill out all required fields.');
+        if (!formData.name || (!formData.email && !formData.phone)) {
+            setError('Please fill out all required fields (Name and at least one contact).');
             return;
+        }
+
+        let contactString = '';
+        if (formData.phone && formData.email) {
+            contactString = `${formData.phone} | ${formData.email}`;
+        } else if (formData.phone) {
+            contactString = formData.phone;
+        } else if (formData.email) {
+            contactString = formData.email;
         }
 
         const payload = {
             name: formData.name,
             role: formData.role,
-            contact: formData.contact,
+            contact: contactString,
             hireDate: formData.hireDate,
             subject: isTeacherRole ? (formData.subject || undefined) : undefined,
         }
@@ -95,9 +119,15 @@ const StaffModal = ({ staffData, onClose }) => {
                             ))}
                         </select>
                     </div>
-                    <div>
-                        <label htmlFor="contact" className={labelClasses}>Contact (Email or Phone)</label>
-                        <input type="text" name="contact" id="contact" value={formData.contact} onChange={handleChange} className={inputClasses} required />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="phone" className={labelClasses}>Phone Number</label>
+                            <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} className={inputClasses} placeholder="012-345-678" />
+                        </div>
+                        <div>
+                            <label htmlFor="email" className={labelClasses}>Email Address</label>
+                            <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} className={inputClasses} placeholder="email@school.com" />
+                        </div>
                     </div>
 
                     {error && <p className="text-sm text-red-600">{error}</p>}
@@ -120,7 +150,7 @@ const ITEMS_PER_PAGE = 20;
  */
 const StaffPage = () => {
     // --- 1. STATE & DATA ---
-    const { staff, deleteStaff, highlightedStaffId, setHighlightedStaffId, addStaffBatch } = useData();
+    const { staff, deleteStaff, highlightedStaffId, setHighlightedStaffId, addStaffBatch, staffPermissions } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingStaff, setEditingStaff] = useState(null);
     const [permissionStaff, setPermissionStaff] = useState(null);
@@ -395,6 +425,9 @@ const StaffPage = () => {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {paginatedStaff.map(s => {
                                 const isHighlighted = s.id === highlightedStaffId;
+                                const todayDate = new Date().toISOString().split('T')[0];
+                                const isOnLeave = staffPermissions?.some(p => p.staffId === s.id && p.startDate <= todayDate && p.endDate >= todayDate);
+
                                 return (
                                     <tr
                                         key={s.id}
@@ -407,8 +440,13 @@ const StaffPage = () => {
                                                     {s.name.charAt(0)}
                                                 </div>
                                                 <div className="ml-4">
-                                                    <div className="text-sm font-semibold text-gray-900">{s.name}</div>
-                                                    <div className="text-xs text-gray-500">ID: {s.id}</div>
+                                                    <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                                        {s.name}
+                                                        <span className={`w-2 h-2 rounded-full ${isOnLeave ? 'bg-amber-400' : 'bg-emerald-500'}`} title={isOnLeave ? 'On Leave' : 'Active'}></span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-400 font-mono">
+                                                        {s.id.length > 8 ? `CS-${s.id.slice(-6)}` : s.id}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -418,7 +456,29 @@ const StaffPage = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {s.contact}
+                                            <div className="flex flex-col gap-1">
+                                                {s.contact.includes('|') ? (
+                                                    <>
+                                                        <div className="flex items-center gap-1.5" title="Phone">
+                                                            <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                                            <span className="text-xs font-medium">{s.contact.split('|')[0].trim()}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5" title="Email">
+                                                            <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                                            <span className="text-xs font-medium">{s.contact.split('|')[1].trim()}</span>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex items-center gap-1.5">
+                                                        {s.contact.includes('@') ? (
+                                                            <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                                        ) : (
+                                                            <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                                        )}
+                                                        <span>{s.contact}</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {new Date(s.hireDate).toLocaleDateString()}
@@ -431,22 +491,31 @@ const StaffPage = () => {
                                                     <button onClick={() => { deleteStaff(s.id); setDeletingStaffId(null); }} className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-bold shadow-sm shadow-red-200">Delete</button>
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => setInviteStaff(s)}
-                                                        className="text-indigo-600 hover:text-indigo-900 mr-3 font-semibold"
-                                                    >
-                                                        Invite
+                                                <div className="flex justify-end items-center gap-2">
+                                                    <button onClick={() => handleOpenModal(s)} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-lg border border-transparent hover:bg-primary-50 transition-colors" title="Edit Staff">
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                                     </button>
-                                                    <button
-                                                        onClick={() => setPermissionStaff(s)}
-                                                        className="text-amber-600 hover:text-amber-900 mr-3 font-semibold"
-                                                    >
-                                                        Permission
+                                                    <button onClick={() => setDeletingStaffId(s.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg border border-transparent hover:bg-red-50 transition-colors" title="Delete Staff">
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
-                                                    <button onClick={() => handleOpenModal(s)} className="text-primary-600 hover:text-primary-900 mr-3 font-semibold">Edit</button>
-                                                    <button onClick={() => setDeletingStaffId(s.id)} className="text-red-600 hover:text-red-900 font-semibold">Delete</button>
-                                                </>
+
+                                                    <details className="relative z-10 group" onBlur={(e) => {
+                                                        // Close dropdown on blur
+                                                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                            e.currentTarget.removeAttribute('open');
+                                                        }
+                                                    }}>
+                                                        <summary className="cursor-pointer list-none ml-1">
+                                                            <div className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 border border-transparent transition-colors">
+                                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
+                                                            </div>
+                                                        </summary>
+                                                        <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden py-1 z-50">
+                                                            <button onClick={() => setInviteStaff(s)} className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-slate-50 font-medium">Invite System</button>
+                                                            <button onClick={() => setPermissionStaff(s)} className="w-full text-left px-4 py-2 text-sm text-amber-600 hover:bg-slate-50 font-medium">Permissions</button>
+                                                        </div>
+                                                    </details>
+                                                </div>
                                             )}
                                         </td>
                                     </tr>

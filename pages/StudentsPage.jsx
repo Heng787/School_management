@@ -175,6 +175,7 @@ const StudentsPage = () => {
     const [deletingStudentId, setDeletingStudentId] = useState(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importResults, setImportResults] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
     const fileInputRef = useRef(null);
     const highlightedRowRef = useRef(null);
 
@@ -183,11 +184,9 @@ const StudentsPage = () => {
 
     // --- 2. MEMOIZED DATA ---
     const filteredStudents = useMemo(() => {
-        if (!currentUser || isAdmin || isOffice) {
-            return students;
-        }
+        let result = students;
 
-        if (currentUser.role === UserRole.Teacher) {
+        if (currentUser?.role === UserRole.Teacher) {
             // Find classes assigned to this teacher
             const teacherClasses = classes.filter(c => c.teacherId === currentUser.id);
             const teacherClassIds = new Set(teacherClasses.map(c => c.id));
@@ -199,11 +198,24 @@ const StudentsPage = () => {
                     .map(e => e.studentId)
             );
 
-            return students.filter(s => teacherStudentIds.has(s.id));
+            result = result.filter(s => teacherStudentIds.has(s.id));
+        } else if (!currentUser || isAdmin || isOffice) {
+            // Keep all students
+        } else {
+            result = [];
         }
 
-        return [];
-    }, [students, currentUser, classes, enrollments, isAdmin, isOffice]);
+        if (searchTerm.trim()) {
+            const lowerterm = searchTerm.toLowerCase();
+            result = result.filter(s => 
+                s.name.toLowerCase().includes(lowerterm) || 
+                s.id.toString().toLowerCase().includes(lowerterm) ||
+                (s.phone && s.phone.includes(lowerterm))
+            );
+        }
+
+        return result;
+    }, [students, currentUser, classes, enrollments, isAdmin, isOffice, searchTerm]);
 
     const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -308,11 +320,24 @@ const StudentsPage = () => {
     return (
         <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
+                <div className="w-full md:w-auto">
                     <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Student Records</h1>
                     <p className="text-slate-500 mt-1">Manage enrollments and levels.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                
+                {/* Search Bar */}
+                <div className="flex-1 max-w-md w-full relative group">
+                    <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input 
+                        type="text" 
+                        placeholder="Search by name, ID, or phone..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow shadow-sm placeholder:text-slate-400"
+                    />
+                </div>
+
+                <div className="flex flex-wrap gap-2 w-full md:w-auto mt-2 md:mt-0">
                     {(isAdmin || isOffice) && (
                         <>
                             <button type="button" onClick={handleExportCSV} className="bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold flex items-center transition-colors">Export</button>
@@ -329,7 +354,7 @@ const StudentsPage = () => {
                     <table className="min-w-full divide-y divide-slate-100">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">ID</th>
+                                <th className="px-4 py-4 w-16 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">ID</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Name</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Gender</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Contact</th>
@@ -366,7 +391,7 @@ const StudentsPage = () => {
 
                                 return (
                                     <tr key={student.id} ref={isHighlighted ? highlightedRowRef : null} className={`transition-all duration-700 ${isHighlighted ? 'bg-primary-50' : 'hover:bg-slate-50'}`}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-400">{student.id}</td>
+                                        <td className="px-4 py-4 w-16 whitespace-nowrap text-sm font-medium text-slate-400">{student.id}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700">{student.name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{student.sex}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
@@ -381,41 +406,31 @@ const StudentsPage = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                                             {displayClasses.length > 0 ? (
-                                                <div className="flex flex-col gap-1">
-                                                    {/* Primary Class */}
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-slate-700">{displayClasses[0].name}</span>
-                                                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                                            <span>{displayClasses[0].level}</span>
-                                                            <span className="text-slate-300">•</span>
-                                                            <span>
-                                                                {displayClasses[0].teacherId ? 
-                                                                    (staff.find(s => s.id === displayClasses[0].teacherId)?.name || 'No Teacher') : 
-                                                                    'No Teacher'
-                                                                }
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* Additional Classes as a dropdown */}
-                                                    {displayClasses.length > 1 && (
-                                                        <details className="mt-1 group cursor-pointer relative z-10">
-                                                            <summary className="text-[10px] font-bold text-primary-600 outline-none select-none flex items-center gap-1 hover:text-primary-700 w-fit bg-primary-50 px-2 py-0.5 rounded transition-colors">
-                                                                <span>+{displayClasses.length - 1} More Class{displayClasses.length > 2 ? 'es' : ''}</span>
+                                                <div className="flex flex-wrap gap-2 items-center">
+                                                    {displayClasses.slice(0, 3).map(c => {
+                                                        const teacherName = c.teacherId ? (staff.find(s => s.id === c.teacherId)?.name || 'No Teacher') : 'No Teacher';
+                                                        return (
+                                                            <div key={c.id} className="flex flex-col bg-blue-50/50 border border-blue-100/60 rounded-md px-2.5 py-1.5 shadow-sm hover:shadow transition-shadow" title={`Teacher: ${teacherName}`}>
+                                                                <span className="font-bold text-blue-900 text-xs leading-none mb-1">{c.name}</span>
+                                                                <span className="text-[9px] text-blue-600/70 font-bold uppercase tracking-wider leading-none">{c.level}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {displayClasses.length > 3 && (
+                                                        <details className="mt-1 group cursor-pointer relative z-40">
+                                                            <summary className="text-[10px] font-bold text-slate-500 outline-none select-none flex items-center gap-1 hover:text-slate-700 w-fit bg-slate-50 border border-slate-200 px-2 py-1 rounded-md transition-colors shadow-sm">
+                                                                <span>+{displayClasses.length - 3} More</span>
                                                                 <svg className="w-3 h-3 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                                                             </summary>
-                                                            <div className="flex flex-col gap-2 mt-2 pl-3 border-l-[3px] border-primary-100/50">
-                                                                {displayClasses.slice(1).map(studentClass => (
-                                                                    <div key={studentClass.id} className="flex flex-col">
+                                                            <div className="absolute top-full left-0 mt-2 p-3 bg-white rounded-xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-3 min-w-[140px] z-50">
+                                                                {displayClasses.slice(3).map(studentClass => (
+                                                                    <div key={studentClass.id} className="flex flex-col pl-2 border-l-2 border-primary-300">
                                                                         <span className="font-bold text-slate-700 text-xs">{studentClass.name}</span>
-                                                                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                                                        <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
                                                                             <span>{studentClass.level}</span>
                                                                             <span className="text-slate-300">•</span>
-                                                                            <span className="truncate max-w-[100px]">
-                                                                                {studentClass.teacherId ? 
-                                                                                    (staff.find(s => s.id === studentClass.teacherId)?.name || 'No Teacher') : 
-                                                                                    'No Teacher'
-                                                                                }
+                                                                            <span className="truncate max-w-[80px]">
+                                                                                {studentClass.teacherId ? (staff.find(s => s.id === studentClass.teacherId)?.name || 'No Teacher') : 'No Teacher'}
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -425,10 +440,10 @@ const StudentsPage = () => {
                                                     )}
                                                 </div>
                                             ) : (
-                                                <div className="flex flex-col opacity-60">
-                                                    <span className="italic text-slate-400">Not Enrolled</span>
-                                                    <span className="text-[10px] font-bold text-primary-600/70 border border-primary-100 rounded self-start px-1 mt-0.5">
-                                                        {student.level || 'No Level'}
+                                                <div className="flex flex-col gap-1.5 opacity-90">
+                                                    <span className="font-bold text-slate-500 flex items-center gap-1.5">
+                                                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                        Not Enrolled
                                                     </span>
                                                 </div>
                                             )}
@@ -438,41 +453,43 @@ const StudentsPage = () => {
                                                 {student.status.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold space-x-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedReportStudent(student);
-                                                    setIsReportModalOpen(true);
-                                                }}
-                                                className="text-emerald-600 hover:text-emerald-800 transition-colors"
-                                            >
-                                                Report Card
-                                            </button>
-                                            {(isAdmin || isOffice) && (
-                                                <>
-                                                    {deletingStudentId === student.id ? (
-                                                        <div className="flex items-center justify-end space-x-2 animate-in fade-in zoom-in duration-200">
-                                                            <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Are you sure?</span>
-                                                            <button onClick={() => setDeletingStudentId(null)} disabled={!!isDeletingId} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-xs font-bold disabled:opacity-50">Cancel</button>
-                                                            <button onClick={() => handleDelete(student.id)} disabled={!!isDeletingId} className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-bold shadow-sm shadow-red-200 disabled:opacity-50 inline-flex items-center justify-center min-w-[60px]">
-                                                                {isDeleting ? '...' : 'Delete'}
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <button type="button" onClick={() => handleOpenModal(student)} className="text-primary-600 hover:text-primary-800 transition-colors">Edit</button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setDeletingStudentId(student.id)}
-                                                                className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50 inline-flex items-center justify-end"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold">
+                                            <div className="flex items-center justify-end gap-5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedReportStudent(student);
+                                                        setIsReportModalOpen(true);
+                                                    }}
+                                                    className="text-emerald-600 hover:text-emerald-800 transition-colors"
+                                                >
+                                                    Report Card
+                                                </button>
+                                                {(isAdmin || isOffice) && (
+                                                    <>
+                                                        {deletingStudentId === student.id ? (
+                                                            <div className="flex items-center justify-end space-x-2 animate-in fade-in zoom-in duration-200">
+                                                                <span className="text-xs font-bold text-red-600 uppercase tracking-wider mr-2">Confirm?</span>
+                                                                <button onClick={() => setDeletingStudentId(null)} disabled={!!isDeletingId} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-xs font-bold disabled:opacity-50">Cancel</button>
+                                                                <button onClick={() => handleDelete(student.id)} disabled={!!isDeletingId} className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-bold shadow-sm shadow-red-200 disabled:opacity-50 inline-flex items-center justify-center min-w-[60px]">
+                                                                    {isDeleting ? '...' : 'Delete'}
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-5">
+                                                                <button type="button" onClick={() => handleOpenModal(student)} className="text-primary-600 hover:text-primary-800 transition-colors">Edit</button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setDeletingStudentId(student.id)}
+                                                                    className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 )

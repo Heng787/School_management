@@ -3,7 +3,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Page, AttendanceStatus } from '../types';
 import { generateClassProgressData } from '../utils/reportGenerator';
+import { gradeId } from '../services/mappers';
 import * as XLSX from 'xlsx';
+
 
 // --- 1. MARKS ENTRY COMPONENT ---
 /**
@@ -12,14 +14,20 @@ import * as XLSX from 'xlsx';
  */
 const MarksEntry = () => {
     // --- 1.1. STATE & DATA ---
-    const { students, classes, subjects, loading, grades, addGrade, updateGrade, enrollments, staff } = useData();
+    const { students, classes, subjects, loading, grades, addGrade, updateGrade, saveGradeBatch, enrollments, staff } = useData();
     const [selectedClassId, setSelectedClassId] = useState(() => sessionStorage.getItem('reports_marks_class') || '');
+    const [selectedTerm, setSelectedTerm] = useState(() => sessionStorage.getItem('reports_marks_term') || 'Midterm');
     const [localGrades, setLocalGrades] = useState({});
 
     useEffect(() => {
         if (selectedClassId) sessionStorage.setItem('reports_marks_class', selectedClassId);
         else sessionStorage.removeItem('reports_marks_class');
     }, [selectedClassId]);
+
+    useEffect(() => {
+        sessionStorage.setItem('reports_marks_term', selectedTerm);
+    }, [selectedTerm]);
+
     const [modifiedStudents, setModifiedStudents] = useState(new Set());
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -52,14 +60,14 @@ const MarksEntry = () => {
         classStudents.forEach(student => {
             initialGrades[student.id] = {};
             subjects.forEach(subject => {
-                const existingGrade = grades.find(g => g.studentId === student.id && g.subject === subject);
+                const existingGrade = grades.find(g => g.studentId === student.id && g.subject === subject && g.classId === selectedClassId && g.term === selectedTerm);
                 initialGrades[student.id][subject] = existingGrade ? existingGrade.score : '';
             });
         });
         setLocalGrades(initialGrades);
         setModifiedStudents(new Set());
         setSaveSuccess(false);
-    }, [classStudents, subjects, grades]);
+    }, [classStudents, subjects, grades, selectedClassId, selectedTerm]);
 
     // --- 1.3. ACTION HANDLERS ---
     /**
@@ -68,25 +76,34 @@ const MarksEntry = () => {
      */
     const handleGradeChange = (studentId, subject, value) => {
         setSaveSuccess(false);
-        let numValue = '';
 
-        if (value !== '') {
-            const parsed = parseFloat(value);
-            if (!isNaN(parsed)) {
-                // Clamp between 0 and 10
-                numValue = Math.min(10, Math.max(0, parsed));
+        setLocalGrades(prev => {
+            const next = { ...prev };
+            if (!next[studentId]) next[studentId] = {};
+
+            if (value === "") {
+                next[studentId][subject] = "";
             } else {
-                numValue = '';
-            }
-        }
+                let strVal = value;
+                let num = parseFloat(strVal);
 
-        setLocalGrades(prev => ({
-            ...prev,
-            [studentId]: {
-                ...prev[studentId],
-                [subject]: numValue
+                if (num < 0) {
+                    strVal = "0";
+                } else if (num > 10) {
+                    // Auto-inject decimal for two-digit numbers (e.g. "55" -> "5.5")
+                    if (!strVal.includes('.') && strVal.length === 2) {
+                        strVal = `${strVal[0]}.${strVal[1]}`;
+                    } else if (!strVal.includes('.') && strVal.length === 3 && strVal.startsWith("10")) {
+                        strVal = "10";
+                    } else {
+                        strVal = "10";
+                    }
+                }
+
+                next[studentId][subject] = strVal;
             }
-        }));
+            return next;
+        });
 
         setModifiedStudents(prev => {
             const next = new Set(prev);
@@ -104,24 +121,19 @@ const MarksEntry = () => {
 
         setIsSaving(true);
         try {
-            const term = "Term 1"; // Default term for now
-            const savePromises = [];
+            const recordsToSave = [];
 
             for (const studentId of Array.from(modifiedStudents)) {
                 for (const subject of subjects) {
                     const score = Number(localGrades[studentId]?.[subject] || 0);
-                    const existingGrade = grades.find(g => g.studentId === studentId && g.subject === subject);
-
-                    if (existingGrade) {
-                        savePromises.push(updateGrade({ ...existingGrade, score }));
-                    } else {
-                        savePromises.push(addGrade({ studentId, subject, score, term }));
-                    }
+                    const existingGrade = grades.find(g => g.studentId === studentId && g.subject === subject && g.classId === selectedClassId && g.term === selectedTerm);
+                    const id = existingGrade ? existingGrade.id : gradeId(selectedClassId, studentId, subject, selectedTerm);
+                    recordsToSave.push({ id, studentId, classId: selectedClassId, subject, score, term: selectedTerm });
                 }
             }
 
-            if (savePromises.length > 0) {
-                await Promise.all(savePromises);
+            if (recordsToSave.length > 0) {
+                await saveGradeBatch(recordsToSave);
             }
 
             setSaveSuccess(true);
@@ -148,27 +160,47 @@ const MarksEntry = () => {
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Class (Marks out of 10.0)</label>
-                    <select
-                        value={selectedClassId}
-                        onChange={(e) => {
-                            if (modifiedStudents.size > 0 && !window.confirm('You have unsaved marks. Switch class and lose changes?')) return;
-                            setSelectedClassId(e.target.value);
-                        }}
-                        className="w-full md:w-96 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                    >
-                        <option value="">Choose a class...</option>
-                        {classes.map(c => {
-                            const teacher = staff?.find(s => s.id === c.teacherId);
-                            const tName = teacher ? ` (Teacher: ${teacher.name})` : '';
-                            return (
-                                <option key={c.id} value={c.id}>
-                                    {c.name} ({c.level}){tName} | {c.schedule}
-                                </option>
-                            );
-                        })}
-                    </select>
+                <div className="flex-1 flex flex-col sm:flex-row gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Class (Marks out of 10.0)</label>
+                        <select
+                            value={selectedClassId}
+                            onChange={(e) => {
+                                if (modifiedStudents.size > 0 && !window.confirm('You have unsaved marks. Switch class and lose changes?')) return;
+                                setSelectedClassId(e.target.value);
+                            }}
+                            className="w-full md:w-96 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                        >
+                            <option value="">Choose a class...</option>
+                            {classes.map(c => {
+                                const teacher = staff?.find(s => s.id === c.teacherId);
+                                const tName = teacher ? ` (Teacher: ${teacher.name})` : '';
+                                return (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name} ({c.level}){tName} | {c.schedule}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Term</label>
+                        <select
+                            value={selectedTerm}
+                            onChange={(e) => {
+                                if (modifiedStudents.size > 0 && !window.confirm('You have unsaved marks. Switch term and lose changes?')) return;
+                                setSelectedTerm(e.target.value);
+                            }}
+                            className="w-full sm:w-48 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                        >
+                            <option value="Midterm">Midterm</option>
+                            <option value="Finals">Finals</option>
+                            <option value="Q1">Quarter 1</option>
+                            <option value="Q2">Quarter 2</option>
+                            <option value="Q3">Quarter 3</option>
+                            <option value="Q4">Quarter 4</option>
+                        </select>
+                    </div>
                 </div>
                 {classStudents.length > 0 && (
                     <div className="flex items-center space-x-4">
@@ -248,7 +280,8 @@ const MarksEntry = () => {
                                                         placeholder="0.0"
                                                         value={localGrades[student.id]?.[subject] ?? ''}
                                                         onChange={(e) => handleGradeChange(student.id, subject, e.target.value)}
-                                                        className={`w-full text-center py-2 rounded-lg border text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none ${Number(localGrades[student.id]?.[subject]) >= 9.0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
+                                                        onFocus={(e) => e.target.select()}
+                                                        className={`w-full text-center py-2 rounded-lg border text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${Number(localGrades[student.id]?.[subject]) >= 9.0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
                                                             Number(localGrades[student.id]?.[subject]) < 5.0 ? 'text-red-600 bg-red-50 border-red-100' :
                                                                 'text-slate-700 bg-white border-slate-200'
                                                             }`}
@@ -324,8 +357,20 @@ const ExportCenter = () => {
     const handleDownloadReport = () => {
         if (targetStudents.length === 0) return;
 
+        let exportGrades = grades;
+        let exportAttendance = attendance;
+
+        if (exportMode === 'class' && selectedClass) {
+            exportGrades = grades.filter(g => g.classId === selectedClass.id);
+            exportAttendance = attendance.filter(a => a.classId === selectedClass.id);
+        } else if (exportMode === 'level' && selectedLevel) {
+            const levelClassIds = classes.filter(c => c.level === selectedLevel).map(c => c.id);
+            exportGrades = grades.filter(g => levelClassIds.includes(g.classId));
+            exportAttendance = attendance.filter(a => levelClassIds.includes(a.classId));
+        }
+
         const titleName = exportMode === 'class' ? (selectedClass?.name || 'Class') : (`Level_${selectedLevel}`);
-        const exportData = generateClassProgressData(titleName, targetStudents, grades, attendance);
+        const exportData = generateClassProgressData(titleName, targetStudents, exportGrades, exportAttendance);
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         const workbook = XLSX.utils.book_new();

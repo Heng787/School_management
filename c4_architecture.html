@@ -3,90 +3,416 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>C4 Architecture Diagrams</title>
+  <title>School Management System — Architecture</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:   #3b82f6;
+      --indigo: #1e3a8a;
+      --green:  #22c55e;
+      --purple: #a855f7;
+      --orange: #f97316;
+      --teal:   #14b8a6;
+      --pink:   #ec4899;
+      --red:    #ef4444;
+      --yellow: #eab308;
+    }
+
+    html { scroll-behavior: smooth; }
+
     body {
       font-family: 'Nunito', sans-serif;
       background: #f0f4ff;
       color: #1e293b;
-      padding: 40px 24px 60px;
+      line-height: 1.6;
     }
-    h1 {
+
+    /* ─── HEADER ─── */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #3b82f6 100%);
+      color: white;
       text-align: center;
-      font-size: 1.6rem;
-      font-weight: 800;
-      margin-bottom: 48px;
-      color: #1e3a8a;
+      padding: 64px 24px 56px;
+      position: relative;
+      overflow: hidden;
     }
-    .diagram-block {
-      background: white;
-      border-radius: 20px;
-      padding: 36px 28px;
-      box-shadow: 0 4px 20px rgba(0,0,0,.07);
+    header::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 70% 50%, rgba(99,102,241,.3) 0%, transparent 60%);
+    }
+    header .badge {
+      display: inline-block;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 99px;
+      padding: 6px 20px;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    header h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 900; margin-bottom: 12px; position: relative; }
+    header p  { font-size: 1.1rem; opacity: .85; max-width: 560px; margin: 0 auto 32px; position: relative; }
+
+    /* NAV PILLS */
+    .nav-pills {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      justify-content: center; position: relative;
+    }
+    .nav-pills a {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      color: white; text-decoration: none;
+      border-radius: 99px;
+      padding: 8px 22px;
+      font-size: .85rem; font-weight: 700;
+      transition: background .2s, transform .2s;
+    }
+    .nav-pills a:hover { background: rgba(255,255,255,.3); transform: translateY(-2px); }
+
+    /* ─── SECTIONS ─── */
+    .section {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 64px 24px;
+    }
+    .section-header {
       margin-bottom: 40px;
     }
-    .diagram-block h2 {
-      font-size: 1rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #64748b;
-      margin-bottom: 24px;
-      border-left: 4px solid #3b82f6;
-      padding-left: 12px;
+    .level-tag {
+      display: inline-block;
+      font-size: .75rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      padding: 4px 14px; border-radius: 99px;
+      margin-bottom: 10px;
     }
-    .mermaid { text-align: center; overflow-x: auto; }
+    .section-header h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 900; margin-bottom: 8px;
+    }
+    .section-header p { color: #64748b; font-size: 1rem; }
+
+    /* ─── DIVIDERS ─── */
+    .bg-white { background: #fff; }
+    .bg-light  { background: #f0f4ff; }
+    .bg-dark   { background: #0f172a; }
+
+    /* ─── PEOPLE CARDS ─── */
+    .people-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 20px;
+    }
+    .person-card {
+      background: #fff;
+      border: 2px solid #e2e8f0;
+      border-radius: 24px;
+      padding: 32px 16px 24px;
+      text-align: center;
+      transition: transform .25s, box-shadow .25s, border-color .25s;
+      cursor: default;
+    }
+    .person-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(59,130,246,.15);
+      border-color: var(--blue);
+    }
+    .avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 16px;
+    }
+    .person-card h3 { font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
+    .person-card p  { font-size: .82rem; color: #64748b; }
+
+    /* ─── HOW CARDS ─── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .how-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 22px;
+      border-left: 5px solid;
+      box-shadow: 0 4px 20px rgba(0,0,0,.06);
+      transition: transform .25s;
+    }
+    .how-card:hover { transform: translateY(-4px); }
+    .how-card .ic { font-size: 40px; margin-bottom: 14px; }
+    .how-card h3  { font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
+    .how-card p   { font-size: .83rem; color: #475569; }
+    .how-card .analogy {
+      margin-top: 12px; padding: 8px 12px;
+      background: #f8faff; border-radius: 10px;
+      font-size: .78rem; color: #94a3b8; font-style: italic;
+    }
+
+    /* ─── FLOW ─── */
+    .flow-row {
+      display: flex; flex-wrap: wrap;
+      align-items: center; justify-content: center;
+      gap: 10px; margin-top: 8px;
+    }
+    .flow-box {
+      background: rgba(255,255,255,.1);
+      border: 2px solid rgba(255,255,255,.2);
+      border-radius: 18px;
+      padding: 18px 20px;
+      text-align: center; min-width: 130px;
+      backdrop-filter: blur(8px);
+    }
+    .flow-box .fi { font-size: 30px; margin-bottom: 8px; }
+    .flow-box span { font-size: .82rem; font-weight: 700; color: white; display: block; }
+    .flow-arrow { font-size: 28px; color: rgba(255,255,255,.5); }
+
+    /* ─── TABLES ─── */
+    .table-wrap { overflow-x: auto; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,.06); }
+    table { border-collapse: collapse; width: 100%; background: white; border-radius: 16px; overflow: hidden; }
+    thead { background: linear-gradient(90deg, #1e3a8a, #3b82f6); color: white; }
+    thead th { padding: 14px 20px; text-align: left; font-size: .85rem; font-weight: 800; letter-spacing:.5px; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8faff; }
+    tbody td { padding: 13px 20px; font-size: .88rem; vertical-align: top; }
+    tbody td:first-child { font-weight: 700; }
+
+    /* ─── DATA CARDS ─── */
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 18px;
+    }
+    .data-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 22px 18px;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+    .data-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--blue);
+      box-shadow: 0 8px 24px rgba(59,130,246,.12);
+    }
+    .data-tag {
+      display: inline-block;
+      font-size: .72rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 3px 12px; border-radius: 99px;
+      margin-bottom: 10px;
+    }
+    .data-card h3 { font-size: .95rem; font-weight: 800; margin-bottom: 6px; }
+    .data-card p  { font-size: .8rem; color: #64748b; margin-bottom: 8px; }
+    .data-card ul { font-size: .8rem; color: #475569; padding-left: 18px; line-height: 1.9; }
+
+    /* ─── SECURITY ─── */
+    .sec-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .sec-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 16px;
+      padding: 22px 20px;
+      color: white;
+    }
+    .sec-card .si { font-size: 28px; margin-bottom: 10px; }
+    .sec-card h3  { font-size: .95rem; font-weight: 800; margin-bottom: 6px; }
+    .sec-card p   { font-size: .82rem; opacity: .75; }
+
+    /* ─── MERMAID ─── */
+    .diagram-box {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.06);
+      overflow-x: auto;
+    }
+    .diagram-box .mermaid { text-align: center; }
+
+    .diagram-label {
+      font-size: .8rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: #94a3b8; margin-bottom: 16px;
+    }
+
+    /* ─── COLORS ─── */
+    .c-blue   { background:#dbeafe; color:#1d4ed8; }
+    .c-green  { background:#dcfce7; color:#15803d; }
+    .c-purple { background:#f3e8ff; color:#7e22ce; }
+    .c-orange { background:#ffedd5; color:#c2410c; }
+    .c-pink   { background:#fce7f3; color:#be185d; }
+    .c-teal   { background:#ccfbf1; color:#0f766e; }
+    .c-yellow { background:#fef9c3; color:#a16207; }
+    .c-red    { background:#fee2e2; color:#b91c1c; }
+    .c-slate  { background:#f1f5f9; color:#475569; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: #0f172a;
+      color: #64748b;
+      text-align: center;
+      padding: 28px 24px;
+      font-size: .85rem;
+    }
+    footer strong { color: #94a3b8; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 640px) {
+      .flow-row { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
   </style>
 </head>
 <body>
 
-  <h1>🏫 School Management System — C4 Diagrams</h1>
+<!-- ══════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════ -->
+<header>
+  <div class="badge">📐 C4 Architecture · Simple Edition</div>
+  <h1>🏫 School Management System</h1>
+  <p>A plain-language walkthrough of how the system is built — no technical background needed.</p>
+  <nav class="nav-pills">
+    <a href="#people">👥 Who Uses It</a>
+    <a href="#how">⚙️ How It Works</a>
+    <a href="#flow">🔄 Data Flow</a>
+    <a href="#data">📂 What's Stored</a>
+    <a href="#erd">🗺️ Database Map</a>
+    <a href="#security">🔐 Security</a>
+  </nav>
+</header>
 
-  <!-- ── Level 1: System Context ── -->
-  <div class="diagram-block">
-    <h2>Level 1 · System Context</h2>
+
+<!-- ══════════════════════════════════════════
+     LEVEL 1 — WHO USES IT
+══════════════════════════════════════════ -->
+<div class="bg-white">
+<div class="section" id="people">
+  <div class="section-header">
+    <span class="level-tag c-blue">Level 1 · System Context</span>
+    <h2>👥 Who Uses the System?</h2>
+    <p>These are the real people who log in every day. Each person has a different job, so they see different things.</p>
+  </div>
+
+  <!-- People cards -->
+  <div class="people-grid" style="margin-bottom:48px;">
+    <div class="person-card">
+      <div class="avatar" style="background:#dbeafe;">👨‍💼</div>
+      <h3>School Admin</h3>
+      <p>The boss. Can see and manage <strong>everything</strong> — students, staff, money, reports, and all settings.</p>
+    </div>
+    <div class="person-card">
+      <div class="avatar" style="background:#dcfce7;">👩‍🏫</div>
+      <h3>Teacher</h3>
+      <p>Views their classes, marks attendance, enters grades, and sends messages to the admin.</p>
+    </div>
+    <div class="person-card">
+      <div class="avatar" style="background:#f3e8ff;">👩‍💻</div>
+      <h3>Office Worker</h3>
+      <p>Handles student registrations, information updates, and helps manage the school schedule.</p>
+    </div>
+  </div>
+
+  <!-- Mermaid: context diagram -->
+  <div class="diagram-box">
+    <div class="diagram-label">📐 System Context Diagram</div>
     <div class="mermaid">
 graph TD
     A["👨‍💼 School Admin"] --> APP
     B["👩‍🏫 Teacher"]       --> APP
     C["👩‍💻 Office Worker"] --> APP
-    D["👮 Guard"]           --> APP
-    E["🧹 Cleaner"]         --> APP
 
     APP["🖥️ SchoolAdmin Website"]
 
-    APP -->|"Reads / Writes data"| DB["🗄️ Supabase\nCloud Database"]
-    APP -->|"Caches offline"| LS["💾 Browser\nlocalStorage"]
+    APP -->|"Zero-Latency Saves"| LS["⚡ Browser\nlocalStorage Engine"]
 
     style APP fill:#1e3a8a,color:#fff,stroke:#3b82f6,stroke-width:2px
-    style DB  fill:#0f766e,color:#fff,stroke:#14b8a6,stroke-width:2px
-    style LS  fill:#c2410c,color:#fff,stroke:#f97316,stroke-width:2px
+    style LS  fill:#f59e0b,color:#fff,stroke:#d97706,stroke-width:2px
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     LEVEL 2 — HOW IT WORKS
+══════════════════════════════════════════ -->
+<div class="bg-light">
+<div class="section" id="how">
+  <div class="section-header">
+    <span class="level-tag c-purple">Level 2 · Containers</span>
+    <h2>⚙️ How Does It Work?</h2>
+    <p>Think of the system as <strong>5 layers</strong> — like floors in a building, each with its own job.</p>
+  </div>
+
+  <div class="how-grid" style="margin-bottom:48px;">
+    <div class="how-card" style="border-color:var(--blue);">
+      <div class="ic">🖥️</div>
+      <h3>The Pages (What You See)</h3>
+      <p>8 different screens — Dashboard, Students, Staff, Classes, Reports, Schedule, Settings, and Messages. Each role sees only what's relevant to them.</p>
+      <div class="analogy">🏫 Like the front desk of a school that everyone walks into.</div>
+    </div>
+    <div class="how-card" style="border-color:var(--green);">
+      <div class="ic">🧠</div>
+      <h3>The Brain (DataContext)</h3>
+      <p>A hidden layer that holds all information in memory while you use the app. When you change something, the screen updates instantly — no waiting.</p>
+      <div class="analogy">📋 Like the school office that knows where every student file is.</div>
+    </div>
+    <div class="how-card" style="border-color:var(--purple);">
+      <div class="ic">📡</div>
+      <h3>The Messenger (Services)</h3>
+      <p>A set of helpers that talk to the database. When you add a student, the messenger carries that information to permanent storage and brings data back when needed.</p>
+      <div class="analogy">📬 Like a courier that delivers letters between the office and the filing room.</div>
+    </div>
+    <div class="how-card" style="border-color:var(--orange);">
+      <div class="ic">💾</div>
+      <h3>The Backup (localStorage)</h3>
+      <p>A small copy of all data saved on your own device. If the internet disappears, you can still use the app. Changes are queued and sent automatically when you reconnect.</p>
+      <div class="analogy">🗂️ Like a photocopy of important files kept in your desk drawer.</div>
+    </div>
+    <div class="how-card" style="border-color:var(--teal);">
+      <div class="ic">🗄️</div>
+      <h3>The Database (Supabase)</h3>
+      <p>The permanent, secure online storage for ALL school data. Only logged-in users can access it. New messages appear instantly thanks to a live connection.</p>
+      <div class="analogy">🔒 Like the main locked filing room — the real, permanent record.</div>
     </div>
   </div>
 
-  <!-- ── Level 2: Containers ── -->
-  <div class="diagram-block">
-    <h2>Level 2 · Containers</h2>
+  <!-- Mermaid: container diagram -->
+  <div class="diagram-box">
+    <div class="diagram-label">📐 Container / Layer Diagram</div>
     <div class="mermaid">
 graph TD
-    U["👤 User"] --> PAGES
+    U["👤 You · using the browser"] --> PAGES
 
-    subgraph SPA ["🖥️ React SPA"]
-        PAGES["📄 Pages\nDashboard · Students · Staff\nClasses · Reports · Schedule\nSettings · Messages"]
-        PAGES --> BRAIN["🧠 DataContext\nGlobal state · updates screen instantly"]
+    subgraph SPA ["🖥️  The Website"]
+        PAGES["📄 8 Pages\nDashboard · Students · Staff · Classes\nReports · Schedule · Settings · Messages"]
+        PAGES --> BRAIN
+        BRAIN["🧠 The Brain · DataContext\nHolds everything in memory\nUpdates screen instantly"]
     end
 
     BRAIN --> SERVICES
 
-    subgraph SVC ["📡 Services Layer"]
+    subgraph SVC ["📡  The Messenger Layer"]
         SERVICES["studentService · staffService · classService\nmessageService · configService · logService\nsyncService · core.ts · mappers.ts"]
     end
 
-    SERVICES --> LOCAL["💾 localStorage\nOffline cache + dirty-flag queue"]
-    SERVICES --> CLOUD["🗄️ Supabase PostgreSQL\n13 tables · RLS · Realtime"]
+    SERVICES --> LOCAL & CLOUD
+
+    LOCAL["💾 Browser Cache\nInstant save · works offline\nDirty-flag queue"]
+    CLOUD["🗄️ Supabase PostgreSQL\n13 tables · RLS Security\nRealtime live updates"]
 
     style SPA   fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
     style SVC   fill:#f5f3ff,stroke:#a855f7,stroke-width:2px
@@ -94,122 +420,441 @@ graph TD
     style CLOUD fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
     </div>
   </div>
+</div>
+</div>
 
-  <!-- ── Level 3: ERD ── -->
-  <div class="diagram-block">
-    <h2>Level 3 · Database Schema (ERD)</h2>
+
+<!-- ══════════════════════════════════════════
+     DATA FLOW
+══════════════════════════════════════════ -->
+<div class="bg-dark">
+<div class="section" id="flow" style="padding-bottom:56px;">
+  <div class="section-header">
+    <span class="level-tag" style="background:rgba(255,255,255,.15);color:white;">🔄 Data Flow</span>
+    <h2 style="color:white;">What Happens When You Save Something?</h2>
+    <p style="color:rgba(255,255,255,.65);">Example: You add a new student. Here's every step the system takes in under a second.</p>
+  </div>
+
+  <div class="flow-row" style="margin-bottom:40px;">
+    <div class="flow-box">
+      <div class="fi">👆</div>
+      <span>You click<br/>"Add Student"</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fi">🧠</div>
+      <span>Brain updates<br/>the screen</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fi">💾</div>
+      <span>Saved on<br/>your device</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fi">📡</div>
+      <span>Messenger<br/>sends to cloud</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fi">🗄️</div>
+      <span>Saved forever<br/>in database</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div class="fi">✅</div>
+      <span>Done!<br/>Confirmed</span>
+    </div>
+  </div>
+
+  <div class="diagram-box" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);">
+    <div class="diagram-label" style="color:rgba(255,255,255,.4);">📐 Sequence Diagram</div>
+    <div class="mermaid">
+%%{init: {'theme': 'dark'}}%%
+sequenceDiagram
+    participant You  as 👆 You
+    participant Page as 🖥️ Page
+    participant Brain as 🧠 Brain
+    participant Local as ⚡ Local Engine
+
+    You->>Page: Click "Add Student"
+    Page->>Brain: Action received
+    Brain->>Local: Instantly saves
+    Local-->>Brain: ✅ Saved
+    Brain->>Page: Screen updates instantly
+    </div>
+  </div>
+
+  <p style="text-align:center;color:rgba(255,255,255,.5);margin-top:24px;font-size:.88rem;">
+    📶 Zero latency: Information is saved in milliseconds directly onto your device.
+  </p>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     LEVEL 3 — WHAT DATA IS STORED
+══════════════════════════════════════════ -->
+<div class="bg-white">
+<div class="section" id="data">
+  <div class="section-header">
+    <span class="level-tag c-teal">Level 3 · Database</span>
+    <h2>📂 What Data Is Stored?</h2>
+    <p>Think of the database as a <strong>filing room</strong> with different folders — one for each topic. There are <strong>15 folders</strong> in total.</p>
+  </div>
+
+  <!-- Students -->
+  <h3 style="font-size:1.1rem;font-weight:800;margin-bottom:16px;color:#1d4ed8;">👨‍🎓 About Students</h3>
+  <div class="data-grid" style="margin-bottom:36px;">
+    <div class="data-card">
+      <span class="data-tag c-blue">📁 Students</span>
+      <h3>Student Records</h3>
+      <p>Everything about each student.</p>
+      <ul>
+        <li>Name, gender, birthday</li>
+        <li>Phone number</li>
+        <li>Enrollment date</li>
+        <li>Status — Active / Suspended / Dropout</li>
+        <li>Tuition paid vs. total owed</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-red">📁 Attendance</span>
+      <h3>Daily Attendance</h3>
+      <p>Who came to school each day.</p>
+      <ul>
+        <li>Student name</li>
+        <li>Date</li>
+        <li>Status: Present / Absent / Late</li>
+        <li>One entry per student per day</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-teal">📁 Grades</span>
+      <h3>Student Grades</h3>
+      <p>Scores for every subject.</p>
+      <ul>
+        <li>Student name</li>
+        <li>Subject</li>
+        <li>Score (0–10 scale)</li>
+        <li>Term (Semester 1, 2…)</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-orange">📁 Enrollments</span>
+      <h3>Who's in Which Class</h3>
+      <p>Links students to their classes.</p>
+      <ul>
+        <li>Student name</li>
+        <li>Class name</li>
+        <li>Academic year</li>
+        <li>One student can join many classes</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Staff -->
+  <h3 style="font-size:1.1rem;font-weight:800;margin-bottom:16px;color:#15803d;">👩‍🏫 About Staff</h3>
+  <div class="data-grid" style="margin-bottom:36px;">
+    <div class="data-card">
+      <span class="data-tag c-green">📁 Staff</span>
+      <h3>Employee Records</h3>
+      <p>Details of every staff member.</p>
+      <ul>
+        <li>Name & role (Teacher, Guard…)</li>
+        <li>Subject they teach</li>
+        <li>Contact number</li>
+        <li>Date hired</li>
+        <li>Login password</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-pink">📁 Leave Requests</span>
+      <h3>Staff Permissions</h3>
+      <p>When staff take time off.</p>
+      <ul>
+        <li>Staff name</li>
+        <li>Type: Annual / Personal / Non-Personal</li>
+        <li>Start &amp; end date</li>
+        <li>Reason given</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-orange">📁 Daily Logs</span>
+      <h3>Gate Entry / Exit Log</h3>
+      <p>Recorded by the Guard.</p>
+      <ul>
+        <li>Visitor name</li>
+        <li>Entry or Exit</li>
+        <li>Purpose of visit</li>
+        <li>Timestamp</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-red">📁 Incident Reports</span>
+      <h3>Security Incidents</h3>
+      <p>Problems reported by the Guard.</p>
+      <ul>
+        <li>Title of incident</li>
+        <li>Description</li>
+        <li>Severity: Low / Medium / High</li>
+        <li>Date &amp; time</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-teal">📁 Room Statuses</span>
+      <h3>Cleaning Updates</h3>
+      <p>Updated by the Cleaner.</p>
+      <ul>
+        <li>Room name</li>
+        <li>Status: Cleaned / Needs Attention</li>
+        <li>Who updated it</li>
+        <li>When updated</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Classes & Communication -->
+  <h3 style="font-size:1.1rem;font-weight:800;margin-bottom:16px;color:#7e22ce;">🏫 Classes, Messages & Settings</h3>
+  <div class="data-grid" style="margin-bottom:0;">
+    <div class="data-card">
+      <span class="data-tag c-purple">📁 Classes</span>
+      <h3>Class Listings</h3>
+      <ul>
+        <li>Class name &amp; level</li>
+        <li>Which teacher runs it</li>
+        <li>Schedule / timetable</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-yellow">📁 School Events</span>
+      <h3>Calendar Events</h3>
+      <ul>
+        <li>Event title</li>
+        <li>Date</li>
+        <li>Type: Holiday / Exam / Meeting</li>
+        <li>Description</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-blue">📁 Messages</span>
+      <h3>Internal Messages</h3>
+      <ul>
+        <li>Who sent → who received</li>
+        <li>Text content</li>
+        <li>Type: Text / Leave Request / Announcement</li>
+        <li>Read / Unread status</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-slate">📁 Settings &amp; Config</span>
+      <h3>School Configuration</h3>
+      <ul>
+        <li>School levels (Grade 1, 2…)</li>
+        <li>Subjects list</li>
+        <li>Timetable time slots</li>
+        <li>Admin password</li>
+      </ul>
+    </div>
+    <div class="data-card">
+      <span class="data-tag c-slate">📁 Change History</span>
+      <h3>Audit Log</h3>
+      <ul>
+        <li>What record was changed</li>
+        <li>Old value vs. new value</li>
+        <li>Action: Added / Updated / Deleted</li>
+        <li>Automatic — triggered by the system</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     ERD
+══════════════════════════════════════════ -->
+<div class="bg-light">
+<div class="section" id="erd">
+  <div class="section-header">
+    <span class="level-tag c-indigo" style="background:#dbeafe;color:#1e3a8a;">🗺️ Database Map</span>
+    <h2>How the Folders Connect to Each Other</h2>
+    <p>This map shows how the 15 folders link together — like a web of relationships.</p>
+  </div>
+
+  <div class="diagram-box">
+    <div class="diagram-label">📐 Entity Relationship Diagram (ERD)</div>
     <div class="mermaid">
 erDiagram
-    students ||--o{ enrollments       : "enrolled in"
-    students ||--o{ grades            : "has grades"
-    students ||--o{ attendance        : "has attendance"
-    classes  ||--o{ enrollments       : "has students"
-    staff    ||--o{ classes           : "teaches"
+    students ||--o{ enrollments   : "enrolled in"
+    students ||--o{ grades        : "has grades"
+    students ||--o{ attendance    : "has attendance"
+    classes  ||--o{ enrollments   : "has students"
+    staff    ||--o{ classes       : "teaches"
     staff    ||--o{ staff_permissions : "takes leave"
-    staff    ||--o{ daily_logs        : "creates logs"
-    staff    ||--o{ incident_reports  : "files reports"
-    staff    ||--o{ room_statuses     : "updates rooms"
+    staff    ||--o{ daily_logs    : "creates logs"
+    staff    ||--o{ incident_reports : "files reports"
+    staff    ||--o{ room_statuses : "updates rooms"
 
     students {
-        text id PK
-        text name
-        text sex
-        date dob
-        text status
-        jsonb tuition
+        text id "Unique ID"
+        text name "Full name"
+        text sex "Male or Female"
+        date dob "Date of birth"
+        text status "Active / Suspended"
+        jsonb tuition "Paid vs Total"
     }
     staff {
-        text id PK
-        text name
-        text role
-        text subject
-        text contact
-        date hire_date
+        text id "Unique ID"
+        text name "Full name"
+        text role "Teacher / Guard / etc"
+        text subject "What they teach"
     }
     classes {
-        text id PK
-        text name
-        text teacher_id FK
-        text level
-        text schedule
+        text id "Unique ID"
+        text name "Class name"
+        text teacher_id "FK → staff"
+        text level "Grade level"
+        text schedule "Timetable"
     }
     enrollments {
-        text id PK
-        text student_id FK
-        text class_id FK
-        text academic_year
+        text id "Unique ID"
+        text student_id "FK → students"
+        text class_id "FK → classes"
+        text academic_year "e.g. 2024-2025"
     }
     grades {
-        text id PK
-        text student_id FK
-        text subject
-        numeric score
-        text term
+        text id "Unique ID"
+        text student_id "FK → students"
+        text subject "Subject name"
+        numeric score "0.0 – 10.0"
+        text term "Semester"
     }
     attendance {
-        text id PK
-        text student_id FK
-        date date
-        text status
+        text id "Unique ID"
+        text student_id "FK → students"
+        date date "YYYY-MM-DD"
+        text status "Present/Absent/Late"
     }
     staff_permissions {
-        text id PK
-        text staff_id FK
-        text type
-        date start_date
-        date end_date
+        text id "Unique ID"
+        text staff_id "FK → staff"
+        text type "Annual/Personal/etc"
+        date start_date "Leave start"
+        date end_date "Leave end"
     }
     daily_logs {
-        text id PK
-        text staff_id FK
-        text type
-        text person_name
-        timestamptz timestamp
+        text id "Unique ID"
+        text staff_id "FK → staff"
+        text type "Entry or Exit"
+        text person_name "Visitor name"
     }
     incident_reports {
-        text id PK
-        text staff_id FK
-        text title
-        text severity
+        text id "Unique ID"
+        text staff_id "FK → staff"
+        text title "Incident title"
+        text severity "Low/Medium/High"
     }
     room_statuses {
-        text id PK
-        text room_name
-        text status
-        text last_updated_by FK
-    }
-    messages {
-        text id PK
-        text sender_id
-        text recipient_id
-        text type
-        jsonb metadata
-        boolean is_read
-    }
-    school_events {
-        text id PK
-        text title
-        date date
-        text type
-    }
-    settings {
-        text id PK
-        jsonb data
-    }
-    config {
-        text key PK
-        jsonb value
-    }
-    audit_log {
-        uuid id PK
-        text table_name
-        text record_id
-        text action
-        jsonb old_data
-        jsonb new_data
+        text id "Unique ID"
+        text room_name "Room label"
+        text status "Cleaned/Needs Attention"
+        text last_updated_by "FK → staff"
     }
     </div>
   </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SECURITY
+══════════════════════════════════════════ -->
+<div class="bg-dark">
+<div class="section" id="security">
+  <div class="section-header">
+    <span class="level-tag" style="background:rgba(255,255,255,.15);color:white;">🔐 Security</span>
+    <h2 style="color:white;">Is the Data Safe?</h2>
+    <p style="color:rgba(255,255,255,.6);">Yes. Multiple layers of protection are built in from the ground up.</p>
+  </div>
+
+  <div class="sec-grid">
+    <div class="sec-card">
+      <div class="si">🔑</div>
+      <h3>Login Required</h3>
+      <p>Nobody can access any data without a valid username and password.</p>
+    </div>
+    <div class="sec-card">
+      <div class="si">🎭</div>
+      <h3>Role-Based Access</h3>
+      <p>A Guard only sees Guard pages. A Cleaner only sees cleaning screens. Admin sees everything.</p>
+    </div>
+    <div class="sec-card">
+      <div class="si">📜</div>
+      <h3>Automatic Change Log</h3>
+      <p>Every edit is automatically recorded — who changed what, old value, new value, and exactly when.</p>
+    </div>
+    <div class="sec-card">
+      <div class="si">☁️</div>
+      <h3>Cloud Hosted</h3>
+      <p>Data lives on Supabase's secure servers — not just one computer. Always backed up.</p>
+    </div>
+    <div class="sec-card">
+      <div class="si">📶</div>
+      <h3>Works Offline</h3>
+      <p>A local copy exists on your device so the app works without internet. Syncs automatically when back online.</p>
+    </div>
+    <div class="sec-card">
+      <div class="si">🛡️</div>
+      <h3>Row-Level Security</h3>
+      <p>The database itself enforces that only authenticated users can read or write data — the app cannot bypass this.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SUMMARY TABLE
+══════════════════════════════════════════ -->
+<div class="bg-white">
+<div class="section">
+  <div class="section-header">
+    <h2>📋 Quick Reference</h2>
+    <p>Everything in one table — for a quick overview.</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Part</th>
+          <th>Real-World Analogy</th>
+          <th>Job in the System</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>🖥️ The App (8 Pages)</td><td>School front desk</td><td>What you see and click on in the browser</td></tr>
+        <tr><td>🧠 The Brain (DataContext)</td><td>School office that tracks everything</td><td>Holds data in memory; updates screens instantly</td></tr>
+        <tr><td>📡 The Messenger (Services)</td><td>Courier between office and filing room</td><td>Saves changes and fetches data from the database</td></tr>
+        <tr><td>💾 Browser Cache (localStorage)</td><td>Photocopy in your desk drawer</td><td>Offline backup; queues changes when no internet</td></tr>
+        <tr><td>🗄️ Supabase Database</td><td>The locked main filing room</td><td>Permanent secure storage for all school data</td></tr>
+        <tr><td>👥 5 User Roles</td><td>Different departments of the school</td><td>Each role sees only what's relevant to their job</td></tr>
+        <tr><td>📂 15 Data Tables</td><td>15 labelled folders in the filing room</td><td>Students, Staff, Classes, Grades, Attendance, Messages…</td></tr>
+        <tr><td>📜 Audit Log</td><td>A diary of every decision</td><td>Automatic record of all changes — who, what, when</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer>
+  <strong>🏫 School Management System</strong> · Architecture Overview · Simple Edition<br/>
+  <span style="font-size:.8rem;margin-top:6px;display:block;">Built with React + Vite · Supabase PostgreSQL · Deployed on Netlify</span>
+</footer>
 
 <script>
   mermaid.initialize({
@@ -222,9 +867,12 @@ erDiagram
       primaryTextColor: '#1e293b',
       primaryBorderColor: '#93c5fd',
       lineColor: '#94a3b8',
+      secondaryColor: '#f0f4ff',
+      tertiaryColor: '#f8faff',
     },
-    flowchart: { curve: 'basis', padding: 24 },
-    er: { layoutDirection: 'TB', minEntityWidth: 120 }
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence:  { actorMargin: 60, noteMargin: 10 },
+    er:        { layoutDirection: 'TB', minEntityWidth: 100 }
   });
 </script>
 </body>

@@ -23,22 +23,40 @@ export const mapStudent = {
     })
 };
 
+// Grade ID scheme (schema-free classId encoding):
+// New format: "grade~{classId}~{studentId}~{subjectEncoded}~{termEncoded}"
+//   e.g.  "grade~class_123~s2~Reading~Midterm"
+// Old format: "grade_{timestamp}" (no classId → classId will be null)
+// This lets us store classId without a DB schema change.
+export const gradeId = (classId, studentId, subject, term) =>
+    `grade~${classId}~${studentId}~${subject.replace(/\s+/g, '_')}~${(term || '').replace(/\s+/g, '_')}`;
+
 export const mapGrade = {
     toDb: (g) => ({
         id: g.id,
         student_id: g.studentId,
         subject: g.subject,
         score: g.score,
-        term: g.term
+        term: g.term || null
     }),
-    fromDb: (d)=> ({
-        id: d.id,
-        studentId: d.student_id,
-        subject: d.subject,
-        score: d.score,
-        term: d.term
-    })
+    fromDb: (d) => {
+        // Parse classId from new-format IDs: grade~{classId}~...
+        let classId = null;
+        const parts = (d.id || '').split('~');
+        if (parts.length >= 3 && parts[0] === 'grade') {
+            classId = parts[1]; // e.g. "class_1234567890"
+        }
+        return {
+            id: d.id,
+            studentId: d.student_id,
+            classId,
+            subject: d.subject,
+            score: d.score,
+            term: d.term || null
+        };
+    }
 };
+
 
 export const mapAttendance = {
     toDb: (a) => ({

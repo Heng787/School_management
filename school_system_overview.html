@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>School System — Simple Overview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #f0f4ff;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            text-align: center;
+            padding: 48px 24px 40px;
+        }
+
+        header .emoji {
+            font-size: 56px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        header h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 900;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            margin-top: 10px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-inline: auto;
+        }
+
+        /* ── SECTION WRAPPER ── */
+        section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 56px 24px;
+        }
+
+        .section-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-sub {
+            color: #64748b;
+            font-size: 1rem;
+            margin-bottom: 36px;
+        }
+
+        /* ── LEVEL 1: PEOPLE ── */
+        #people {
+            background: #fff;
+        }
+
+        .people-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 20px;
+        }
+
+        .person-card {
+            background: #f8faff;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 28px 16px 24px;
+            text-align: center;
+            transition: transform .2s, box-shadow .2s;
+        }
+
+        .person-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(59, 130, 246, .15);
+        }
+
+        .person-card .avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 14px;
+        }
+
+        .person-card h3 {
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .person-card p {
+            font-size: .82rem;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        /* ── CONNECTORS ── */
+        .connector {
+            text-align: center;
+            padding: 12px 0;
+            font-size: 2rem;
+            color: #3b82f6;
+        }
+
+        .connector-label {
+            font-size: .85rem;
+            color: #64748b;
+            margin-top: -6px;
+            margin-bottom: 8px;
+        }
+
+        /* ── LEVEL 2: HOW IT WORKS ── */
+        #how {
+            background: #f0f4ff;
+        }
+
+        .how-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .how-card {
+            background: white;
+            border-radius: 20px;
+            padding: 28px 20px;
+            border-left: 5px solid;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, .06);
+            transition: transform .2s;
+        }
+
+        .how-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .how-card .icon {
+            font-size: 36px;
+            margin-bottom: 14px;
+        }
+
+        .how-card h3 {
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .how-card p {
+            font-size: .84rem;
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        /* ── LEVEL 3: DATA STORAGE ── */
+        #data {
+            background: #fff;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+            gap: 18px;
+        }
+
+        .data-card {
+            background: #f8faff;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px 16px;
+            transition: transform .2s, border-color .2s;
+        }
+
+        .data-card:hover {
+            transform: translateY(-3px);
+            border-color: #3b82f6;
+        }
+
+        .data-card .tag {
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            padding: 3px 10px;
+            border-radius: 99px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .data-card h3 {
+            font-size: .95rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .data-card p {
+            font-size: .8rem;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .data-card ul {
+            font-size: .8rem;
+            color: #475569;
+            padding-left: 16px;
+            margin-top: 8px;
+            line-height: 1.8;
+        }
+
+        /* ── FLOW DIAGRAM ── */
+        #flow {
+            background: #1e3a8a;
+            color: white;
+        }
+
+        #flow .section-title,
+        #flow .section-sub {
+            color: white;
+        }
+
+        #flow .section-sub {
+            opacity: .8;
+        }
+
+        .flow-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .flow-box {
+            background: rgba(255, 255, 255, .12);
+            border: 2px solid rgba(255, 255, 255, .25);
+            border-radius: 16px;
+            padding: 18px 24px;
+            text-align: center;
+            min-width: 140px;
+            backdrop-filter: blur(8px);
+        }
+
+        .flow-box .icon {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .flow-box span {
+            font-size: .85rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .flow-arrow {
+            font-size: 24px;
+            opacity: .7;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            background: #1e293b;
+            color: #94a3b8;
+            text-align: center;
+            padding: 24px;
+            font-size: .85rem;
+        }
+
+        /* ── COLORS ── */
+        .c-blue {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .c-green {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .c-purple {
+            background: #f3e8ff;
+            color: #7e22ce;
+        }
+
+        .c-orange {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+
+        .c-pink {
+            background: #fce7f3;
+            color: #be185d;
+        }
+
+        .c-teal {
+            background: #ccfbf1;
+            color: #0f766e;
+        }
+
+        .c-yellow {
+            background: #fef9c3;
+            color: #a16207;
+        }
+
+        .c-red {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .c-slate {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .border-blue {
+            border-color: #3b82f6;
+        }
+
+        .border-green {
+            border-color: #22c55e;
+        }
+
+        .border-purple {
+            border-color: #a855f7;
+        }
+
+        .border-orange {
+            border-color: #f97316;
+        }
+
+        .border-pink {
+            border-color: #ec4899;
+        }
+
+        .border-teal {
+            border-color: #14b8a6;
+        }
+
+        .border-red {
+            border-color: #ef4444;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ══════════ HEADER ══════════ -->
+    <header>
+        <span class="emoji">🏫</span>
+        <h1>School Management System</h1>
+        <p>A simple guide to how the system works — no technical knowledge needed!</p>
+    </header>
+
+
+    <!-- ══════════ LEVEL 1: WHO USES IT ══════════ -->
+    <div style="background:#fff;">
+        <section id="people">
+            <h2 class="section-title">👥 Part 1 — Who Uses the System?</h2>
+            <p class="section-sub">These are the real people who log in every day and use the app to do their jobs.</p>
+
+            <div class="people-grid">
+
+                <div class="person-card">
+                    <div class="avatar" style="background:#dbeafe;">👨‍💼</div>
+                    <h3>School Admin</h3>
+                    <p>The boss of the system. Can see and manage everything — students, staff, money, reports, and
+                        settings.</p>
+                </div>
+
+                <div class="person-card">
+                    <div class="avatar" style="background:#dcfce7;">👩‍🏫</div>
+                    <h3>Teacher</h3>
+                    <p>Views their classes, marks student attendance, enters grades, and sends messages to the admin.
+                    </p>
+                </div>
+
+                <div class="person-card">
+                    <div class="avatar" style="background:#f3e8ff;">👩‍💻</div>
+                    <h3>Office Worker</h3>
+                    <p>Handles student information, registration, and helps manage the school schedule.</p>
+                </div>
+
+            </div>
+        </section>
+    </div>
+
+
+    <!-- ══════════ LEVEL 2: HOW IT WORKS ══════════ -->
+    <div style="background:#f0f4ff;">
+        <section id="how">
+            <h2 class="section-title">⚙️ Part 2 — How Does It Work?</h2>
+            <p class="section-sub">Think of the system as 4 layers — like floors in a building, each with its own job.
+            </p>
+
+            <div class="how-grid">
+
+                <div class="how-card border-blue">
+                    <div class="icon">🖥️</div>
+                    <h3>The App (What you see)</h3>
+                    <p>This is the website you open in your browser. It has 8 different pages — Dashboard, Students,
+                        Staff, Classes, Reports, Schedule, Settings, and Messages.</p>
+                    <p style="margin-top:10px; font-size:.8rem; color:#94a3b8;">Like: The front desk of a school that
+                        everyone walks into.</p>
+                </div>
+
+                <div class="how-card border-green">
+                    <div class="icon">🧠</div>
+                    <h3>The Brain (DataContext)</h3>
+                    <p>A hidden layer that holds all the information in memory while you're using the app. When you
+                        change something, it instantly updates everywhere on screen.</p>
+                    <p style="margin-top:10px; font-size:.8rem; color:#94a3b8;">Like: The school office that knows where
+                        every student file is.</p>
+                </div>
+
+                <div class="how-card border-purple">
+                    <div class="icon">📡</div>
+                    <h3>The Messenger (Services)</h3>
+                    <p>A set of helpers that talk to the database and save your changes. When you add a student, the
+                        messenger carries that info to the database for permanent storage.</p>
+                    <p style="margin-top:10px; font-size:.8rem; color:#94a3b8;">Like: A courier that carries letters
+                        between the office and the filing room.</p>
+                </div>
+
+                <div class="how-card border-orange">
+                    <div class="icon">⚡</div>
+                    <h3>The Flash Engine (localStorage)</h3>
+                    <p>The primary storage engine running natively on your computer. It stores all students, grades, and
+                        settings directly in your browser for zero-latency loading and instant data saving.</p>
+                    <p style="margin-top:10px; font-size:.8rem; color:#94a3b8;">Like: A filing cabinet sitting right on
+                        your desk for immediate access.</p>
+                </div>
+
+                <div class="how-card border-teal">
+                    <div class="icon">🔒</div>
+                    <h3>Local-First Mode</h3>
+                    <p>The system is currently running entirely offline. Cloud synchronization has been safely decoupled
+                        to prevent slow load times. Your data will never lag or wait for the internet.</p>
+                    <p style="margin-top:10px; font-size:.8rem; color:#94a3b8;">Like: A fully self-contained management
+                        suite.</p>
+                </div>
+
+            </div>
+        </section>
+    </div>
+
+
+    <!-- ══════════ FLOW ══════════ -->
+    <div style="background:#1e3a8a;">
+        <section id="flow">
+            <h2 class="section-title">🔄 How Information Moves</h2>
+            <p class="section-sub">When you do something in the app (e.g. add a student), here's what happens step by
+                step:</p>
+
+            <div class="flow-row">
+                <div class="flow-box">
+                    <div class="icon">👆</div>
+                    <span>You click<br />in the app</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="icon">🧠</div>
+                    <span>Brain updates<br />the screen</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="icon">💾</div>
+                    <span>Saved locally<br />(instant)</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="icon">⚡</div>
+                    <span>Saved instantly<br />in local engine</span>
+                </div>
+            </div>
+
+            <p style="text-align:center; margin-top:24px; opacity:.7; font-size:.9rem;">
+                📶 Zero latency: Your changes are saved onto your hyper-optimized offline database and available
+                immediately across all pages.
+            </p>
+        </section>
+    </div>
+
+
+    <!-- ══════════ LEVEL 3: DATA STORED ══════════ -->
+    <div style="background:#fff;">
+        <section id="data">
+            <h2 class="section-title">📂 Part 3 — What Data Is Stored?</h2>
+            <p class="section-sub">Think of the database as a filing room with different folders — one for each topic.
+            </p>
+
+            <div class="data-grid">
+
+                <div class="data-card">
+                    <span class="tag c-blue">👨‍🎓 Students</span>
+                    <h3>Student Records</h3>
+                    <p>Everything about each student.</p>
+                    <ul>
+                        <li>Name, gender, date of birth</li>
+                        <li>Phone number</li>
+                        <li>Enrollment date</li>
+                        <li>Status (Active / Suspended)</li>
+                        <li>Tuition paid vs. total</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-green">👩‍🏫 Staff</span>
+                    <h3>Staff Records</h3>
+                    <p>Details of every employee.</p>
+                    <ul>
+                        <li>Name & role (Teacher, Guard…)</li>
+                        <li>Subject they teach</li>
+                        <li>Contact number</li>
+                        <li>Date they were hired</li>
+                        <li>Login password</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-purple">🏫 Classes</span>
+                    <h3>Class Listings</h3>
+                    <p>Details of each class/classroom.</p>
+                    <ul>
+                        <li>Class name & level</li>
+                        <li>Which teacher runs it</li>
+                        <li>Schedule / timetable</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-orange">📋 Enrollments</span>
+                    <h3>Who's in Which Class</h3>
+                    <p>Links students to their classes.</p>
+                    <ul>
+                        <li>Student name</li>
+                        <li>Class name</li>
+                        <li>Academic year</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-teal">📝 Grades</span>
+                    <h3>Student Grades</h3>
+                    <p>Scores for each subject.</p>
+                    <ul>
+                        <li>Student name</li>
+                        <li>Subject</li>
+                        <li>Score (0–10)</li>
+                        <li>Term (Semester 1, 2…)</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-red">📅 Attendance</span>
+                    <h3>Daily Attendance</h3>
+                    <p>Who came to school each day.</p>
+                    <ul>
+                        <li>Student name</li>
+                        <li>Date</li>
+                        <li>Status: Present / Absent / Late</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-yellow">📆 Events</span>
+                    <h3>School Calendar</h3>
+                    <p>Important dates for the school.</p>
+                    <ul>
+                        <li>Event title</li>
+                        <li>Date</li>
+                        <li>Type: Holiday, Exam, Meeting</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-pink">🏖️ Staff Leave</span>
+                    <h3>Leave Requests</h3>
+                    <p>When staff take time off.</p>
+                    <ul>
+                        <li>Staff name</li>
+                        <li>Type of leave</li>
+                        <li>Start & end date</li>
+                        <li>Reason given</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-orange">🚪 Daily Logs</span>
+                    <h3>Gate Entry / Exit Log</h3>
+                    <p>Recorded by the Guard.</p>
+                    <ul>
+                        <li>Who entered or exited</li>
+                        <li>Purpose of visit</li>
+                        <li>Time & date</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-red">🚨 Incidents</span>
+                    <h3>Incident Reports</h3>
+                    <p>Security problems reported.</p>
+                    <ul>
+                        <li>Title of incident</li>
+                        <li>Description</li>
+                        <li>Severity: Low / Medium / High</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-teal">🧹 Rooms</span>
+                    <h3>Room Status</h3>
+                    <p>Cleaning updates by Cleaner.</p>
+                    <ul>
+                        <li>Room name</li>
+                        <li>Status: Cleaned / Needs Attention</li>
+                        <li>Who updated it</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-blue">💬 Messages</span>
+                    <h3>Internal Messages</h3>
+                    <p>Staff ↔ Admin communication.</p>
+                    <ul>
+                        <li>Who sent & who received</li>
+                        <li>Message content</li>
+                        <li>Type: Text, Leave request, Announcement</li>
+                        <li>Read / Unread status</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-slate">⚙️ Settings</span>
+                    <h3>School Configuration</h3>
+                    <p>General school settings.</p>
+                    <ul>
+                        <li>School levels (Grade 1, 2…)</li>
+                        <li>Subjects list</li>
+                        <li>Time slots / timetable</li>
+                        <li>Admin password</li>
+                    </ul>
+                </div>
+
+                <div class="data-card">
+                    <span class="tag c-slate">🕵️ History Log</span>
+                    <h3>Change History</h3>
+                    <p>Automatic record of all changes.</p>
+                    <ul>
+                        <li>What was changed</li>
+                        <li>Old value vs. new value</li>
+                        <li>Date & time of change</li>
+                    </ul>
+                </div>
+
+            </div>
+        </section>
+    </div>
+
+
+    <!-- ══════════ FOOTER ══════════ -->
+    <footer>
+        🏫 SchoolAdmin System — Architecture Overview &nbsp;|&nbsp; Designed for everyone to understand
+    </footer>
+
+</body>
+
+</html>

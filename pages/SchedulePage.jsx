@@ -15,12 +15,12 @@ const formatLocalDate = (date) => {
  * COMPONENT: EventModal
  * DESCRIPTION: Inlined modal for adding or editing events.
  */
-const EventModal = ({ eventData, onClose }) => {
+const EventModal = ({ eventData, selectedDate, onClose }) => {
     // --- 1.1. MODAL STATE & DATA ---
     const { addEvent, updateEvent, deleteEvent } = useData();
     const [formData, setFormData] = useState({
         title: '',
-        date: formatLocalDate(new Date()),
+        date: selectedDate || formatLocalDate(new Date()),
         type: EventType.General,
         description: '',
     });
@@ -147,10 +147,23 @@ const EventModal = ({ eventData, onClose }) => {
  */
 const SchedulePage = () => {
     // --- 2.1. STATE & DATA ---
-    const { events } = useData();
+    const { events, addEvent } = useData();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState(null);
+    const [selectedDateFilter, setSelectedDateFilter] = useState(null);
+
+    // Auto-populate mock demo data if empty
+    useEffect(() => {
+        if (events.length === 0) {
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            
+            addEvent({ title: 'K1 Midterm Exam', date: `${year}-${month}-23`, type: EventType.Exam, description: 'Midterm examinations for K1.' });
+            addEvent({ title: 'Staff Meeting', date: `${year}-${month}-27`, type: EventType.Meeting, description: 'Monthly all-staff planning meeting.' });
+            addEvent({ title: 'Public Holiday', date: `${year}-${month}-30`, type: EventType.Holiday, description: 'School closed for public holiday.' });
+        }
+    }, [events.length, addEvent, currentDate]);
 
     const eventTypeClasses = {
         [EventType.Holiday]: 'bg-red-500 hover:bg-red-600',
@@ -168,14 +181,16 @@ const SchedulePage = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
-    const handleOpenModal = (event = null) => {
+    const handleOpenModal = (event = null, dateString = null) => {
         setEditingEvent(event);
+        setSelectedDateFilter(dateString);
         setIsModalOpen(true);
     };
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingEvent(null);
+        setSelectedDateFilter(null);
     };
 
     // --- 2.3. MEMOIZED CALENDAR DATA ---
@@ -227,6 +242,11 @@ const SchedulePage = () => {
                     <h1 className="text-3xl font-bold text-gray-800 tracking-tight">School Schedule</h1>
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
+                    <div className="hidden md:flex bg-slate-100 p-1 rounded-lg text-sm font-medium mr-4 shadow-inner">
+                        <button className="px-3 py-1.5 bg-white text-slate-800 rounded-md shadow-sm">Month</button>
+                        <button className="px-3 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-md transition-colors">Week</button>
+                        <button className="px-3 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-md transition-colors">Day</button>
+                    </div>
                     <div className="flex items-center gap-4">
                         <button onClick={handlePrevMonth} className="p-2 rounded-full hover:bg-gray-200" aria-label="Previous month">
                             <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -247,10 +267,10 @@ const SchedulePage = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-4 rounded-lg shadow">
-                <div className="grid grid-cols-7 gap-px">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div className="grid grid-cols-7 gap-px rounded-t-lg overflow-hidden">
                     {weekdays.map(day => (
-                        <div key={day} className="text-center font-semibold text-gray-600 py-2">{day}</div>
+                        <div key={day} className="text-center font-bold text-slate-700 bg-slate-50 py-3 uppercase tracking-wider text-[11px]">{day}</div>
                     ))}
                 </div>
                 <div className="grid grid-cols-7 grid-rows-5 gap-px border-t border-gray-200">
@@ -260,18 +280,22 @@ const SchedulePage = () => {
                         const dayEvents = day ? (eventsByDate.get(dateKey) || []) : [];
 
                         return (
-                            <div key={index} className="relative min-h-[120px] bg-white border-r border-b border-gray-200 p-2">
+                            <div 
+                                key={index} 
+                                className={`relative min-h-[120px] bg-white border-r border-b border-gray-200 p-2 ${day ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : ''}`}
+                                onClick={() => day && handleOpenModal(null, dateKey)}
+                            >
                                 {day && (
                                     <>
-                                        <span className={`absolute top-2 right-2 text-sm font-semibold ${isToday ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : 'text-gray-700'}`}>
+                                        <span className={`absolute top-2 right-2 text-sm font-semibold transition-colors ${isToday ? 'bg-primary-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-md' : 'text-gray-500 group-hover:text-primary-600'}`}>
                                             {day.getDate()}
                                         </span>
                                         <div className="mt-8 space-y-1">
                                             {dayEvents.map(event => (
                                                 <button
                                                     key={event.id}
-                                                    onClick={() => handleOpenModal(event)}
-                                                    className={`w-full text-left text-white text-xs font-semibold p-1.5 rounded-md truncate transition-colors ${eventTypeClasses[event.type]}`}
+                                                    onClick={(e) => { e.stopPropagation(); handleOpenModal(event); }}
+                                                    className={`w-full text-left text-white text-[11px] font-bold py-1 px-1.5 rounded truncate transition-colors shadow-sm hover:shadow ${eventTypeClasses[event.type]}`}
                                                     title={event.title}
                                                 >
                                                     {event.title}
@@ -286,7 +310,7 @@ const SchedulePage = () => {
                 </div>
             </div>
 
-            {isModalOpen && <EventModal eventData={editingEvent} onClose={handleCloseModal} />}
+            {isModalOpen && <EventModal eventData={editingEvent} selectedDate={selectedDateFilter} onClose={handleCloseModal} />}
         </div>
     );
 };

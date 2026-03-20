@@ -168,7 +168,7 @@ export const AdminDashboard = ({ navigate }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                    <Card title="Academic Performance Heatmap">
+                    <Card title="Average Performance by Level">
                         <PerformanceChart subjectFilter="All" />
                     </Card>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -223,7 +223,18 @@ export const AdminDashboard = ({ navigate }) => {
                                     </div>
                                 </div>
                             ))}
-                            {upcomingEvents.length === 0 && <p className="text-sm text-slate-400 italic">No upcoming events.</p>}
+                            {upcomingEvents.length === 0 && (
+                                <div className="flex gap-4 opacity-50 grayscale hover:grayscale-0 transition-all cursor-default" title="Example Event Placeholder">
+                                    <div className="flex flex-col items-center justify-center w-12 h-12 bg-slate-100 rounded-xl text-slate-500 border border-slate-200 shrink-0">
+                                        <span className="text-[10px] font-bold uppercase">Oct</span>
+                                        <span className="text-lg font-black leading-none">15</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-slate-600 text-sm">Staff Meeting (Example)</h4>
+                                        <p className="text-xs text-slate-400 line-clamp-1">Discussing Q4 curriculum changes in the main hall.</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </Card>
 
@@ -243,7 +254,20 @@ export const AdminDashboard = ({ navigate }) => {
                                     </div>
                                 </div>
                             ))}
-                            {recentActivity.length === 0 && <p className="text-sm text-slate-400 italic">No recent activity found.</p>}
+                            {recentActivity.length === 0 && (
+                                <div className="flex items-start gap-3 opacity-50 grayscale cursor-default transition-all hover:grayscale-0" title="Example Activity Placeholder">
+                                    <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full shrink-0 bg-slate-200 text-slate-500">
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-slate-500"><span className="font-bold">System Admin</span> updated settings</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[10px] text-slate-400 font-medium">08:00 AM</span>
+                                            <span className="text-[10px] text-slate-400 font-medium truncate max-w-[150px]">— Example activity log</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </Card>
 
