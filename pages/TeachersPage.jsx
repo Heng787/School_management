@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
-import { StaffRole } from '../types';
+import { StaffRole, UserRole } from '../types';
 import { generateStaffCSV } from '../utils/reportGenerator';
 import { parseStaffCSV } from '../utils/csvParser';
 import ImportResultsModal from '../components/ImportResultsModal';
@@ -176,10 +176,7 @@ const StaffPage = () => {
                 s.contact.toLowerCase().includes(searchQuery.toLowerCase());
 
             const isTeaching = s.role === StaffRole.Teacher || s.role === StaffRole.AssistantTeacher;
-            const matchesTab = activeTab === 'all' ||
-                (activeTab === 'teaching' && isTeaching) ||
-                (activeTab === 'support' && !isTeaching);
-
+            const matchesTab = activeTab === 'all' || s.role === activeTab || (activeTab === 'teaching' && isTeaching) || (activeTab === 'support' && !isTeaching);
             return matchesSearch && matchesTab;
         });
     }, [staff, searchQuery, activeTab]);
@@ -383,8 +380,10 @@ const StaffPage = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row justify-between gap-4">
                 <div className="flex bg-gray-100 p-1 rounded-lg">
                     <button onClick={() => setActiveTab('all')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'all' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
-                    <button onClick={() => setActiveTab('teaching')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'teaching' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Teaching</button>
-                    <button onClick={() => setActiveTab('support')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'support' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Support</button>
+                    <button onClick={() => setActiveTab(StaffRole.Teacher)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.Teacher ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Teachers</button>
+                    <button onClick={() => setActiveTab(StaffRole.OfficeWorker)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.OfficeWorker ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Office</button>
+                    <button onClick={() => setActiveTab(StaffRole.Guard)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.Guard ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Guards</button>
+                    <button onClick={() => setActiveTab(StaffRole.Cleaner)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.Cleaner ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Cleaners</button>
 
                     <div className="w-px bg-gray-300 mx-2 my-1"></div>
 
