@@ -200,9 +200,9 @@ const ClassModal = ({ classData, onClose }) => {
     }, [scheduleType, timeSlots]);
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-            <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-3xl">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">{classData ? 'Edit Class' : 'Add New Class'}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-2 sm:p-4">
+            <div className="bg-white rounded-lg shadow-xl p-5 sm:p-8 w-full max-w-3xl max-h-[95vh] overflow-y-auto">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">{classData ? 'Edit Class' : 'Add New Class'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="name" className="block text-sm font-medium text-primary-900">Class Name / Room</label>

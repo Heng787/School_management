@@ -321,12 +321,10 @@ export const DataProvider = ({ children }) => {
                 e.classId === classId && !studentIds.includes(e.studentId)
             );
             
-            // 3. Process deletions sequentially in Supabase
+            // 3. Process deletions in parallel for efficiency
             if (enrollmentsToDelete.length > 0) {
-                console.log(`Cleaning up ${enrollmentsToDelete.length} removed enrollments for class ${classId}...`);
-                for (const enr of enrollmentsToDelete) {
-                    await apiService.deleteRecord('enrollments', enr.id);
-                }
+                console.log(`Cleaning up ${enrollmentsToDelete.length} removed enrollments for class ${classId} in parallel...`);
+                await Promise.all(enrollmentsToDelete.map(enr => apiService.deleteRecord('enrollments', enr.id)));
             }
 
             const newEnrollments = studentIds.map(sid => ({
