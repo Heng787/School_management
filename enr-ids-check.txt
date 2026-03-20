@@ -1,0 +1,10 @@
+﻿=== Checking All Enrollments in Supabase ===
+Found 4 total enrollments.
+
+Class: class_1772611464540 (3 students)
+  - Student: s10, ID: enr_class_1772611464540_s10, Year: 2026
+  - Student: s4, ID: enr_class_1772611464540_s4, Year: 2026
+  - Student: s15, ID: enr_class_1772611464540_s15, Year: 2026
+
+Class: class_1773913231774 (1 students)
+  - Student: s11, ID: enr_class_1773913231774_s11, Year: 2026

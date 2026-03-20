@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 # School Admin Portal (Offline-Ready)
 
@@ -30,3 +31,7 @@ All data is stored **locally** on the specific device being used. If you want to
 1. Laptop: Go to **Settings > Database** and click **Backup Database**.
 2. Send the `.json` file to your phone.
 3. Phone: Go to **Settings > Database** and click **Restore Database**.
+=======
+# school-management-system
+not typescript 
+>>>>>>> f4adaf6a2cf3339515f51d51c3ca093f21d61c04
