@@ -234,20 +234,24 @@ const MarksEntry = () => {
                     <p className="text-slate-500">This class has no students enrolled yet.</p>
                 </div>
             ) : selectedClassId ? (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                        <table className="min-w-full divide-y divide-slate-100 table-fixed">
-                            <thead className="bg-slate-50 sticky top-0 z-10">
-                                <tr>
-                                    <th className="w-64 px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-r border-slate-100">Student Name</th>
-                                    {subjects.map(subject => (
-                                        <th key={subject} className="px-4 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[120px]">
-                                            {subject}
-                                        </th>
-                                    ))}
-                                    <th className="w-24 px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-l border-slate-100">Avg / 10</th>
-                                </tr>
-                            </thead>
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
+                    <div className="overflow-auto max-h-[600px]">
+                        <div className="min-w-full inline-block align-middle">
+                            {/* Horizontal Scroll Indicator for Mobile */}
+                            <div className="sm:hidden absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent pointer-events-none z-20"></div>
+
+                            <table className="min-w-full divide-y divide-slate-100 table-fixed border-separate border-spacing-0">
+                                <thead className="bg-slate-50 sticky top-0 z-30 shadow-sm">
+                                    <tr>
+                                        <th className="w-40 sm:w-64 px-4 sm:px-6 py-3 sm:py-4 text-left text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-r border-slate-100 sticky left-0 z-40">Student Name</th>
+                                        {subjects.map(subject => (
+                                            <th key={subject} className="px-2 sm:px-4 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[80px] sm:min-w-[120px]">
+                                                {subject}
+                                            </th>
+                                        ))}
+                                        <th className="w-20 sm:w-24 px-4 sm:px-6 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-l border-slate-100">Avg</th>
+                                    </tr>
+                                </thead>
                             <tbody className="bg-white divide-y divide-slate-100">
                                 {classStudents.map(student => {
                                     const scores = subjects.map(sub => Number(localGrades[student.id]?.[sub] || 0));
@@ -256,40 +260,42 @@ const MarksEntry = () => {
 
                                     return (
                                         <tr key={student.id} className={`transition-colors ${isModified ? 'bg-amber-50/30' : 'hover:bg-slate-50/50'}`}>
-                                            <td className="px-6 py-4 whitespace-nowrap bg-white sticky left-0 z-10 border-r border-slate-100">
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap bg-white sticky left-0 z-20 border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                 <div className="flex items-center">
-                                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs mr-3 ${isModified ? 'bg-amber-100 text-amber-700' : 'bg-primary-100 text-primary-700'}`}>
+                                                    <div className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs mr-2 sm:mr-3 shrink-0 ${isModified ? 'bg-amber-100 text-amber-700' : 'bg-primary-100 text-primary-700'}`}>
                                                         {student.name.charAt(0)}
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-800 flex items-center">
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs sm:text-sm font-bold text-slate-800 flex items-center truncate max-w-[80px] sm:max-w-none">
                                                             {student.name}
-                                                            {isModified && <span className="ml-2 w-1.5 h-1.5 rounded-full bg-amber-500" title="Unsaved changes"></span>}
+                                                            {isModified && <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Unsaved changes"></span>}
                                                         </p>
-                                                        <p className="text-[10px] font-medium text-slate-400">ID: {student.id}</p>
+                                                        <p className="text-[9px] sm:text-[10px] font-medium text-slate-400 hidden sm:block">ID: {student.id}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             {subjects.map(subject => (
-                                                <td key={subject} className="px-2 py-3">
+                                                <td key={subject} className="px-1 sm:px-2 py-2 sm:py-3">
                                                     <input
                                                         type="number"
                                                         min="0"
                                                         max="10"
                                                         step="0.1"
                                                         placeholder="0.0"
+                                                        name={`admin-score-${student.id}-${subject}`}
+                                                        autoComplete="off"
                                                         value={localGrades[student.id]?.[subject] ?? ''}
                                                         onChange={(e) => handleGradeChange(student.id, subject, e.target.value)}
                                                         onFocus={(e) => e.target.select()}
-                                                        className={`w-full text-center py-2 rounded-lg border text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${Number(localGrades[student.id]?.[subject]) >= 9.0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
+                                                        className={`w-full text-center py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${Number(localGrades[student.id]?.[subject]) >= 9.0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
                                                             Number(localGrades[student.id]?.[subject]) < 5.0 ? 'text-red-600 bg-red-50 border-red-100' :
                                                                 'text-slate-700 bg-white border-slate-200'
                                                             }`}
                                                     />
                                                 </td>
                                             ))}
-                                            <td className="px-6 py-4 whitespace-nowrap text-center bg-slate-50/30 border-l border-slate-100">
-                                                <span className={`text-sm font-black ${Number(avg) >= 9.0 ? 'text-emerald-600' : Number(avg) < 5.0 ? 'text-red-600' : 'text-slate-700'}`}>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-center bg-slate-50/30 border-l border-slate-100">
+                                                <span className={`text-xs sm:text-sm font-black ${Number(avg) >= 9.0 ? 'text-emerald-600' : Number(avg) < 5.0 ? 'text-red-600' : 'text-slate-700'}`}>
                                                     {avg}
                                                 </span>
                                             </td>
@@ -299,6 +305,7 @@ const MarksEntry = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
                 </div>
             ) : (
                 <div className="p-20 flex flex-col items-center justify-center bg-white rounded-xl border border-dashed border-slate-200 opacity-60">

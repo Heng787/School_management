@@ -205,8 +205,8 @@ export const GradesModal = ({ classData, students, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]">
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
                     <div>
                         <h2 className="text-xl font-bold text-slate-800">Grades</h2>
@@ -234,19 +234,23 @@ export const GradesModal = ({ classData, students, onClose }) => {
                     </div>
                 </div>
 
-                <div className="overflow-y-auto flex-1 bg-white">
-                    <table className="min-w-full divide-y divide-slate-100 table-fixed">
-                        <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
-                            <tr>
-                                <th className="w-64 px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-100">Student Name</th>
-                                {subjects.map(subject => (
-                                    <th key={subject} className="px-4 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                        {subject}
-                                    </th>
-                                ))}
-                                <th className="w-24 px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider border-l border-slate-100">Avg / 10</th>
-                            </tr>
-                        </thead>
+                <div className="overflow-auto flex-1 bg-white relative">
+                    <div className="min-w-full inline-block align-middle">
+                        {/* Horizontal Scroll Indicator for Mobile */}
+                        <div className="sm:hidden absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent pointer-events-none z-20"></div>
+                        
+                        <table className="min-w-full divide-y divide-slate-100 table-fixed border-separate border-spacing-0">
+                            <thead className="bg-slate-50 sticky top-0 z-30 shadow-sm">
+                                <tr>
+                                    <th className="w-40 sm:w-64 px-4 sm:px-6 py-3 sm:py-4 text-left text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-100 bg-slate-50 sticky left-0 z-40">Student Name</th>
+                                    {subjects.map(subject => (
+                                        <th key={subject} className="px-2 sm:px-4 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[80px] sm:min-w-[120px]">
+                                            {subject}
+                                        </th>
+                                    ))}
+                                    <th className="w-20 sm:w-24 px-4 sm:px-6 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider border-l border-slate-100 bg-slate-50">Avg</th>
+                                </tr>
+                            </thead>
                         <tbody className="bg-white divide-y divide-slate-100">
                             {students.map(student => {
                                 const scores = subjects.map(sub => parseFloat(scoreMap[student.id]?.[sub])).filter(n => !isNaN(n));
@@ -254,28 +258,30 @@ export const GradesModal = ({ classData, students, onClose }) => {
 
                                 return (
                                     <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap bg-white border-r border-slate-100 sticky left-0 z-0">
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap bg-white border-r border-slate-100 sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                             <div className="flex items-center">
-                                                <div className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs mr-3 bg-gradient-to-br from-indigo-100 to-blue-100 text-blue-700 shadow-inner">
+                                                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs mr-2 sm:mr-3 bg-gradient-to-br from-indigo-100 to-blue-100 text-blue-700 shadow-inner shrink-0">
                                                     {student.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-slate-800">{student.name}</p>
-                                                    <p className="text-[10px] font-medium text-slate-400">ID: {student.id}</p>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-[80px] sm:max-w-none">{student.name}</p>
+                                                    <p className="text-[9px] sm:text-[10px] font-medium text-slate-400 hidden sm:block">ID: {student.id}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         {subjects.map(subject => (
-                                            <td key={subject} className="px-2 py-3">
+                                            <td key={subject} className="px-1 sm:px-2 py-2 sm:py-3">
                                                 <input
                                                     type="number"
                                                     min="0"
                                                     max="10"
                                                     step="0.1"
                                                     placeholder="0.0"
+                                                    name={`score-${student.id}-${subject}`}
+                                                    autoComplete="off"
                                                     value={scoreMap[student.id]?.[subject] ?? ''}
                                                     onChange={(e) => handleScoreChange(student.id, subject, e.target.value)}
-                                                    className={`w-full text-center py-2 rounded-lg border text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none 
+                                                    className={`w-full text-center py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none 
                                                         ${parseFloat(scoreMap[student.id]?.[subject]) >= 9.0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
                                                             parseFloat(scoreMap[student.id]?.[subject]) < 5.0 ? 'text-red-600 bg-red-50 border-red-100' :
                                                                 scoreMap[student.id]?.[subject] !== "" ? 'text-slate-700 bg-white border-slate-200 hover:border-slate-300' :
@@ -284,7 +290,7 @@ export const GradesModal = ({ classData, students, onClose }) => {
                                                 />
                                             </td>
                                         ))}
-                                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-bold border-l border-slate-100">
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-center text-xs sm:text-sm font-bold border-l border-slate-100 bg-slate-50/30">
                                             <span className={`${parseFloat(avg) >= 9.0 ? 'text-emerald-600' : parseFloat(avg) < 5.0 && parseFloat(avg) > 0 ? 'text-red-600' : 'text-slate-700'}`}>
                                                 {avg}
                                             </span>
@@ -301,6 +307,7 @@ export const GradesModal = ({ classData, students, onClose }) => {
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end space-x-3 shrink-0">
