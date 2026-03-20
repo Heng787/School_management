@@ -230,6 +230,9 @@ const SchedulePage = () => {
         return { calendarGrid: grid, eventsByDate: groupedEvents };
 
     }, [currentDate, events]);
+    
+    // NEW: state for specifically viewing events for a date on mobile
+    const [mobileSelectedDate, setMobileSelectedDate] = useState(formatLocalDate(new Date()));
 
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const today = new Date();
@@ -268,11 +271,11 @@ const SchedulePage = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-2 sm:p-4 rounded-xl shadow-sm border border-slate-200 overflow-x-auto scrollbar-hide">
-                <div className="min-w-[800px] md:min-w-0">
+            <div className="bg-white p-2 sm:p-4 rounded-xl shadow-sm border border-slate-200">
+                <div className="">
                     <div className="grid grid-cols-7 gap-px rounded-t-lg overflow-hidden border-b border-slate-100">
                         {weekdays.map(day => (
-                            <div key={day} className="text-center font-bold text-slate-700 bg-slate-50/50 py-3 uppercase tracking-wider text-[11px]">{day}</div>
+                            <div key={day} className="text-center font-bold text-slate-700 bg-slate-50/50 py-2 sm:py-3 uppercase tracking-wider text-[10px] sm:text-[11px]">{day}</div>
                         ))}
                     </div>
                     <div className="grid grid-cols-7 gap-px">
@@ -280,29 +283,50 @@ const SchedulePage = () => {
                             const isToday = day && day.getTime() === today.getTime();
                             const dateKey = day ? formatLocalDate(day) : '';
                             const dayEvents = day ? (eventsByDate.get(dateKey) || []) : [];
+                            const isSelected = mobileSelectedDate === dateKey && day;
 
                             return (
                                 <div 
                                     key={index} 
-                                    className={`relative min-h-[90px] sm:min-h-[120px] bg-white border-r border-b border-slate-100 p-1.5 sm:p-2 ${day ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : 'bg-slate-50/20'}`}
-                                    onClick={() => day && handleOpenModal(null, dateKey)}
+                                    className={`relative min-h-[60px] sm:min-h-[120px] bg-white border-r border-b border-slate-100 p-1 sm:p-2 
+                                        ${day ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : 'bg-slate-50/20'}
+                                        ${isSelected ? 'ring-2 ring-inset ring-primary-500 bg-primary-50' : ''}
+                                    `}
+                                    onClick={() => {
+                                        if (day) {
+                                            setMobileSelectedDate(dateKey);
+                                        }
+                                    }}
                                 >
                                     {day && (
                                         <>
-                                            <span className={`absolute top-1.5 right-1.5 text-xs sm:text-sm font-semibold transition-colors ${isToday ? 'bg-primary-600 text-white rounded-full w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shadow-md' : 'text-slate-400 group-hover:text-primary-600'}`}>
+                                            <span className={`absolute top-1 sm:top-1.5 right-1 sm:right-1.5 text-[10px] sm:text-sm font-semibold transition-colors 
+                                                ${isToday ? 'bg-primary-600 text-white rounded-full w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center shadow-md' : 'text-slate-400 group-hover:text-primary-600'}
+                                                ${isSelected && !isToday ? '!text-primary-600 font-bold' : ''}
+                                            `}>
                                                 {day.getDate()}
                                             </span>
-                                            <div className="mt-7 sm:mt-8 space-y-1">
+                                            
+                                            {/* Desktop View: Buttons */}
+                                            <div className="hidden sm:block mt-8 space-y-1">
                                                 {dayEvents.map(event => (
                                                     <button
                                                         key={event.id}
                                                         onClick={(e) => { e.stopPropagation(); handleOpenModal(event); }}
-                                                        className={`w-full text-left text-white text-[10px] sm:text-[11px] font-bold py-1 px-1.5 rounded truncate transition-colors shadow-sm hover:shadow active:scale-95 ${eventTypeClasses[event.type]}`}
+                                                        className={`w-full text-left text-white text-[11px] font-bold py-1 px-1.5 rounded truncate transition-colors shadow-sm hover:shadow active:scale-95 ${eventTypeClasses[event.type]}`}
                                                         title={event.title}
                                                     >
                                                         {event.title}
                                                     </button>
                                                 ))}
+                                            </div>
+
+                                            {/* Mobile View: Dots */}
+                                            <div className="flex sm:hidden justify-center items-center gap-0.5 mt-8 px-0.5">
+                                                {dayEvents.slice(0, 3).map(event => (
+                                                    <div key={event.id} className={`w-1.5 h-1.5 rounded-full ${eventTypeClasses[event.type]} ring-1 ring-white`}></div>
+                                                ))}
+                                                {dayEvents.length > 3 && <div className="text-[8px] font-bold text-slate-400">+{dayEvents.length - 3}</div>}
                                             </div>
                                         </>
                                     )}
@@ -311,6 +335,45 @@ const SchedulePage = () => {
                         })}
                     </div>
                 </div>
+            </div>
+
+            {/* --- SECTION: MOBILE SELECTED DAY EVENTS --- */}
+            <div className="sm:hidden mt-6 space-y-4">
+                 <div className="flex justify-between items-center px-2">
+                    <h3 className="font-bold text-slate-800">
+                        Events for {new Date(mobileSelectedDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </h3>
+                    <button 
+                        onClick={() => handleOpenModal(null, mobileSelectedDate)}
+                        className="text-xs font-bold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                    >
+                        + Add Event
+                    </button>
+                 </div>
+
+                 <div className="space-y-3 px-1">
+                    {eventsByDate.get(mobileSelectedDate)?.length > 0 ? (
+                        eventsByDate.get(mobileSelectedDate).map(event => (
+                            <div 
+                                key={event.id} 
+                                onClick={() => handleOpenModal(event)}
+                                className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 active:bg-slate-50 transition-colors"
+                            >
+                                <div className={`w-3 h-12 rounded-full ${eventTypeClasses[event.type]}`}></div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-slate-800 text-sm">{event.title}</h4>
+                                    <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{event.description}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">{event.type}</p>
+                                </div>
+                                <svg className="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                             <p className="text-sm text-slate-400 font-medium">No events scheduled for this day</p>
+                        </div>
+                    )}
+                 </div>
             </div>
 
             {isModalOpen && <EventModal eventData={editingEvent} selectedDate={selectedDateFilter} onClose={handleCloseModal} />}
