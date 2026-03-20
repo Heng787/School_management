@@ -17,13 +17,13 @@ const ClassIcon = () => <svg className="w-5 h-5 text-indigo-500" fill="none" str
  * A reusable KPI card component for displaying key metrics.
  */
 const KpiCard = ({ title, value, trend, subValue, badge, icon }) => (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-card hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
-        <div className="flex justify-between items-start mb-2">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</h3>
+    <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-card hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
+        <div className="flex justify-between items-start mb-1.5 sm:mb-2">
+            <h3 className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</h3>
             {icon}
         </div>
         <div className="flex items-baseline space-x-2">
-            <p className="text-3xl font-bold text-slate-800 tracking-tight">{value}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">{value}</p>
         </div>
         <div className="mt-3 flex items-center justify-between">
             {subValue && <p className="text-xs text-slate-400 font-medium">{subValue}</p>}

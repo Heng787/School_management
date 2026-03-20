@@ -700,7 +700,7 @@ const SettingsPage = ({ onLogout, userRole }) => {
 
             <div className="flex flex-col md:flex-row gap-8 items-start">
                 {/* --- UI SECTION: SIDEBAR NAVIGATION --- */}
-                <div className="w-full md:w-64 shrink-0 space-y-2">
+                <div className="w-full md:w-64 shrink-0 flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -709,13 +709,13 @@ const SettingsPage = ({ onLogout, userRole }) => {
                                 window.history.replaceState({}, '', `/settings/${tab.id}`);
                                 document.title = `Settings / ${tab.label} | SchoolAdmin`;
                             }}
-                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${activeTab === tab.id
-                                ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 translate-x-1'
+                            className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 shrink-0 md:w-full ${activeTab === tab.id
+                                ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 translate-x-0 md:translate-x-1'
                                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-transparent border-b-slate-100'
                                 }`}
                         >
                             {tab.icon}
-                            <span className="font-semibold">{tab.label}</span>
+                            <span className="font-semibold whitespace-nowrap">{tab.label}</span>
                         </button>
                     ))}
 
@@ -812,14 +812,14 @@ const SettingsPage = ({ onLogout, userRole }) => {
                             <h2 className="text-xl font-semibold text-gray-700">Cloud Sync Status</h2>
 
                             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Last Synced</p>
-                                        <p className="text-sm font-bold text-slate-600">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <div className="w-full sm:w-auto">
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 text-center sm:text-left">Last Synced</p>
+                                        <p className="text-sm font-bold text-slate-600 text-center sm:text-left">
                                             {lastSyncedAt ? lastSyncedAt.toLocaleString() : 'Never'}
                                         </p>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="w-full sm:w-auto text-center sm:text-right">
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Sync Status</p>
                                         <p className={`text-sm font-bold ${isSyncing ? 'text-blue-600 animate-pulse' : 'text-slate-600'}`}>
                                             {isSyncing ? 'Syncing...' : 'Idle'}
@@ -827,8 +827,8 @@ const SettingsPage = ({ onLogout, userRole }) => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                                    <div>
+                                <div className="flex flex-col sm:flex-row items-center justify-between pt-2 border-t border-slate-200 gap-4">
+                                    <div className="text-center sm:text-left">
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Connection Status</p>
                                         <p className={`text-sm font-bold ${navigator.onLine ? 'text-emerald-600' : 'text-red-600'}`}>
                                             {navigator.onLine ? 'Connected (Online)' : 'Disconnected (Offline)'}
@@ -836,7 +836,7 @@ const SettingsPage = ({ onLogout, userRole }) => {
                                     </div>
                                     <button
                                         onClick={() => window.location.reload()}
-                                        className="text-xs text-primary-600 font-bold hover:underline"
+                                        className="text-xs text-primary-600 font-bold hover:underline px-3 py-1 bg-white border border-slate-100 rounded-md shadow-sm"
                                     >
                                         Refresh Connection
                                     </button>

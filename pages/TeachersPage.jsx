@@ -377,14 +377,14 @@ const StaffPage = () => {
             </div>
 
             {/* Filters and Search */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row justify-between gap-4">
-                <div className="flex bg-gray-100 p-1 rounded-lg">
-                    <button onClick={() => setActiveTab('all')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === 'all' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
-                    <button onClick={() => setActiveTab(StaffRole.Teacher)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.Teacher ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Teachers</button>
-                    <button onClick={() => setActiveTab(StaffRole.AssistantTeacher)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.AssistantTeacher ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Assistants</button>
-                    <button onClick={() => setActiveTab(StaffRole.OfficeWorker)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.OfficeWorker ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Office</button>
-                    <button onClick={() => setActiveTab(StaffRole.Guard)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.Guard ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Guards</button>
-                    <button onClick={() => setActiveTab(StaffRole.Cleaner)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${activeTab === StaffRole.Cleaner ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Cleaners</button>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row justify-between gap-4 overflow-hidden">
+                <div className="flex bg-gray-100 p-1 rounded-lg overflow-x-auto scrollbar-hide w-full md:w-auto">
+                    <button onClick={() => setActiveTab('all')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === 'all' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
+                    <button onClick={() => setActiveTab(StaffRole.Teacher)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === StaffRole.Teacher ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Teachers</button>
+                    <button onClick={() => setActiveTab(StaffRole.AssistantTeacher)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === StaffRole.AssistantTeacher ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Assistants</button>
+                    <button onClick={() => setActiveTab(StaffRole.OfficeWorker)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === StaffRole.OfficeWorker ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Office</button>
+                    <button onClick={() => setActiveTab(StaffRole.Guard)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === StaffRole.Guard ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Guards</button>
+                    <button onClick={() => setActiveTab(StaffRole.Cleaner)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === StaffRole.Cleaner ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Cleaners</button>
 
                     <div className="w-px bg-gray-300 mx-2 my-1"></div>
 

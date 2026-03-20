@@ -524,8 +524,8 @@ const ClassesPage = () => {
                                                 </div>
                                                 )}
 
-                                                {/* Mobile Actions - Admin only */}
-                                                {isAdmin && (
+                                                {/* Mobile Actions - Admin and Office Workers */}
+                                                {(isAdmin || isOffice) && (
                                                 <div onClick={e => e.stopPropagation()} className="sm:hidden flex items-center justify-end gap-3 mt-3 pt-3 border-t border-slate-50">
                                                     {deletingClassId === cls.id ? (
                                                         <div className="flex items-center space-x-2 w-full justify-between animate-in fade-in zoom-in duration-200">
@@ -542,8 +542,10 @@ const ClassesPage = () => {
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <button onClick={(e) => handleOpenModal(e, cls)} className="text-xs font-medium text-emerald-600">Edit</button>
-                                                            <button onClick={(e) => { e.stopPropagation(); setDeletingClassId(cls.id); }} className="text-xs font-medium text-red-600">Delete</button>
+                                                            <button onClick={(e) => { e.stopPropagation(); handleOpenModal(e, cls); }} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all">Edit</button>
+                                                            {isAdmin && (
+                                                                <button onClick={(e) => { e.stopPropagation(); setDeletingClassId(cls.id); }} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-all">Delete</button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
