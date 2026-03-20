@@ -623,8 +623,9 @@ create trigger on_room_statuses_change after insert or update or delete on publi
  */
 const SettingsPage = ({ onLogout, userRole }) => {
     // --- 1. STATE & DATA INITIALIZATION ---
-    const { adminPassword, setAdminPassword, triggerSync, lastSyncedAt, isSyncing } = useData();
+    const { adminPassword, setAdminPassword, triggerSync, lastSyncedAt, isSyncing, importAllData, currentUser } = useData();
     const isAdmin = userRole === UserRole.Admin;
+    const isOffice = userRole === UserRole.OfficeWorker;
     // Read sub-tab from URL on mount (e.g. /settings/levels → 'levels')
     const getInitialSettingsTab = () => {
         const parts = window.location.pathname.split('/');
@@ -677,9 +678,8 @@ const SettingsPage = ({ onLogout, userRole }) => {
         { id: 'offline', label: 'Offline Help', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>, adminOnly: false },
     ];
 
-    const isOffice = currentUser?.role === UserRole.OfficeWorker;
     const tabs = allTabs.filter(tab => {
-        if (!tab.adminOnly) return true;
+                if (!tab.adminOnly) return true;
         if (isAdmin) return true;
         // Office Workers can access Data and Sync tabs
         if (isOffice && (tab.id === 'data' || tab.id === 'sync')) return true;
