@@ -87,7 +87,7 @@ export const AdminDashboard = ({ navigate }) => {
     return (
         <div className="space-y-6">
             {/* Top Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <Card className="!p-5 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0" title="">
                     <div className="flex justify-between items-start">
                         <div>
@@ -144,7 +144,7 @@ export const AdminDashboard = ({ navigate }) => {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <button onClick={() => navigate && navigate(Page.Students)} className="flex items-center justify-center gap-2 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow hover:border-emerald-300 text-sm font-semibold text-slate-700 transition-all">
                     <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
                     Add Student

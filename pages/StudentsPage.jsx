@@ -99,9 +99,9 @@ const StudentModal = ({ studentData, onClose }) => {
     const inputStyle = "mt-1 w-full px-3 py-2 bg-white border border-gray-400 rounded-md text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all";
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg">
-                <h2 className="text-2xl font-bold text-slate-800 mb-6">{studentData ? 'Update Student Record' : 'Register New Student'}</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-2 sm:p-4">
+            <div className="bg-white rounded-xl shadow-2xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">{studentData ? 'Update Student Record' : 'Register New Student'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>

@@ -694,11 +694,11 @@ const SettingsPage = ({ onLogout, userRole }) => {
     }, [isAdmin, isOffice, activeTab]);
 
     return (
-        <div className="container mx-auto max-w-4xl px-4 py-8">
+        <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-8">
             {/* --- UI SECTION: HEADER --- */}
-            <h1 className="text-3xl font-bold text-gray-800 mb-8 tracking-tight">Settings</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-8 tracking-tight">Settings</h1>
 
-            <div className="flex flex-col md:flex-row gap-8 items-start">
+            <div className="flex flex-col md:flex-row gap-4 sm:gap-8 items-start">
                 {/* --- UI SECTION: SIDEBAR NAVIGATION --- */}
                 <div className="w-full md:w-64 shrink-0 flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                     {tabs.map((tab) => (

@@ -103,9 +103,9 @@ const StaffModal = ({ staffData, onClose }) => {
     const labelClasses = "block text-sm font-medium text-primary-900";
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">{staffData ? 'Edit Staff Member' : 'Add New Staff Member'}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-2 sm:p-4">
+            <div className="bg-white rounded-lg shadow-xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">{staffData ? 'Edit Staff Member' : 'Add New Staff Member'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="name" className={labelClasses}>Full Name</label>
