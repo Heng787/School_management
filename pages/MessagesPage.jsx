@@ -440,7 +440,7 @@ const MessagesPage = () => {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeConversation, setActiveConversation] = useState('');
-    const [mobileShowChat, setMobileShowChat] = useState(!isAdmin); // staff goes straight to chat
+    const [mobileShowChat, setMobileShowChat] = useState(false); // Initially show sidebar for everyone
     const [text, setText] = useState('');
     const [sending, setSending] = useState(false);
     const [modal, setModal] = useState(null);
@@ -455,21 +455,27 @@ const MessagesPage = () => {
         const data = await fetchMessages(myDbId, isAdmin);
         setMessages(data);
 
-        if (isAdmin && staff.length > 0) {
-            const staffIdSet = new Set(staff.map(s => s.id));
-            const ids = [...new Set(data
-                .map(m => staffIdSet.has(m.senderId) ? m.senderId : m.recipientId)
-                .filter(id => id !== 'all' && staffIdSet.has(id))
-            )];
-            const defaultId = ids[0] || staff[0]?.id || '';
-            // Functional updater: only sets if currently empty (never resets user's choice)
-            setActiveConversation(prev => prev || defaultId);
-        } else if (!isAdmin) {
-            setActiveConversation(prev => prev || ADMIN_KEY);
+        // Initialize active conversation
+        if (!activeConversation) {
+            if (isAdmin && staff.length > 0) {
+                const staffIdSet = new Set(staff.map(s => s.id));
+                const ids = [...new Set(data
+                    .map(m => staffIdSet.has(m.senderId) ? m.senderId : m.recipientId)
+                    .filter(id => id !== 'all' && staffIdSet.has(id))
+                )];
+                const defaultId = ids[0] || staff[0]?.id || '';
+                setActiveConversation(defaultId);
+            } else if (!isAdmin) {
+                setActiveConversation(ADMIN_KEY);
+                // Non-teachers go straight to chat
+                if (currentUser?.role !== UserRole.Teacher) {
+                    setMobileShowChat(true);
+                }
+            }
         }
 
         setLoading(false);
-    }, [myDbId, isAdmin, staff]); // ← no activeConversation dep = no stale closure reset
+    }, [myDbId, isAdmin, staff, currentUser?.role]);
 
     useEffect(() => {
         load();
@@ -502,24 +508,46 @@ const MessagesPage = () => {
         if (unread.length > 0) markAsRead(unread);
     }, [activeConversation, messages]);
 
-    // ── Conversation list for admin sidebar
-    const staffConversations = isAdmin
-        ? staff.map(s => {
+    // ── Build staff list / contacts
+    const staffConversations = useMemo(() => {
+        // Staff filter
+        const filteredStaff = staff.filter(s => {
+            if (isAdmin) return true;
+            if (s.id === currentUser?.id) return false;
+            // Teachers see other teachers/assistant teachers
+            if (currentUser?.role === UserRole.Teacher) {
+                return s.role === UserRole.Teacher || s.role === 'Assistant Teacher';
+            }
+            return false;
+        });
+
+        const contacts = filteredStaff.map(s => {
             const msgs = messages.filter(m => m.senderId === s.id || m.recipientId === s.id);
             const lastMsg = msgs[msgs.length - 1];
             const unread = msgs.filter(m => !m.isRead && m.senderId === s.id).length;
             return { id: s.id, name: s.name, role: s.role, lastMsg, unread };
-        }).sort((a, b) => {
+        });
+
+        // Add Admin to the top for everyone else
+        if (!isAdmin) {
+            const adminMsgs = messages.filter(m => m.senderId === ADMIN_KEY || m.recipientId === ADMIN_KEY);
+            const lastMsg = adminMsgs[adminMsgs.length - 1];
+            const unread = adminMsgs.filter(m => !m.isRead && m.senderId === ADMIN_KEY).length;
+            contacts.unshift({ id: ADMIN_KEY, name: 'School Office', role: 'Support', lastMsg, unread });
+        }
+
+        return contacts.sort((a, b) => {
+            if (a.id === ADMIN_KEY) return -1;
+            if (b.id === ADMIN_KEY) return 1;
             if (!a.lastMsg && !b.lastMsg) return 0;
             if (!a.lastMsg) return 1;
             if (!b.lastMsg) return -1;
             return new Date(b.lastMsg.createdAt).getTime() - new Date(a.lastMsg.createdAt).getTime();
-        })
-        : [];
+        }).filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }, [isAdmin, staff, messages, currentUser?.role, currentUser?.id, searchQuery]);
 
-    const filteredStaffConversations = staffConversations.filter(c => 
-        c.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredStaffConversations = staffConversations;
+    const isMultiRecipient = isAdmin || currentUser?.role === UserRole.Teacher;
 
     // Build a set of known staff IDs for role checks
     const staffIdSet = new Set(staff.map(s => s.id));
@@ -528,10 +556,18 @@ const MessagesPage = () => {
     const conversationMessages = messages.filter(m => {
         if (isAdmin) {
             if (activeConversation === 'all') return m.type === 'announcement';
-            // Show messages where the staff member is sender OR recipient
             return m.senderId === activeConversation || m.recipientId === activeConversation;
         }
-        return m.senderId === myDbId || m.recipientId === myDbId || (m.recipientId === 'all');
+        // General Announcement logic
+        if (m.recipientId === 'all') return true;
+        // Personal logic
+        if (activeConversation === ADMIN_KEY) {
+            return (m.senderId === myDbId && m.recipientId === ADMIN_KEY) ||
+                   (m.senderId === ADMIN_KEY && m.recipientId === myDbId);
+        }
+        // Private chat with another teacher
+        return (m.senderId === myDbId && m.recipientId === activeConversation) ||
+               (m.senderId === activeConversation && m.recipientId === myDbId);
     });
 
     const totalUnread = messages.filter(m => !m.isRead && m.recipientId === myDbId).length;
@@ -549,7 +585,7 @@ const MessagesPage = () => {
         if ((!text.trim() && !attachment) || sending) return;
 
         setSending(true);
-        const recipient = announcementMode ? 'all' : (isAdmin ? activeConversation : ADMIN_KEY);
+        const recipient = announcementMode ? 'all' : activeConversation;
 
         let metadata = undefined;
         if (attachment) {
@@ -583,7 +619,7 @@ const MessagesPage = () => {
 
     // ── Quick send (leave / incident)
     const handleQuickSend = async (content, metadata, type) => {
-        const recipient = ADMIN_KEY; // Staff always sends to Admin
+        const recipient = activeConversation || ADMIN_KEY;
         const newMsg = await sendMessage({
             senderId: myDbId, senderName: myName, recipientId: recipient,
             type, content, metadata, isAdmin,
@@ -623,11 +659,11 @@ const MessagesPage = () => {
         <div className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl shadow-card border border-slate-200 overflow-hidden">
 
             {/* ══ LEFT conversation list ══ */}
-            {isAdmin && (
+            {isMultiRecipient && (
                 <div className={`w-full md:w-72 shrink-0 border-r border-slate-200 flex flex-col bg-slate-50 ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
                     <div className="p-4 border-b border-slate-200 shadow-sm z-10 space-y-3">
                         <div>
-                            <h2 className="text-base font-bold text-slate-800">Messages</h2>
+                            <h2 className="text-base font-bold text-slate-800">{isAdmin ? 'Messages' : 'Contacts'}</h2>
                             <p className="text-xs text-slate-400 mt-0.5">{totalUnread > 0 ? `${totalUnread} unread` : '✨ All caught up'}</p>
                         </div>
                         <div className="relative">
@@ -636,7 +672,7 @@ const MessagesPage = () => {
                             </span>
                             <input 
                                 type="text" 
-                                placeholder="Search staff..." 
+                                placeholder={isAdmin ? "Search staff..." : "Search contacts..."} 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all placeholder-slate-400 text-slate-700 shadow-sm"
@@ -663,7 +699,7 @@ const MessagesPage = () => {
                             <button key={conv.id}
                                 onClick={() => { setActiveConversation(conv.id); setAnnouncementMode(false); setMobileShowChat(true); }}
                                 className={`w-full flex items-center gap-3 px-4 py-3 border-b border-slate-100 transition-colors ${activeConversation === conv.id ? 'bg-primary-50 border-l-2 border-l-primary-500' : 'hover:bg-white'}`}>
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-900 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm ${conv.id === ADMIN_KEY ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-gradient-to-br from-slate-600 to-slate-900'}`}>
                                     {conv.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0 text-left">
@@ -692,16 +728,16 @@ const MessagesPage = () => {
             )}
 
             {/* ══ RIGHT panel ══ */}
-            <div className={`flex-1 flex flex-col min-w-0 w-full ${isAdmin && !mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
+            <div className={`flex-1 flex flex-col min-w-0 w-full ${isMultiRecipient && !mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
 
                 {/* ── Chat Header ── */}
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-white/90 backdrop-blur-sm">
-                    {/* Back button (mobile admin only) */}
-                    {isAdmin && (
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-white/90 backdrop-blur-sm shadow-sm relative z-50">
+                    {/* Back button (mobile only) */}
+                    {isMultiRecipient && (
                         <button onClick={() => setMobileShowChat(false)}
                             className="md:hidden p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors mr-1 shrink-0">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
                             </svg>
                         </button>
                     )}
@@ -725,18 +761,20 @@ const MessagesPage = () => {
                     <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-800 text-sm leading-tight">
                             {activeConversation === 'all' ? 'All Staff Announcement'
-                                : isAdmin && activeStaff ? activeStaff.name
+                                : (isAdmin || currentUser?.role === UserRole.Teacher) && filteredStaffConversations.find(c => c.id === activeConversation)?.name 
+                                    ? filteredStaffConversations.find(c => c.id === activeConversation).name
                                     : 'Administrator'}
                         </p>
                         <p className="text-xs text-slate-400 leading-tight">
                             {activeConversation === 'all' ? `${staff.length} staff members`
-                                : isAdmin && activeStaff ? activeStaff.role
+                                : (isAdmin || currentUser?.role === UserRole.Teacher) && filteredStaffConversations.find(c => c.id === activeConversation)?.role 
+                                    ? filteredStaffConversations.find(c => c.id === activeConversation).role
                                     : '● School Admin'}
                         </p>
                     </div>
 
                     {/* Staff quick-action buttons — compact pills in header */}
-                    {!isAdmin && (
+                    {!isAdmin && activeConversation === ADMIN_KEY && (
                         <div className="flex items-center gap-2 shrink-0">
                             <button
                                 onClick={() => setModal('leave')}
