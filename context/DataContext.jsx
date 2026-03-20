@@ -196,20 +196,21 @@ export const DataProvider = ({ children }) => {
             if (!navigator.onLine || isSyncingRef.current) return;
             
             try {
-                // Only refresh tables that are NOT locally dirty (to avoid overwriting local edits)
                 const tablesToRefresh = [
                     { table: 'enrollments', setter: setEnrollments, fetcher: apiService.getEnrollments },
                     { table: 'classes', setter: setClasses, fetcher: apiService.getClasses },
                     { table: 'students', setter: setStudents, fetcher: apiService.getStudents },
+                    { table: 'grades', setter: setGrades, fetcher: apiService.getGrades },
+                    { table: 'attendance', setter: setAttendance, fetcher: apiService.getAttendance },
                 ];
 
                 for (const { table, setter, fetcher } of tablesToRefresh) {
                     if (!localStore.isDirty(table)) {
                         const freshData = await fetcher();
                         setter(prev => {
-                            // Only update if data actually changed (avoid unnecessary re-renders)
+                            // Deep equality check to avoid redundant renders
                             if (JSON.stringify(prev) !== JSON.stringify(freshData)) {
-                                console.log(`Remote refresh: ${table} updated (${freshData.length} records)`);
+                                console.log(`[Sync] Background update: ${table} (${freshData.length} records)`);
                                 return freshData;
                             }
                             return prev;
@@ -222,8 +223,23 @@ export const DataProvider = ({ children }) => {
             }
         };
 
-        const intervalId = setInterval(refreshFromRemote, 30000); // every 30 seconds
-        return () => clearInterval(intervalId);
+        const intervalId = setInterval(refreshFromRemote, 15000); // every 15 seconds
+        
+        // --- INSTANT CROSS-TAB SYNC ---
+        // When another tab saves to localStore, this tab gets a 'storage' event.
+        // We trigger a remote refresh to ensure we're looking at the latest ground truth.
+        const handleStorageChange = (e) => {
+            if (e.key && e.key.startsWith('school_admin_')) {
+                // If it's a dirty flag change or a data change, trigger background refresh
+                refreshFromRemote();
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            clearInterval(intervalId);
+            window.removeEventListener('storage', handleStorageChange);
+        };
     }, [loading]);
 
     // --- 7. STUDENT MANAGEMENT ---
