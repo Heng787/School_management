@@ -677,13 +677,21 @@ const SettingsPage = ({ onLogout, userRole }) => {
         { id: 'offline', label: 'Offline Help', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>, adminOnly: false },
     ];
 
-    const tabs = allTabs.filter(tab => !tab.adminOnly || isAdmin);
+    const isOffice = currentUser?.role === UserRole.OfficeWorker;
+    const tabs = allTabs.filter(tab => {
+        if (!tab.adminOnly) return true;
+        if (isAdmin) return true;
+        // Office Workers can access Data and Sync tabs
+        if (isOffice && (tab.id === 'data' || tab.id === 'sync')) return true;
+        return false;
+    });
 
     useEffect(() => {
-        if (!isAdmin && activeTab !== 'offline') {
+        const hasAccess = isAdmin || (isOffice && (activeTab === 'data' || activeTab === 'sync' || activeTab === 'offline'));
+        if (!hasAccess && !isAdmin && activeTab !== 'offline') {
             setActiveTab('offline');
         }
-    }, [isAdmin]);
+    }, [isAdmin, isOffice, activeTab]);
 
     return (
         <div className="container mx-auto max-w-4xl px-4 py-8">

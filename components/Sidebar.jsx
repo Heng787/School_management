@@ -117,13 +117,13 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
                         {(isAdmin || isTeacher || isOffice) && (
                             <NavItem icon={<StudentsIcon />} label={Page.Students} isActive={currentPage === Page.Students} onClick={() => navigate(Page.Students)} />
                         )}
-                        {isAdmin && (
+                        {(isAdmin || isOffice) && (
                             <NavItem icon={<TeachersIcon />} label={Page.Staff} isActive={currentPage === Page.Staff} onClick={() => navigate(Page.Staff)} />
                         )}
-                        {(isAdmin || isTeacher) && (
+                        {(isAdmin || isTeacher || isOffice) && (
                             <NavItem icon={<ClassesIcon />} label={Page.Classes} isActive={currentPage === Page.Classes} onClick={() => navigate(Page.Classes)} />
                         )}
-                        {(isAdmin || isTeacher) && (
+                        {(isAdmin || isTeacher || isOffice) && (
                             <NavItem icon={<ScheduleIcon />} label={Page.Schedule} isActive={currentPage === Page.Schedule} onClick={() => navigate(Page.Schedule)} />
                         )}
                         <NavItem
