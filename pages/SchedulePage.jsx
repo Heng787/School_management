@@ -71,31 +71,26 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
 
     // --- 1.3. MODAL RENDER LOGIC ---
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-2 sm:p-4">
+            <div className="bg-white rounded-lg shadow-xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">{eventData ? 'Edit Event' : 'Add New Event'}</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="title" className={labelClasses}>Event Title</label>
                         <input type="text" name="title" id="title" value={formData.title} onChange={handleChange} className={inputClasses} required />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="date" className={labelClasses}>Date</label>
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-lg">
-                                    🗓️
-                                </span>
-                                <input
-                                    type="date"
-                                    name="date"
-                                    id="date"
-                                    value={formData.date}
-                                    onChange={handleChange}
-                                    className={`${inputClasses} pl-10`}
-                                    required
-                                />
-                            </div>
+                            <input
+                                type="date"
+                                name="date"
+                                id="date"
+                                value={formData.date}
+                                onChange={handleChange}
+                                className={inputClasses}
+                                required
+                            />
                         </div>
                         <div>
                             <label htmlFor="type" className={labelClasses}>Event Type</label>
@@ -113,24 +108,30 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
 
                     {error && <p className="text-sm text-red-600">{error}</p>}
 
-                    <div className="flex justify-between items-center pt-4">
-                        <div>
-                            {eventData && (
-                                isDeleting ? (
-                                    <div className="flex items-center space-x-2 animate-in fade-in zoom-in duration-200">
-                                        <span className="text-sm font-bold text-red-600 uppercase tracking-wider">Are you sure?</span>
-                                        <button type="button" onClick={() => setIsDeleting(false)} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-sm font-bold">Cancel</button>
-                                        <button type="button" onClick={handleDelete} className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-bold shadow-sm shadow-red-200">Yes, Delete</button>
-                                    </div>
-                                ) : (
-                                    <button type="button" onClick={() => setIsDeleting(true)} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold shadow-sm transition-colors">Delete Event</button>
-                                )
+                    <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-4 pt-6">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button type="button" onClick={onClose} className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 font-bold transition-all order-2 sm:order-1">Close</button>
+                            {!isDeleting && (
+                                <button type="submit" className="px-5 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 font-bold shadow-lg shadow-primary-100 transition-all order-1 sm:order-2">
+                                    {eventData ? 'Save Changes' : 'Add Event'}
+                                </button>
                             )}
                         </div>
-                        <div className="space-x-4">
-                            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold">Close</button>
-                            {!isDeleting && (
-                                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold">{eventData ? 'Save Changes' : 'Add Event'}</button>
+                        <div className="flex justify-start sm:justify-end">
+                            {eventData && (
+                                isDeleting ? (
+                                    <div className="flex flex-col sm:flex-row items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-100 w-full sm:w-auto">
+                                        <span className="text-[10px] font-black text-red-600 uppercase tracking-widest whitespace-nowrap">Confirm Delete?</span>
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={() => setIsDeleting(false)} className="px-3 py-1 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-bold">No</button>
+                                            <button type="button" onClick={handleDelete} className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs font-bold shadow-sm">Yes, Delete</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button type="button" onClick={() => setIsDeleting(true)} className="w-full sm:w-auto px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 font-bold transition-all text-sm">
+                                        Delete Event
+                                    </button>
+                                )
                             )}
                         </div>
                     </div>
@@ -267,46 +268,48 @@ const SchedulePage = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <div className="grid grid-cols-7 gap-px rounded-t-lg overflow-hidden">
-                    {weekdays.map(day => (
-                        <div key={day} className="text-center font-bold text-slate-700 bg-slate-50 py-3 uppercase tracking-wider text-[11px]">{day}</div>
-                    ))}
-                </div>
-                <div className="grid grid-cols-7 grid-rows-5 gap-px border-t border-gray-200">
-                    {calendarGrid.map((day, index) => {
-                        const isToday = day && day.getTime() === today.getTime();
-                        const dateKey = day ? formatLocalDate(day) : '';
-                        const dayEvents = day ? (eventsByDate.get(dateKey) || []) : [];
+            <div className="bg-white p-2 sm:p-4 rounded-xl shadow-sm border border-slate-200 overflow-x-auto scrollbar-hide">
+                <div className="min-w-[800px] md:min-w-0">
+                    <div className="grid grid-cols-7 gap-px rounded-t-lg overflow-hidden border-b border-slate-100">
+                        {weekdays.map(day => (
+                            <div key={day} className="text-center font-bold text-slate-700 bg-slate-50/50 py-3 uppercase tracking-wider text-[11px]">{day}</div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-px">
+                        {calendarGrid.map((day, index) => {
+                            const isToday = day && day.getTime() === today.getTime();
+                            const dateKey = day ? formatLocalDate(day) : '';
+                            const dayEvents = day ? (eventsByDate.get(dateKey) || []) : [];
 
-                        return (
-                            <div 
-                                key={index} 
-                                className={`relative min-h-[120px] bg-white border-r border-b border-gray-200 p-2 ${day ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : ''}`}
-                                onClick={() => day && handleOpenModal(null, dateKey)}
-                            >
-                                {day && (
-                                    <>
-                                        <span className={`absolute top-2 right-2 text-sm font-semibold transition-colors ${isToday ? 'bg-primary-600 text-white rounded-full w-7 h-7 flex items-center justify-center shadow-md' : 'text-gray-500 group-hover:text-primary-600'}`}>
-                                            {day.getDate()}
-                                        </span>
-                                        <div className="mt-8 space-y-1">
-                                            {dayEvents.map(event => (
-                                                <button
-                                                    key={event.id}
-                                                    onClick={(e) => { e.stopPropagation(); handleOpenModal(event); }}
-                                                    className={`w-full text-left text-white text-[11px] font-bold py-1 px-1.5 rounded truncate transition-colors shadow-sm hover:shadow ${eventTypeClasses[event.type]}`}
-                                                    title={event.title}
-                                                >
-                                                    {event.title}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        );
-                    })}
+                            return (
+                                <div 
+                                    key={index} 
+                                    className={`relative min-h-[90px] sm:min-h-[120px] bg-white border-r border-b border-slate-100 p-1.5 sm:p-2 ${day ? 'cursor-pointer hover:bg-slate-50 transition-colors group' : 'bg-slate-50/20'}`}
+                                    onClick={() => day && handleOpenModal(null, dateKey)}
+                                >
+                                    {day && (
+                                        <>
+                                            <span className={`absolute top-1.5 right-1.5 text-xs sm:text-sm font-semibold transition-colors ${isToday ? 'bg-primary-600 text-white rounded-full w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center shadow-md' : 'text-slate-400 group-hover:text-primary-600'}`}>
+                                                {day.getDate()}
+                                            </span>
+                                            <div className="mt-7 sm:mt-8 space-y-1">
+                                                {dayEvents.map(event => (
+                                                    <button
+                                                        key={event.id}
+                                                        onClick={(e) => { e.stopPropagation(); handleOpenModal(event); }}
+                                                        className={`w-full text-left text-white text-[10px] sm:text-[11px] font-bold py-1 px-1.5 rounded truncate transition-colors shadow-sm hover:shadow active:scale-95 ${eventTypeClasses[event.type]}`}
+                                                        title={event.title}
+                                                    >
+                                                        {event.title}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
