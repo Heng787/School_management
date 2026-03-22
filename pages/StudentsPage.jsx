@@ -164,7 +164,7 @@ const ITEMS_PER_PAGE = 20;
  */
 const StudentsPage = () => {
     // --- 1. STATE & REFS ---
-    const { students, staff, deleteStudent, highlightedStudentId, setHighlightedStudentId, addStudents, addClasses, addEnrollments, loading, enrollments, classes, currentUser } = useData();
+    const { students, staff, deleteStudent, highlightedStudentId, setHighlightedStudentId, addStudents, addClasses, addEnrollments, saveGradeBatch, loading, enrollments, classes, currentUser } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
@@ -318,11 +318,15 @@ const StudentsPage = () => {
                     if (addEnrollments) await addEnrollments(result.enrollments);
                 }
                 
+                if (result.grades && result.grades.length > 0) {
+                    if (saveGradeBatch) await saveGradeBatch(result.grades);
+                }
+                
                 setImportResults({
-                    successCount: (result.classes?.length || 0) + (result.students?.length || 0),
+                    successCount: (result.classes?.length || 0) + (result.students?.length || 0) + (result.grades?.length || 0),
                     errorCount: result.errors?.length || 0,
                     errors: result.errors?.map(err => ({ message: err })) || [],
-                    message: "Successfully imported classes and kids from Score Sheet."
+                    message: `Successfully imported ${result.classes?.length || 0} classes, ${result.students?.length || 0} kids, and ${result.grades?.length || 0} marks.`
                 });
                 setIsImportModalOpen(true);
             } catch (err) {

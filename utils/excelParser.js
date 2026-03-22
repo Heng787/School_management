@@ -16,114 +16,134 @@ export const parseExcelFile = async (file) => {
                     errors: [],
                 };
 
-                // The primary sheet for Classes and Students is "(1).Classes"
-                // The sheets for grades could be "(2).Midterm Daily", "(3).Midterm Exam", "(4).Midterm Results", "(5).Promotion Daily", "(6).Promotion Exam" 
-                
-                const classesSheetName = workbook.SheetNames.find(sn => sn.includes('Classes'));
-                if (!classesSheetName) {
-                    results.errors.push("Missing '(1).Classes' sheet. Please use the provided template.");
-                    return resolve(results);
-                }
-
-                const classesSheet = XLSX.utils.sheet_to_json(workbook.Sheets[classesSheetName], { header: 1 });
-                
-                // Extract class details using keyword search across the top 10 rows
-                let branch = 'Unknown Branch';
-                let level = 'Unknown Level';
-                let time = 'Unknown Time';
-                let room = 'Unknown Room';
-                let teacherName = 'Unknown Teacher';
-
-                // Scan top rows for metadata (up to row 15)
-                for (let i = 0; i < Math.min(classesSheet.length, 15); i++) {
-                    const row = classesSheet[i];
-                    if (!row) continue;
-                    for (let j = 0; j < row.length; j++) {
-                        const cellRaw = String(row[j] || '').trim().toLowerCase();
-                        if (!cellRaw) continue;
-                        const nextCellRaw = String(row[j + 1] || '').trim();
-
-                        if (cellRaw === 'br:' || cellRaw === 'branch' || cellRaw === 'branch:') branch = nextCellRaw || branch;
-                        if (cellRaw === 'level:' || cellRaw === 'level') level = nextCellRaw || level;
-                        if (cellRaw === 'time:' || cellRaw === 'time' || cellRaw === 'schedule:') time = nextCellRaw || time;
-                        if (cellRaw === 'room:' || cellRaw === 'room') room = nextCellRaw || room;
-                        if (cellRaw === 'tr:' || cellRaw === 'teacher:' || cellRaw === 'teacher') teacherName = nextCellRaw || teacherName;
-                    }
-                }
-
-                let classData = {
-                    name: room,
-                    level,
-                    schedule: time,
-                    teacherName,
-                    branch,
-                    id: 'new_class_' + Date.now()
-                };
-
-                results.classes.push(classData);
-
-                // Find the header row for the student table
-                let headerRowIdx = -1;
-                let colMapping = { name: -1, sex: -1, phone: -1 };
-
-                for (let i = 0; i < Math.min(classesSheet.length, 30); i++) {
-                    const row = classesSheet[i];
-                    if (!row) continue;
-                    let foundName = false;
+                // Scan all sheets for relevant data
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+                    console.log(`Processing sheet: ${sheetName}, Rows: ${sheet.length}`);
                     
-                    for (let j = 0; j < row.length; j++) {
-                        const val = String(row[j] || '').trim().toLowerCase();
-                        if (val === 'name' || val === 'student name' || val === 'student' || val === 'students') {
-                            colMapping.name = j;
-                            foundName = true;
+                    // --- A. CLASS METADATA SCAN (Look for Level, Time, Room, Teacher) ---
+                    if (sheetName.toLowerCase().includes('classes') || sheetName.toLowerCase().includes('score') || results.classes.length === 0) {
+                        let branch = '', level = '', time = '', room = '', teacherName = '';
+                        for (let i = 0; i < Math.min(sheet.length, 15); i++) {
+                            const row = sheet[i];
+                            if (!row) continue;
+                            for (let j = 0; j < row.length; j++) {
+                                const cell = String(row[j] || '').trim().toLowerCase();
+                                const val = String(row[j + 1] || '').trim();
+                                if (cell === 'br:' || cell === 'branch') branch = val;
+                                if (cell === 'level:' || cell === 'level') level = val;
+                                if (cell === 'time:' || cell === 'schedule:') time = val;
+                                if (cell === 'room:' || cell === 'room') room = val;
+                                if (cell === 'tr:' || cell === 'teacher:') teacherName = val;
+                            }
                         }
-                        if (val === 'sex' || val === 'gender') colMapping.sex = j;
-                        if (val.includes('phone') || val.includes('contact')) colMapping.phone = j;
+                        if (level && room) {
+                            results.classes.push({ name: room, level, schedule: time, teacherName, branch, id: 'cls_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4) });
+                        }
                     }
-                    
-                    if (foundName) {
-                        headerRowIdx = i;
-                        break;
+
+                    // --- B. STUDENT LIST SCAN ---
+                    let colMapping = { name: -1, sex: -1, phone: -1 };
+                    let headerRowIdx = -1;
+                    for (let i = 0; i < Math.min(sheet.length, 30); i++) {
+                        const row = sheet[i];
+                        if (!row) continue;
+                        let foundName = false;
+                        for (let j = 0; j < row.length; j++) {
+                            const val = String(row[j] || '').trim().toLowerCase();
+                            if (val === 'name' || val === 'student name' || val === 'student') {
+                                colMapping.name = j;
+                                foundName = true;
+                            }
+                            if (val === 'sex' || val === 'gender') colMapping.sex = j;
+                            if (val.includes('phone') || val.includes('contact')) colMapping.phone = j;
+                        }
+                        if (foundName) { headerRowIdx = i; break; }
                     }
-                }
 
-                // Fallback to strict columns if header row not found or incomplete
-                if (headerRowIdx === -1) {
-                    headerRowIdx = 5; // Default to row 6
-                    if (colMapping.name === -1) colMapping.name = 1;
-                }
-                if (colMapping.sex === -1) colMapping.sex = colMapping.name + 1;
-                if (colMapping.phone === -1) colMapping.phone = colMapping.name + 2;
+                    if (headerRowIdx !== -1) {
+                        for (let i = headerRowIdx + 1; i < sheet.length; i++) {
+                            const row = sheet[i];
+                            if (!row || !row[colMapping.name] || String(row[colMapping.name]).trim() === '') continue;
+                            const cell0 = String(row[0]||'').toLowerCase();
+                            if (cell0 === 'no' || cell0 === 'name') continue;
 
-                const studentStartRow = headerRowIdx + 1;
-                let studentList = [];
+                            const name = String(row[colMapping.name]).trim();
+                            // Avoid duplicates in the same import session
+                            if (results.students.find(s => s.name === name)) continue;
 
-                for (let i = studentStartRow; i < classesSheet.length; i++) {
-                    const row = classesSheet[i];
-                    if (!row || !row[colMapping.name] || String(row[colMapping.name]).trim() === '') continue; // Skip empty names
+                            const studentObj = {
+                                id: 'stu_imp_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 3),
+                                name,
+                                sex: (String(row[colMapping.sex] || '').toUpperCase().startsWith('M')) ? 'Male' : 'Female',
+                                phone: String(row[colMapping.phone] || '').trim(),
+                                dob: '2015-01-01',
+                                status: 'Active',
+                                enrollmentDate: new Date().toISOString().split('T')[0]
+                            };
+                            results.students.push(studentObj);
+                            if (results.classes.length > 0) {
+                                results.enrollments.push({ studentId: studentObj.id, classId: results.classes[results.classes.length - 1].id });
+                            }
+                        }
+                    }
+
+                    // --- C. GRADES / MARKS SCAN ---
+                    // Detect Subject and Exam type from sheet name or headers
+                    let type = 'Daily'; // Default
+                    if (sheetName.toLowerCase().includes('exam')) type = 'Exam';
+                    if (sheetName.toLowerCase().includes('result')) type = 'Result';
                     
-                    const cell0 = String(row[0] || '').trim().toLowerCase();
-                    if (cell0 === 'no' || cell0 === 'name' || cell0 === 'student') continue; // Skip repeating headers
+                    let term = 'Midterm';
+                    if (sheetName.toLowerCase().includes('promotion')) term = 'Promotion';
 
-                    const name = String(row[colMapping.name]).trim();
-                    const sexRaw = String(row[colMapping.sex] || '').trim().toUpperCase();
-                    const sex = (sexRaw === 'M' || sexRaw === 'MALE' || sexRaw === 'BOY') ? 'Male' : 'Female';
-                    const phone = String(row[colMapping.phone] || '').trim();
+                    // Look for Subject names in headers (columns 4+)
+                    if (headerRowIdx !== -1) {
+                        const headerRow = sheet[headerRowIdx];
+                        let subjectCols = [];
+                        for (let j = 0; j < headerRow.length; j++) {
+                            const val = String(headerRow[j] || '').trim();
+                            if (val && !['no','name','sex','phone','total','avg','result','mention'].includes(val.toLowerCase())) {
+                                subjectCols.push({ col: j, name: val });
+                            }
+                        }
 
-                    const studentObj = {
-                        id: 'new_stu_' + Date.now() + '_' + i,
-                        name,
-                        sex,
-                        phone,
-                        dob: '2015-01-01', // Default DOB
-                        status: 'Active',
-                        enrollmentDate: new Date().toISOString().split('T')[0]
-                    };
+                        if (subjectCols.length > 0) {
+                            for (let i = headerRowIdx + 1; i < sheet.length; i++) {
+                                const row = sheet[i];
+                                if (!row || !row[colMapping.name]) continue;
+                                const studentName = String(row[colMapping.name]).trim();
+                                const student = results.students.find(s => s.name === studentName);
+                                if (!student) continue;
 
-                    studentList.push(studentObj);
-                    results.students.push(studentObj);
-                    results.enrollments.push({ studentId: studentObj.id, classId: classData.id });
-                }
+                                subjectCols.forEach(sub => {
+                                    const score = parseFloat(row[sub.col]);
+                                    if (!isNaN(score)) {
+                                        results.grades.push({
+                                            id: `grd_${Date.now()}_${Math.random().toString(36).substr(2,5)}`,
+                                            studentId: student.id,
+                                            classId: results.classes[0]?.id || '',
+                                            subject: sub.name,
+                                            score: score,
+                                            type: type === 'Result' ? 'Exam' : type, // Map Result to Exam for consistency
+                                            term: term,
+                                            date: new Date().toISOString().split('T')[0]
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+
+                // Dedup classes (if multiple sheets had metadata)
+                results.classes = results.classes.filter((v, i, a) => a.findIndex(t => (t.name === v.name && t.level === v.level)) === i);
+
+                console.log("Parse complete:", {
+                    classes: results.classes.length,
+                    students: results.students.length,
+                    grades: results.grades.length
+                });
 
                 resolve(results);
             } catch (err) {

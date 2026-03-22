@@ -15,7 +15,7 @@ import { LevelManager, SessionManager, SubjectManager } from '../components/Clas
  */
 const ClassesPage = () => {
     // --- 1. GLOBAL DATA & STATE ---
-    const { classes, staff, students, timeSlots, levels, deleteClass, addClasses, addStudents, addEnrollments, highlightedClassId, setHighlightedClassId, enrollments, currentUser } = useData();
+    const { classes, staff, students, timeSlots, levels, deleteClass, addClasses, addStudents, addEnrollments, saveGradeBatch, highlightedClassId, setHighlightedClassId, enrollments, currentUser } = useData();
     const isAdmin = currentUser?.role === UserRole.Admin;
     const isOffice = currentUser?.role === UserRole.OfficeWorker;
 
@@ -221,11 +221,15 @@ const ClassesPage = () => {
                     if (addEnrollments) await addEnrollments(result.enrollments);
                 }
                 
+                if (result.grades && result.grades.length > 0) {
+                    if (saveGradeBatch) await saveGradeBatch(result.grades);
+                }
+                
                 setImportResults({
-                    successCount: (result.classes?.length || 0) + (result.students?.length || 0),
+                    successCount: (result.classes?.length || 0) + (result.students?.length || 0) + (result.grades?.length || 0),
                     errorCount: result.errors?.length || 0,
                     errors: result.errors?.map(e => ({ message: e })) || [],
-                    message: "Successfully imported classes and kids from Score Sheet."
+                    message: `Successfully imported ${result.classes?.length || 0} classes, ${result.students?.length || 0} kids, and ${result.grades?.length || 0} marks.`
                 });
                 setIsImportModalOpen(true);
             } catch (err) {
