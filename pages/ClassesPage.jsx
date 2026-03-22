@@ -257,7 +257,7 @@ const ClassesPage = () => {
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Classes</h1>
                     <p className="text-slate-500 text-sm mt-1">Manage schedules, room assignments, and enrollment.</p>
                 </div>
-                <div className="flex items-center gap-2 overflow-x-auto pb-4 md:pb-0 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 w-[calc(100%+2rem)] md:w-auto">
+                <div className="flex flex-wrap items-center gap-2 pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 w-[calc(100%+2rem)] md:w-auto">
                     {selectedClassIds.size > 0 && isAdmin && (
                         <button
                             onClick={handleExportSelected}

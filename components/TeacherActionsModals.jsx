@@ -6,7 +6,7 @@ import { gradeId } from '../services/mappers';
 
 export const AttendanceModal = ({ classData, students, onClose }) => {
     const { attendance, saveAttendanceBatch } = useData();
-    const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA'));
 
     // Map of studentId -> AttendanceStatus
     const [statusMap, setStatusMap] = useState({});
@@ -70,7 +70,7 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]}
+                            max={new Date().toLocaleDateString('en-CA')}
                             className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                         />
                     </div>

@@ -449,6 +449,7 @@ const MessagesPage = () => {
     const [announcementMode, setAnnouncementMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const bottomRef = useRef(null);
+    const initRef = useRef(false);
 
     // Load messages
     const load = useCallback(async () => {
@@ -456,21 +457,25 @@ const MessagesPage = () => {
         setMessages(data);
 
         // Initialize active conversation
-        if (!activeConversation) {
-            if (isAdmin && staff.length > 0) {
-                const staffIdSet = new Set(staff.map(s => s.id));
-                const ids = [...new Set(data
-                    .map(m => staffIdSet.has(m.senderId) ? m.senderId : m.recipientId)
-                    .filter(id => id !== 'all' && staffIdSet.has(id))
-                )];
-                const defaultId = ids[0] || staff[0]?.id || '';
-                setActiveConversation(defaultId);
-            } else if (!isAdmin) {
+        if (!initRef.current) {
+            if (isAdmin) {
+                if (staff.length > 0) {
+                    const staffIdSet = new Set(staff.map(s => s.id));
+                    const ids = [...new Set(data
+                        .map(m => staffIdSet.has(m.senderId) ? m.senderId : m.recipientId)
+                        .filter(id => id !== 'all' && staffIdSet.has(id))
+                    )];
+                    const defaultId = ids[0] || staff[0]?.id || '';
+                    setActiveConversation(defaultId);
+                    initRef.current = true;
+                }
+            } else {
                 setActiveConversation(ADMIN_KEY);
                 // Non-teachers go straight to chat
                 if (currentUser?.role !== UserRole.Teacher) {
                     setMobileShowChat(true);
                 }
+                initRef.current = true;
             }
         }
 

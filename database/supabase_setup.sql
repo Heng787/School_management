@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS students (
     phone TEXT,
     enrollment_date DATE,
     status TEXT,
-    tuition JSONB DEFAULT '{"total": 0, "paid": 0}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -93,11 +92,11 @@ DECLARE
 BEGIN
     -- Upsert Students
     FOREACH item IN ARRAY p_students LOOP
-        INSERT INTO students (id, name, sex, dob, phone, enrollment_date, status, tuition)
-        VALUES (item->>'id', item->>'name', item->>'sex', NULLIF(item->>'dob', '')::DATE, item->>'phone', NULLIF(item->>'enrollment_date', '')::DATE, item->>'status', (item->'tuition'))
+        INSERT INTO students (id, name, sex, dob, phone, enrollment_date, status)
+        VALUES (item->>'id', item->>'name', item->>'sex', NULLIF(item->>'dob', '')::DATE, item->>'phone', NULLIF(item->>'enrollment_date', '')::DATE, item->>'status')
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name, sex = EXCLUDED.sex, dob = EXCLUDED.dob, phone = EXCLUDED.phone, 
-            enrollment_date = EXCLUDED.enrollment_date, status = EXCLUDED.status, tuition = EXCLUDED.tuition;
+            enrollment_date = EXCLUDED.enrollment_date, status = EXCLUDED.status;
     END LOOP;
 
     -- Upsert Staff

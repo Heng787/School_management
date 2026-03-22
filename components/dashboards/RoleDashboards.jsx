@@ -18,8 +18,8 @@ export const AdminDashboard = ({ navigate }) => {
     const { students, staff, classes, enrollments, attendance, events, staffPermissions, dailyLogs, grades } = useData();
 
     // 1. Student Lifecycle & Attendance
-    const today = new Date().toISOString().split('T')[0];
-    const todaysAttendance = attendance.filter(a => a.date.startsWith(today));
+    const today = new Date().toLocaleDateString('en-CA');
+    const todaysAttendance = attendance.filter(a => a.date === today);
     const uniquePresentStudents = new Set(todaysAttendance.filter(a => a.status === AttendanceStatus.Present).map(a => a.studentId));
     const totalMarkedToday = new Set(todaysAttendance.map(a => a.studentId)).size;
     const attendanceRate = totalMarkedToday > 0 ? Math.round((uniquePresentStudents.size / totalMarkedToday) * 100) : 100;
@@ -387,24 +387,10 @@ export const TeacherDashboard = () => {
 // --- Office Worker Dashboard ---
 export const OfficeWorkerDashboard = () => {
     const { students } = useData();
-    const pendingTuition = students.filter(s => s.tuition.paid < s.tuition.total);
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card title="Pending Tuition Payments">
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                        {pendingTuition.map(s => (
-                            <div key={s.id} className="p-3 bg-slate-50 rounded-xl flex justify-between items-center">
-                                <div>
-                                    <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                                    <p className="text-xs text-slate-500">Balance: ${(s.tuition.total - s.tuition.paid).toLocaleString()}</p>
-                                </div>
-                                <button className="text-xs font-bold text-primary-600 hover:underline">Record Payment</button>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
+            <div className="grid grid-cols-1 gap-6">
                 <Card title="Recent Registrations">
                     <div className="space-y-3">
                         {students.slice(-5).reverse().map(s => (

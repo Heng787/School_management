@@ -251,7 +251,6 @@ create table if not exists public.students (
   phone text,
   enrollment_date date default current_date,
   status text default 'Active',
-  tuition jsonb default '{"total": 0, "paid": 0}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -356,12 +355,11 @@ create table if not exists public.audit_log (
 begin
   -- 1. Sync Students
   delete from public.students;
-  insert into public.students (id, name, sex, dob, phone, enrollment_date, status, tuition)
+  insert into public.students (id, name, sex, dob, phone, enrollment_date, status)
   select 
     (value->>'id'), (value->>'name'), (value->>'sex'), 
     (value->>'dob')::date, (value->>'phone'), 
-    (value->>'enrollment_date')::date, (value->>'status'), 
-    (value->'tuition')
+    (value->>'enrollment_date')::date, (value->>'status')
   from jsonb_array_elements(p_students);
 
   -- 2. Sync Staff
@@ -700,7 +698,7 @@ const SettingsPage = ({ onLogout, userRole }) => {
 
             <div className="flex flex-col md:flex-row gap-4 sm:gap-8 items-start">
                 {/* --- UI SECTION: SIDEBAR NAVIGATION --- */}
-                <div className="w-full md:w-64 shrink-0 flex md:flex-col gap-2 overflow-x-auto pb-4 md:pb-0 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+                <div className="w-full md:w-64 shrink-0 flex flex-wrap md:flex-col gap-2 pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -721,8 +719,9 @@ const SettingsPage = ({ onLogout, userRole }) => {
 
                     <div className="pt-4 mt-2 border-t border-slate-100">
                         <button
+                            type="button"
                             onClick={onLogout}
-                            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 group"
+                            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 group cursor-pointer"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

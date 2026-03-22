@@ -144,10 +144,18 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
                         <p className="text-sm font-semibold text-slate-700">{currentUser?.name || userRole}</p>
                         <p className="text-xs text-slate-400 capitalize">{userRole.toLowerCase()}</p>
                     </div>
-                    <div className="relative">
+                    <div 
+                        className="relative"
+                        onBlur={(e) => {
+                            // If focus moves to something outside the profile menu, close it
+                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                setTimeout(() => setIsProfileOpen(false), 200);
+                            }
+                        }}
+                    >
                         <button
+                            type="button"
                             onClick={() => setIsProfileOpen(!isProfileOpen)}
-                            onBlur={() => setTimeout(() => setIsProfileOpen(false), 200)}
                             className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold hover:bg-slate-200 transition-all focus:ring-2 focus:ring-primary-500 focus:outline-none focus:ring-offset-1"
                         >
                             {(currentUser?.name || userRole).charAt(0).toUpperCase()}
@@ -163,6 +171,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
                                 {userRole === UserRole.Admin && (
                                     <>
                                         <button
+                                            type="button"
                                             onClick={() => { navigate(Page.Settings); setIsProfileOpen(false); }}
                                             className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center space-x-3 transition-colors"
                                         >
@@ -176,8 +185,9 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
                                     </>
                                 )}
                                 <button
+                                    type="button"
                                     onClick={() => { onLogout(); setIsProfileOpen(false); }}
-                                    className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors"
+                                    className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors cursor-pointer"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

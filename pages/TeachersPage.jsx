@@ -378,7 +378,7 @@ const StaffPage = () => {
 
             {/* Filters and Search */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row justify-between gap-4 overflow-hidden">
-                <div className="flex bg-gray-100 p-1 rounded-lg overflow-x-auto scrollbar-hide w-full md:w-auto">
+                <div className="flex flex-wrap bg-gray-100 p-1 rounded-lg w-full md:w-auto">
                     <button onClick={() => setActiveTab('all')} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === 'all' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>All</button>
                     <button onClick={() => setActiveTab(StaffRole.Teacher)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === StaffRole.Teacher ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Teachers</button>
                     <button onClick={() => setActiveTab(StaffRole.AssistantTeacher)} className={`px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${activeTab === StaffRole.AssistantTeacher ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Assistants</button>

@@ -311,7 +311,7 @@
     <div class="person-card">
       <div class="avatar" style="background:#dbeafe;">👨‍💼</div>
       <h3>School Admin</h3>
-      <p>The boss. Can see and manage <strong>everything</strong> — students, staff, money, reports, and all settings.</p>
+      <p>The boss. Can see and manage <strong>everything</strong> — students, staff, reports, and all settings.</p>
     </div>
     <div class="person-card">
       <div class="avatar" style="background:#dcfce7;">👩‍🏫</div>
@@ -515,7 +515,6 @@ sequenceDiagram
         <li>Phone number</li>
         <li>Enrollment date</li>
         <li>Status — Active / Suspended / Dropout</li>
-        <li>Tuition paid vs. total owed</li>
       </ul>
     </div>
     <div class="data-card">
@@ -702,7 +701,6 @@ erDiagram
         text sex "Male or Female"
         date dob "Date of birth"
         text status "Active / Suspended"
-        jsonb tuition "Paid vs Total"
     }
     staff {
         text id "Unique ID"

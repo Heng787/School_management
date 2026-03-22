@@ -77,8 +77,6 @@ const StudentModal = ({ studentData, onClose }) => {
 
         const payload = {
             ...formData,
-            // Preserve existing tuition data or initialize with zeros
-            tuition: studentData ? studentData.tuition : { total: 0, paid: 0 },
         };
 
         try {

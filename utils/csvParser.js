@@ -193,7 +193,6 @@ export const parseStudentCSV = (csvContent) => {
                 phone,
                 enrollmentDate,
                 status,
-                tuition: { total: 0, paid: 0 },
             });
         } catch (e) {
             errors.push({ row: rowNumber, message: e.message || 'Unknown parsing error.' });

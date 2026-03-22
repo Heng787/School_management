@@ -7,7 +7,6 @@ create table if not exists public.students (
   phone text,
   enrollment_date date default current_date,
   status text default 'Active',
-  tuition jsonb default '{"total": 0, "paid": 0}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -108,12 +107,11 @@ create or replace function public.sync_school_data_v2(
 begin
   -- 1. Sync Students
   delete from public.students;
-  insert into public.students (id, name, sex, dob, phone, enrollment_date, status, tuition)
+  insert into public.students (id, name, sex, dob, phone, enrollment_date, status)
   select 
     (value->>'id'), (value->>'name'), (value->>'sex'), 
     (value->>'dob')::date, (value->>'phone'), 
-    (value->>'enrollment_date')::date, (value->>'status'), 
-    (value->'tuition')
+    (value->>'enrollment_date')::date, (value->>'status')
   from jsonb_array_elements(p_students);
 
   -- 2. Sync Staff

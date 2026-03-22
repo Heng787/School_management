@@ -9,7 +9,6 @@ export const mapStudent = {
         phone: s.phone || null,
         enrollment_date: s.enrollmentDate || null,
         status: s.status,
-        tuition: s.tuition || { total: 0, paid: 0 }
     }),
     fromDb: (d)=> ({
         id: d.id,
@@ -19,7 +18,6 @@ export const mapStudent = {
         phone: d.phone,
         enrollmentDate: d.enrollment_date,
         status: d.status,
-        tuition: d.tuition || { total: 0, paid: 0 }
     })
 };
 

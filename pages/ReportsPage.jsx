@@ -397,7 +397,7 @@ const ExportCenter = () => {
                     Download a comprehensive roster for a specific Class or an entire Level. The exported file is <strong>automatically formatted (.xlsx)</strong> containing <strong>Attendance %</strong>, <strong>Contact Phone</strong>, <strong>DOB</strong>, and <strong>Letter Grades (A, B, C, D, F)</strong>.
                 </p>
 
-                <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 mb-6 w-full">
+                <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200 mb-6 w-full">
                     <button
                         onClick={() => setExportMode('class')}
                         className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all ${exportMode === 'class' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -468,9 +468,9 @@ const ExportCenter = () => {
                 <h3 className="text-lg font-bold text-slate-800 mb-2">Export File</h3>
                 <p className="text-sm border border-slate-100 bg-slate-50 py-1.5 px-3 rounded-md text-slate-500 mb-6 min-w-[200px] truncate max-w-full">
                     {(exportMode === 'class' && selectedClass)
-                        ? `class_export_${selectedClass.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
+                        ? `class_export_${selectedClass.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('en-CA')}.xlsx`
                         : (exportMode === 'level' && selectedLevel)
-                            ? `level_export_${selectedLevel}_${new Date().toISOString().split('T')[0]}.xlsx`
+                            ? `level_export_${selectedLevel}_${new Date().toLocaleDateString('en-CA')}.xlsx`
                             : 'No target selected'}
                 </p>
 
@@ -498,7 +498,7 @@ const AttendanceReport = () => {
     const [selectedClassId, setSelectedClassId] = useState(() => sessionStorage.getItem('reports_attendance_class') || '');
     const [expandedStudentId, setExpandedStudentId] = useState(null);
     const [flaggedIds, setFlaggedIds] = useState(new Set());
-    const [timeRange, setTimeRange] = useState(() => sessionStorage.getItem('reports_attendance_time') || 'all');
+    const [timeRange, setTimeRange] = useState(() => sessionStorage.getItem('reports_attendance_time') || 'today');
     
     useEffect(() => {
         if (timeRange) sessionStorage.setItem('reports_attendance_time', timeRange);
@@ -514,7 +514,6 @@ const AttendanceReport = () => {
 
     // --- 3.2. MEMOIZED DATA ---
     const filteredAttendance = useMemo(() => {
-        if (timeRange === 'all') return attendance;
         const cutoff = new Date();
         
         switch (timeRange) {
@@ -538,9 +537,8 @@ const AttendanceReport = () => {
             default:
                 break;
         }
-        cutoff.setHours(0, 0, 0, 0);
-        
-        return attendance.filter(a => new Date(a.date) >= cutoff);
+        const cutoffStr = cutoff.toLocaleDateString('en-CA');
+        return attendance.filter(a => a.date >= cutoffStr);
     }, [attendance, timeRange]);
 
     const topAbsences = useMemo(() => {
@@ -555,7 +553,7 @@ const AttendanceReport = () => {
             .slice(0, 5)
             .map(([studentId, count]) => ({ student: students.find(s => s.id === studentId), count }))
             .filter(item => item.student);
-    }, [attendance, students]);
+    }, [filteredAttendance, students]);
 
     const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
 
@@ -575,7 +573,7 @@ const AttendanceReport = () => {
                 .sort((a, b) => b.date.localeCompare(a.date));
             return { student, present, absent, late, total: present + absent + late, history };
         });
-    }, [students, selectedClass, enrollments, attendance]);
+    }, [students, selectedClass, enrollments, filteredAttendance]);
 
     const flaggedStudents = useMemo(() =>
         classStudentsStats.filter(s => flaggedIds.has(s.student.id)),
@@ -610,7 +608,7 @@ const AttendanceReport = () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `attendance_${stat.student.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.download = `attendance_${stat.student.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('en-CA')}.csv`;
         link.click();
         URL.revokeObjectURL(url);
     };
@@ -628,7 +626,6 @@ const AttendanceReport = () => {
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Timeframe:</span>
                         <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-1.5 font-semibold focus:ring-2 focus:ring-red-500 outline-none transition-all cursor-pointer">
-                            <option value="all">All Time</option>
                             <option value="today">Today</option>
                             <option value="7days">Last 7 Days</option>
                             <option value="30days">Last 30 Days</option>
@@ -897,7 +894,7 @@ const ReportsPage = () => {
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Academic Records</h1>
                     <p className="text-slate-500 mt-1">Record marks, track attendance, and export student performance data.</p>
                 </div>
-                <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                     <button
                         onClick={() => {
                             setActiveTab('marks');
