@@ -209,9 +209,10 @@ const ClassesPage = () => {
             try {
                 const result = await parseExcelFile(file);
                 
-                // --- 1. SMART CLASS MATCHING ---
+                // --- 1. SMART CLASS MATCHING & ID PREPARATION ---
                 const classIDMap = {};
                 const classesToAdd = [];
+                let classNextIdx = Date.now();
                 
                 if (result.classes && result.classes.length > 0) {
                     for (const impClass of result.classes) {
@@ -224,19 +225,24 @@ const ClassesPage = () => {
                         if (existing) {
                             classIDMap[impClass.id] = existing.id;
                         } else {
-                            // Find teacher ID if possible
-                            const teacher = staff.find(s => s.name.toLowerCase().includes(impClass.teacherName.toLowerCase()));
-                            const newClass = { ...impClass, teacherId: teacher?.id || 'unassigned' };
+                            // Find teacher ID if possible (flexible match)
+                            const teacher = staff.find(s => 
+                                s.name.toLowerCase().includes(impClass.teacherName.toLowerCase()) ||
+                                impClass.teacherName.toLowerCase().includes(s.name.toLowerCase())
+                            );
+                            const finalClassId = `class_imp_${classNextIdx++}`;
+                            const newClass = { ...impClass, id: finalClassId, teacherId: teacher?.id || 'unassigned' };
                             classesToAdd.push(newClass);
-                            classIDMap[impClass.id] = newClass.id;
+                            classIDMap[impClass.id] = finalClassId;
                         }
                     }
                     if (classesToAdd.length > 0) await addClasses(classesToAdd);
                 }
                 
-                // --- 2. SMART STUDENT MATCHING ---
+                // --- 2. SMART STUDENT MATCHING & ID PREPARATION ---
                 const studentIDMap = {};
                 const studentsToAdd = [];
+                let lastStuId = students.map(s => parseInt(s.id.substring(1), 10)).filter(id => !isNaN(id)).reduce((max, curr) => Math.max(max, curr), 0);
                 
                 if (result.students && result.students.length > 0) {
                     for (const impStu of result.students) {
@@ -248,8 +254,10 @@ const ClassesPage = () => {
                         if (existing) {
                             studentIDMap[impStu.id] = existing.id;
                         } else {
-                            studentsToAdd.push(impStu);
-                            studentIDMap[impStu.id] = impStu.id;
+                            const finalStuId = `s${++lastStuId}`;
+                            const newStu = { ...impStu, id: finalStuId };
+                            studentsToAdd.push(newStu);
+                            studentIDMap[impStu.id] = finalStuId;
                         }
                     }
                     if (studentsToAdd.length > 0) await addStudents(studentsToAdd);
@@ -274,7 +282,8 @@ const ClassesPage = () => {
                     const mappedGrades = result.grades.map(grd => ({
                         ...grd,
                         studentId: studentIDMap[grd.studentId] || grd.studentId,
-                        classId: classIDMap[grd.classId] || grd.classId
+                        classId: classIDMap[grd.classId] || grd.classId,
+                        id: `grd_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
                     }));
                     if (saveGradeBatch) await saveGradeBatch(mappedGrades);
                 }
@@ -283,7 +292,7 @@ const ClassesPage = () => {
                     successCount: classesToAdd.length + studentsToAdd.length + (result.grades?.length || 0),
                     errorCount: result.errors?.length || 0,
                     errors: result.errors?.map(e => ({ message: e })) || [],
-                    message: `Imported ${classesToAdd.length} new classes, ${studentsToAdd.length} new students, and ${result.grades?.length || 0} marks.`
+                    message: `Successfully linked everything! Added ${classesToAdd.length} new classes, ${studentsToAdd.length} new students, and ${result.grades?.length || 0} marks.`
                 });
                 setIsImportModalOpen(true);
             } catch (err) {

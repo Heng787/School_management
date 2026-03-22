@@ -245,8 +245,11 @@ export const DataProvider = ({ children }) => {
     // --- 7. STUDENT MANAGEMENT ---
     const addStudents = (newStudentsData) =>
         performUpdate((data) => apiService.saveStudents(data), setStudents, (current) => {
-            let lastId = current.map(s => parseInt(s.id.substring(1), 10)).filter(id => !isNaN(id)).reduce((max, curr) => Math.max(max, curr), 0);
-            const newOnes = newStudentsData.map(data => ({ ...data, id: `s${++lastId}` }));
+            let lastIdInt = current.map(s => parseInt(s.id.substring(1), 10)).filter(id => !isNaN(id)).reduce((max, curr) => Math.max(max, curr), 0);
+            const newOnes = newStudentsData.map((data, i) => {
+                if (data.id && !data.id.startsWith('stu_imp_')) return data;
+                return { ...data, id: `s${++lastIdInt}` };
+            });
             return [...current, ...newOnes];
         });
 
@@ -292,8 +295,14 @@ export const DataProvider = ({ children }) => {
     };
 
     // --- 9. CLASS & ENROLLMENT MANAGEMENT ---
-    const addClass = (data) => performUpdate((d) => apiService.saveClasses(d), setClasses, (prev) => [...prev, { ...data, id: data.id || `class_${Date.now()}` }]);
-    const addClasses = (data) => performUpdate((d) => apiService.saveClasses(d), setClasses, (prev) => [...prev, ...data.map((d, i) => ({ ...d, id: `class_${Date.now()}_${i}` }))]);
+    const addClass = (data) => addClasses([data]);
+    const addClasses = (data) => performUpdate((d) => apiService.saveClasses(d), setClasses, (prev) => {
+        const newItems = data.map((d, i) => ({ 
+            ...d, 
+            id: (d.id && !d.id.startsWith('cls_')) ? d.id : `class_${Date.now()}_${i}` 
+        }));
+        return [...prev, ...newItems];
+    });
     const updateClass = (updated) => performUpdate((d) => apiService.saveClasses(d), setClasses, (prev) => prev.map(c => c.id === updated.id ? updated : c));
     const deleteClass = async (id) => {
         setClasses(prev => prev.filter(c => c.id !== id));
@@ -303,8 +312,14 @@ export const DataProvider = ({ children }) => {
         } catch (err) {}
     };
 
-    const addEnrollment = (data) => performUpdate((d) => apiService.saveEnrollments(d), setEnrollments, (prev) => [...prev, { ...data, id: `enr_${Date.now()}` }]);
-    const addEnrollments = (data) => performUpdate((d) => apiService.saveEnrollments(d), setEnrollments, (prev) => [...prev, ...data.map((enr, i) => ({ ...enr, id: `enr_${Date.now()}_${i}` }))]);
+    const addEnrollment = (data) => addEnrollments([data]);
+    const addEnrollments = (data) => performUpdate((d) => apiService.saveEnrollments(d), setEnrollments, (prev) => {
+        const newItems = data.map((enr, i) => ({ 
+            ...enr, 
+            id: enr.id || `enr_${Date.now()}_${i}` 
+        }));
+        return [...prev, ...newItems];
+    });
     const deleteEnrollment = (id) => {
         setEnrollments(prev => prev.filter(e => e.id !== id));
         apiService.deleteRecord('enrollments', id).catch(() => {});
