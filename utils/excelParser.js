@@ -27,22 +27,29 @@ export const parseExcelFile = async (file) => {
 
                 const classesSheet = XLSX.utils.sheet_to_json(workbook.Sheets[classesSheetName], { header: 1 });
                 
-                // Extract class details
-                // B2/C2 etc.. We read rows
-                const rowBr = classesSheet[0] || [];
-                const rowLevel = classesSheet[1] || [];
-                const rowTime = classesSheet[2] || [];
-                const rowRoom = classesSheet[3] || [];
-                const rowTr = classesSheet[4] || [];
+                // Extract class details using keyword search across the top 10 rows
+                let branch = 'Unknown Branch';
+                let level = 'Unknown Level';
+                let time = 'Unknown Time';
+                let room = 'Unknown Room';
+                let teacherName = 'Unknown Teacher';
 
-                const getVal = (row, idx) => (row[idx] ? String(row[idx]).trim() : '');
-                
-                // Assuming it's in Column B (index 1)
-                const branch = getVal(rowBr, 1) || 'Unknown Branch';
-                const level = getVal(rowLevel, 1) || 'Unknown Level';
-                const time = getVal(rowTime, 1) || 'Unknown Time';
-                const room = getVal(rowRoom, 1) || 'Unknown Room';
-                const teacherName = getVal(rowTr, 1) || 'Unknown Teacher';
+                // Scan top rows for metadata (up to row 15)
+                for (let i = 0; i < Math.min(classesSheet.length, 15); i++) {
+                    const row = classesSheet[i];
+                    if (!row) continue;
+                    for (let j = 0; j < row.length; j++) {
+                        const cellRaw = String(row[j] || '').trim().toLowerCase();
+                        if (!cellRaw) continue;
+                        const nextCellRaw = String(row[j + 1] || '').trim();
+
+                        if (cellRaw === 'br:' || cellRaw === 'branch' || cellRaw === 'branch:') branch = nextCellRaw || branch;
+                        if (cellRaw === 'level:' || cellRaw === 'level') level = nextCellRaw || level;
+                        if (cellRaw === 'time:' || cellRaw === 'time' || cellRaw === 'schedule:') time = nextCellRaw || time;
+                        if (cellRaw === 'room:' || cellRaw === 'room') room = nextCellRaw || room;
+                        if (cellRaw === 'tr:' || cellRaw === 'teacher:' || cellRaw === 'teacher') teacherName = nextCellRaw || teacherName;
+                    }
+                }
 
                 let classData = {
                     name: room,
@@ -55,22 +62,53 @@ export const parseExcelFile = async (file) => {
 
                 results.classes.push(classData);
 
-                // Start parsing students at row 7 (index 6 in 0-based array)
-                // NO | NAME | SEX | PHONE
-                const studentStartRow = 6;
+                // Find the header row for the student table
+                let headerRowIdx = -1;
+                let colMapping = { name: -1, sex: -1, phone: -1 };
+
+                for (let i = 0; i < Math.min(classesSheet.length, 30); i++) {
+                    const row = classesSheet[i];
+                    if (!row) continue;
+                    let foundName = false;
+                    
+                    for (let j = 0; j < row.length; j++) {
+                        const val = String(row[j] || '').trim().toLowerCase();
+                        if (val === 'name' || val === 'student name' || val === 'student' || val === 'students') {
+                            colMapping.name = j;
+                            foundName = true;
+                        }
+                        if (val === 'sex' || val === 'gender') colMapping.sex = j;
+                        if (val.includes('phone') || val.includes('contact')) colMapping.phone = j;
+                    }
+                    
+                    if (foundName) {
+                        headerRowIdx = i;
+                        break;
+                    }
+                }
+
+                // Fallback to strict columns if header row not found or incomplete
+                if (headerRowIdx === -1) {
+                    headerRowIdx = 5; // Default to row 6
+                    if (colMapping.name === -1) colMapping.name = 1;
+                }
+                if (colMapping.sex === -1) colMapping.sex = colMapping.name + 1;
+                if (colMapping.phone === -1) colMapping.phone = colMapping.name + 2;
+
+                const studentStartRow = headerRowIdx + 1;
                 let studentList = [];
 
                 for (let i = studentStartRow; i < classesSheet.length; i++) {
                     const row = classesSheet[i];
-                    if (!row || !row[1] || row[1].trim() === '') continue; // Skip empty names
+                    if (!row || !row[colMapping.name] || String(row[colMapping.name]).trim() === '') continue; // Skip empty names
                     
-                    const no = row[0];
-                    if (no === 'NO') continue; // Skip header again if any
+                    const cell0 = String(row[0] || '').trim().toLowerCase();
+                    if (cell0 === 'no' || cell0 === 'name' || cell0 === 'student') continue; // Skip repeating headers
 
-                    const name = String(row[1]).trim();
-                    const sexRaw = String(row[2] || '').trim().toUpperCase();
-                    const sex = (sexRaw === 'M' || sexRaw === 'MALE') ? 'Male' : 'Female';
-                    const phone = String(row[3] || '').trim();
+                    const name = String(row[colMapping.name]).trim();
+                    const sexRaw = String(row[colMapping.sex] || '').trim().toUpperCase();
+                    const sex = (sexRaw === 'M' || sexRaw === 'MALE' || sexRaw === 'BOY') ? 'Male' : 'Female';
+                    const phone = String(row[colMapping.phone] || '').trim();
 
                     const studentObj = {
                         id: 'new_stu_' + Date.now() + '_' + i,
