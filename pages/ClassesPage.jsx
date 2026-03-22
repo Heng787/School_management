@@ -6,6 +6,7 @@ import { generateSingleClassCSV, generateBulkClassCSV } from '../utils/reportGen
 import { parseClassCSV } from '../utils/csvParser';
 import { parseExcelFile } from '../utils/excelParser';
 import ImportResultsModal from '../components/ImportResultsModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { LevelManager, SessionManager, SubjectManager } from '../components/ClassAcademicConfig';
 
 /**
@@ -23,7 +24,8 @@ const ClassesPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
     const highlightedRowRef = useRef(null);
-    const [deletingClassId, setDeletingClassId] = useState(null);
+    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+    const [classToDelete, setClassToDelete] = useState(null);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [expandedClassId, setExpandedClassId] = useState(null);
 
@@ -36,6 +38,23 @@ const ClassesPage = () => {
     const [selectedTime, setSelectedTime] = useState('all');
     const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false);
     const teacherDropdownRef = useRef(null);
+
+    const confirmDelete = async () => {
+        if (classToDelete) {
+            try {
+                await deleteClass(classToDelete.id);
+                setSelectedClassIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(classToDelete.id);
+                    return next;
+                });
+                setClassToDelete(null);
+                setIsConfirmDeleteOpen(false);
+            } catch (error) {
+                console.error("Failed to delete class:", error);
+            }
+        }
+    };
 
     // --- Import State ---
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -102,7 +121,7 @@ const ClassesPage = () => {
         return baseClasses
             .filter(cls => selectedLevel === 'all' || cls.level === selectedLevel)
             .filter(cls => selectedTeacherIds.length === 0 || selectedTeacherIds.includes(cls.teacherId))
-            .filter(cls => selectedTime === 'all' || cls.schedule.includes(selectedTime));
+            .filter(cls => selectedTime === 'all' || (cls.schedule && cls.schedule.includes(selectedTime)));
     }, [classes, selectedLevel, selectedTeacherIds, selectedTime, currentUser, enrollments]);
 
     // --- 6. SELECTION & ACTION HANDLERS ---
@@ -332,7 +351,7 @@ const ClassesPage = () => {
         grouped['Other Schedule'] = []; // Fallback bucket for unmatched schedules
 
         filteredClasses.forEach(cls => {
-            const matchedSlot = allSessionLabels.find(label => cls.schedule.includes(label));
+            const matchedSlot = allSessionLabels.find(label => cls.schedule && cls.schedule.includes(label));
             if (matchedSlot) {
                 grouped[matchedSlot].push(cls);
             } else {
@@ -595,37 +614,22 @@ const ClassesPage = () => {
 
                                                 {/* Actions - Admin and Office Workers */}
                                                 {(isAdmin || isOffice) && (
-                                                <div onClick={e => e.stopPropagation()} className={`hidden sm:flex items-center justify-end gap-1 w-auto pl-4 transition-opacity relative z-20 ${deletingClassId === cls.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                                                    {deletingClassId === cls.id ? (
-                                                        <div className="flex items-center space-x-2 animate-in fade-in zoom-in duration-200">
-                                                            <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Sure?</span>
-                                                            <button onClick={() => setDeletingClassId(null)} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-xs font-bold">Cancel</button>
-                                                            <button onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                deleteClass(cls.id);
-                                                                setSelectedClassIds(prev => { const n = new Set(prev); n.delete(cls.id); return n; });
-                                                                setDeletingClassId(null);
-                                                            }} className="px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-bold shadow-sm shadow-red-200">Delete</button>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <button
-                                                                onClick={(e) => handleOpenModal(e, cls)}
-                                                                className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
-                                                                title="Edit Class"
-                                                            >
-                                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                                            </button>
-                                                            {isAdmin && (
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setDeletingClassId(cls.id); }}
-                                                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                                                    title="Delete Class"
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                                </button>
-                                                            )}
-                                                        </>
+                                                <div onClick={e => e.stopPropagation()} className={`hidden sm:flex items-center justify-end gap-1 w-auto pl-4 transition-opacity relative z-20 opacity-0 group-hover:opacity-100`}>
+                                                    <button
+                                                        onClick={(e) => handleOpenModal(e, cls)}
+                                                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                                                        title="Edit Class"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    </button>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setClassToDelete(cls); setIsConfirmDeleteOpen(true); }}
+                                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                                            title="Delete Class"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
                                                     )}
                                                 </div>
                                                 )}
@@ -633,26 +637,9 @@ const ClassesPage = () => {
                                                 {/* Mobile Actions - Admin and Office Workers */}
                                                 {(isAdmin || isOffice) && (
                                                 <div onClick={e => e.stopPropagation()} className="sm:hidden flex items-center justify-end gap-3 mt-3 pt-3 border-t border-slate-50">
-                                                    {deletingClassId === cls.id ? (
-                                                        <div className="flex items-center space-x-2 w-full justify-between animate-in fade-in zoom-in duration-200">
-                                                            <span className="text-xs font-bold text-red-600 uppercase tracking-wider">Are you sure?</span>
-                                                            <div className="flex space-x-2">
-                                                                <button onClick={() => setDeletingClassId(null)} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-xs font-bold">Cancel</button>
-                                                                <button onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    deleteClass(cls.id);
-                                                                    setSelectedClassIds(prev => { const n = new Set(prev); n.delete(cls.id); return n; });
-                                                                    setDeletingClassId(null);
-                                                                }} className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-bold shadow-sm shadow-red-200">Delete</button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <button onClick={(e) => { e.stopPropagation(); handleOpenModal(e, cls); }} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all">Edit</button>
-                                                            {isAdmin && (
-                                                                <button onClick={(e) => { e.stopPropagation(); setDeletingClassId(cls.id); }} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-all">Delete</button>
-                                                            )}
-                                                        </>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleOpenModal(e, cls); }} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-all">Edit</button>
+                                                    {isAdmin && (
+                                                        <button onClick={(e) => { e.stopPropagation(); setClassToDelete(cls); setIsConfirmDeleteOpen(true); }} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-all">Delete</button>
                                                     )}
                                                 </div>
                                                 )}
@@ -700,6 +687,13 @@ const ClassesPage = () => {
 
             {isModalOpen && <ClassModal classData={editingClass} onClose={handleCloseModal} />}
             {isImportModalOpen && <ImportResultsModal results={importResults} onClose={() => setIsImportModalOpen(false)} />}
+            <ConfirmModal 
+                isOpen={isConfirmDeleteOpen} 
+                onClose={() => setIsConfirmDeleteOpen(false)} 
+                onConfirm={confirmDelete}
+                title="Delete Class"
+                message={`Are you sure you want to delete class ${classToDelete?.name}? All enrollments and marks for this class will be affected.`}
+            />
         </div>
     );
 };

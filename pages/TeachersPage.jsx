@@ -8,6 +8,7 @@ import ImportResultsModal from '../components/ImportResultsModal';
 import StaffPermissionModal from '../components/StaffPermissionModal';
 import InviteStaffModal from '../components/InviteStaffModal';
 import AllStaffPermissionModal from '../components/AllStaffPermissionModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 /**
  * COMPONENT: StaffModal
@@ -165,7 +166,8 @@ const StaffPage = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importResults, setImportResults] = useState(null);
     const fileInputRef = useRef(null);
-    const [deletingStaffId, setDeletingStaffId] = useState(null);
+    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+    const [staffToDelete, setStaffToDelete] = useState(null);
     const [isAllPermissionModalOpen, setIsAllPermissionModalOpen] = useState(false);
 
     // --- 2. MEMOIZED DATA ---
@@ -485,22 +487,15 @@ const StaffPage = () => {
                                             {new Date(s.hireDate).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            {deletingStaffId === s.id ? (
-                                                <div className="flex items-center justify-end space-x-2 animate-in fade-in zoom-in duration-200">
-                                                    <span className="text-xs font-bold text-red-600 mr-2 uppercase tracking-wider">Are you sure?</span>
-                                                    <button onClick={() => setDeletingStaffId(null)} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-xs font-bold">Cancel</button>
-                                                    <button onClick={() => { deleteStaff(s.id); setDeletingStaffId(null); }} className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-bold shadow-sm shadow-red-200">Delete</button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex justify-end items-center gap-2">
-                                                    <button onClick={() => handleOpenModal(s)} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-lg border border-transparent hover:bg-primary-50 transition-colors" title="Edit Staff">
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                            <div className="flex justify-end items-center gap-2">
+                                                <button onClick={() => handleOpenModal(s)} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-lg border border-transparent hover:bg-primary-50 transition-colors" title="Edit Staff">
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                </button>
+                                                {isAdmin && (
+                                                    <button onClick={() => { setStaffToDelete(s); setIsConfirmDeleteOpen(true); }} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg border border-transparent hover:bg-red-50 transition-colors" title="Delete Staff">
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
-                                                    {isAdmin && (
-                                                        <button onClick={() => setDeletingStaffId(s.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg border border-transparent hover:bg-red-50 transition-colors" title="Delete Staff">
-                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                        </button>
-                                                    )}
+                                                )}
 
                                                     <details className="relative z-10 group" onBlur={(e) => {
                                                         // Close dropdown on blur
@@ -519,7 +514,6 @@ const StaffPage = () => {
                                                         </div>
                                                     </details>
                                                 </div>
-                                            )}
                                         </td>
                                     </tr>
                                 );
@@ -581,6 +575,13 @@ const StaffPage = () => {
             {inviteStaff && <InviteStaffModal staff={inviteStaff} onClose={() => setInviteStaff(null)} />}
             {isImportModalOpen && <ImportResultsModal results={importResults} onClose={() => setIsImportModalOpen(false)} />}
             {isAllPermissionModalOpen && <AllStaffPermissionModal onClose={() => setIsAllPermissionModalOpen(false)} />}
+            <ConfirmModal 
+                isOpen={isConfirmDeleteOpen} 
+                onClose={() => setIsConfirmDeleteOpen(false)} 
+                onConfirm={() => { deleteStaff(staffToDelete?.id); setStaffToDelete(null); }}
+                title="Remove Staff"
+                message={`Are you sure you want to remove ${staffToDelete?.name} from the system? This will also remove their access to the system.`}
+            />
         </div>
     );
 };

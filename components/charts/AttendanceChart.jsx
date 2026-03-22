@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useData } from '../../context/DataContext';
 
 const AttendanceChart = ({ startDate, endDate }) => {
-    const { students } = useData();
+    const { students, attendance } = useData();
 
     const getWeekStartDate = (d) => {
         const date = new Date(d);
@@ -15,22 +15,24 @@ const AttendanceChart = ({ startDate, endDate }) => {
 
     const data = useMemo(() => {
         const attendanceByDate = {};
+        const studentIds = new Set(students.map(s => s.id));
         
-        students.forEach(student => {
-            student.attendance.forEach(att => {
-                const attDate = new Date(att.date);
-                attDate.setHours(0, 0, 0, 0);
-                if (attDate >= startDate && attDate <= endDate) {
-                    const dateString = att.date;
-                    if (!attendanceByDate[dateString]) {
-                        attendanceByDate[dateString] = { present: 0, total: 0 };
-                    }
-                    attendanceByDate[dateString].total += 1;
-                    if (att.present) {
-                        attendanceByDate[dateString].present += 1;
-                    }
+        attendance.forEach(att => {
+            if (!studentIds.has(att.studentId)) return;
+
+            const attDate = new Date(att.date);
+            attDate.setHours(0, 0, 0, 0);
+            
+            if (attDate >= startDate && attDate <= endDate) {
+                const dateString = att.date;
+                if (!attendanceByDate[dateString]) {
+                    attendanceByDate[dateString] = { present: 0, total: 0 };
                 }
-            });
+                attendanceByDate[dateString].total += 1;
+                if (att.status === 'Present') {
+                    attendanceByDate[dateString].present += 1;
+                }
+            }
         });
 
         const diffTime = Math.abs(endDate.getTime() - startDate.getTime());

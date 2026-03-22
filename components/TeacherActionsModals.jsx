@@ -116,8 +116,21 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
 };
 
 export const GradesModal = ({ classData, students, onClose }) => {
-    const { grades, subjects, saveGradeBatch } = useData();
+    const { grades, subjects: globalSubjects, saveGradeBatch } = useData();
     const [term, setTerm] = useState('Midterm');
+
+    const availableTerms = useMemo(() => {
+        const terms = new Set(grades.filter(g => g.classId === classData.id).map(g => g.term));
+        ['Midterm', 'Finals', 'Q1', 'Q2', 'Q3', 'Q4'].forEach(t => terms.add(t));
+        return Array.from(terms);
+    }, [grades, classData.id]);
+
+    // Dynamically get subjects for this class/term
+    const classSubjects = useMemo(() => {
+        const classGrades = grades.filter(g => g.classId === classData.id && g.term === term);
+        const uniqueSubs = Array.from(new Set(classGrades.map(g => g.subject)));
+        return uniqueSubs.length > 0 ? uniqueSubs : globalSubjects;
+    }, [grades, classData.id, term, globalSubjects]);
 
     // Map of studentId -> { subject: score }
     const [scoreMap, setScoreMap] = useState({});
@@ -129,14 +142,14 @@ export const GradesModal = ({ classData, students, onClose }) => {
 
         students.forEach(s => {
             newMap[s.id] = {};
-            subjects.forEach(sub => {
+            classSubjects.forEach(sub => {
                 const existing = existingGrades.find(g => g.studentId === s.id && g.subject === sub);
                 newMap[s.id][sub] = existing ? existing.score : "";
             });
         });
 
         setScoreMap(newMap);
-    }, [term, students, grades, subjects, classData.id]);
+    }, [term, students, grades, classSubjects, classData.id]);
 
     const handleScoreChange = (studentId, subject, val) => {
         setScoreMap(prev => {
@@ -156,9 +169,7 @@ export const GradesModal = ({ classData, students, onClose }) => {
             } else if (num > 10) {
                 // Auto-inject decimal for two-digit numbers (e.g. "55" -> "5.5")
                 if (!strVal.includes('.') && strVal.length === 2) {
-                    strVal = `${strVal[0]}.${strVal[1]}`;
-                } else if (!strVal.includes('.') && strVal.length === 3 && strVal.startsWith("10")) {
-                    strVal = "10";
+                    strVal = (num / 10).toString();
                 } else {
                     strVal = "10";
                 }
@@ -174,7 +185,7 @@ export const GradesModal = ({ classData, students, onClose }) => {
         const recordsToSave = [];
 
         students.forEach(s => {
-            subjects.forEach(subject => {
+            classSubjects.forEach(subject => {
                 const rawScore = scoreMap[s.id]?.[subject];
                 if (rawScore !== undefined && rawScore !== "") {
                     const score = Number(rawScore);
@@ -207,10 +218,11 @@ export const GradesModal = ({ classData, students, onClose }) => {
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-start md:items-center bg-slate-50 shrink-0">
                     <div>
-                        <h2 className="text-xl font-bold text-slate-800">Grades</h2>
-                        <p className="text-sm text-slate-500">{classData.name}</p>
+                        <h2 className="text-xl font-extrabold text-blue-900 uppercase tracking-wide">{term} Exam Score Sheet</h2>
+                        <p className="text-sm font-bold text-slate-600 mt-1">Room {classData.name} <span className="text-slate-300 mx-2">|</span> Level <span className="text-primary-600 bg-primary-50 px-2 py-0.5 rounded">{classData.level}</span></p>
+                        <p className="text-xs font-bold text-slate-500 mt-1.5 uppercase tracking-widest">February - July 2026</p>
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
@@ -220,12 +232,9 @@ export const GradesModal = ({ classData, students, onClose }) => {
                                 onChange={(e) => setTerm(e.target.value)}
                                 className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-500 outline-none shadow-sm"
                             >
-                                <option value="Midterm">Midterm</option>
-                                <option value="Finals">Finals</option>
-                                <option value="Q1">Quarter 1</option>
-                                <option value="Q2">Quarter 2</option>
-                                <option value="Q3">Quarter 3</option>
-                                <option value="Q4">Quarter 4</option>
+                                {availableTerms.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
                             </select>
                         </div>
                         <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 transition-colors">
@@ -242,18 +251,21 @@ export const GradesModal = ({ classData, students, onClose }) => {
                         <table className="min-w-full divide-y divide-slate-100 table-fixed border-separate border-spacing-0">
                             <thead className="bg-slate-50 sticky top-0 z-30 shadow-sm">
                                 <tr>
-                                    <th className="w-40 sm:w-64 px-4 sm:px-6 py-3 sm:py-4 text-left text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-100 bg-slate-50 sticky left-0 z-40">Student Name</th>
-                                    {subjects.map(subject => (
-                                        <th key={subject} className="px-2 sm:px-4 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[80px] sm:min-w-[120px]">
-                                            {subject}
+                                    <th className="w-40 sm:w-64 px-4 sm:px-6 py-3 sm:py-4 text-left text-[10px] sm:text-xs font-bold text-blue-900 uppercase tracking-wider border-r border-slate-100 bg-slate-50 sticky left-0 z-40">Student Name</th>
+                                    {classSubjects.map(subject => (
+                                        <th key={subject} className="px-2 sm:px-4 py-3 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider min-w-[80px] sm:min-w-[100px] border-b-2 border-slate-200">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-blue-900 font-extrabold leading-tight">{subject}</span>
+                                                <span className="text-red-500 font-bold mt-1.5 lowercase tracking-normal">10 points</span>
+                                            </div>
                                         </th>
                                     ))}
-                                    <th className="w-20 sm:w-24 px-4 sm:px-6 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider border-l border-slate-100 bg-slate-50">Avg</th>
+                                    <th className="w-20 sm:w-24 px-4 sm:px-6 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-extrabold text-blue-900 uppercase tracking-wider border-l border-slate-100 bg-slate-50">Avg</th>
                                 </tr>
                             </thead>
                         <tbody className="bg-white divide-y divide-slate-100">
                             {students.map(student => {
-                                const scores = subjects.map(sub => parseFloat(scoreMap[student.id]?.[sub])).filter(n => !isNaN(n));
+                                const scores = classSubjects.map(sub => parseFloat(scoreMap[student.id]?.[sub])).filter(n => !isNaN(n));
                                 const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '0.0';
 
                                 return (
@@ -267,9 +279,8 @@ export const GradesModal = ({ classData, students, onClose }) => {
                                                     <p className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-[80px] sm:max-w-none">{student.name}</p>
                                                     <p className="text-[9px] sm:text-[10px] font-medium text-slate-400 hidden sm:block">ID: {student.id}</p>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        {subjects.map(subject => (
+                                            </div>                                        </td>
+                                        {classSubjects.map(subject => (
                                             <td key={subject} className="px-1 sm:px-2 py-2 sm:py-3">
                                                 <input
                                                     type="number"
@@ -284,8 +295,8 @@ export const GradesModal = ({ classData, students, onClose }) => {
                                                     className={`w-full text-center py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none 
                                                         ${parseFloat(scoreMap[student.id]?.[subject]) >= 9.0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
                                                             parseFloat(scoreMap[student.id]?.[subject]) < 5.0 ? 'text-red-600 bg-red-50 border-red-100' :
-                                                                scoreMap[student.id]?.[subject] !== "" ? 'text-slate-700 bg-white border-slate-200 hover:border-slate-300' :
-                                                                    'text-slate-400 bg-slate-50 border-slate-200 hover:border-slate-300'
+                                                                scoreMap[student.id]?.[subject] !== "" ? 'text-slate-800 bg-white border-slate-300 shadow-sm' :
+                                                                    'text-slate-400 bg-slate-50 border-slate-100 hover:border-slate-300 hover:bg-white'
                                                         }`}
                                                 />
                                             </td>
@@ -300,7 +311,7 @@ export const GradesModal = ({ classData, students, onClose }) => {
                             })}
                             {students.length === 0 && (
                                 <tr>
-                                    <td colSpan={subjects.length + 2} className="px-6 py-12 text-center text-slate-400 bg-slate-50 italic">
+                                    <td colSpan={classSubjects.length + 2} className="px-6 py-12 text-center text-slate-400 bg-slate-50 italic">
                                         No students enrolled in this class.
                                     </td>
                                 </tr>

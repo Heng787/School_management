@@ -36,9 +36,23 @@ const ClassModal = ({ classData, onClose }) => {
 
     // Room options generation
     const roomOptions = useMemo(() => {
-        const rooms = Array.from({ length: 15 }, (_, i) => `Room ${i + 1}`);
-        return [...rooms, 'Library', 'Conference'];
-    }, []);
+        const rooms = Array.from({ length: 20 }, (_, i) => `Room ${i + 1}`);
+        const opts = [...rooms, 'Library', 'Conference'];
+        if (classData && classData.name) {
+            let n = classData.name;
+            if (/^\d+$/.test(n)) n = `Room ${n}`; // Convert "5" to "Room 5"
+            if (!opts.includes(n)) opts.push(n);
+        }
+        return opts;
+    }, [classData]);
+
+    const levelOptions = useMemo(() => {
+        const opts = [...levels];
+        if (classData && classData.level && !opts.includes(classData.level)) {
+            opts.push(classData.level);
+        }
+        return opts;
+    }, [levels, classData]);
 
     // --- Effects ---
     useEffect(() => {
@@ -57,8 +71,10 @@ const ClassModal = ({ classData, onClose }) => {
     // Effect to pre-fill form when editing a class
     useEffect(() => {
         if (classData) {
+            let n = classData.name;
+            if (/^\d+$/.test(n)) n = `Room ${n}`; // Auto-ensure "5" matches "Room 5"
             setFormData({
-                name: classData.name,
+                name: n,
                 teacherId: classData.teacherId,
                 schedule: classData.schedule,
                 level: classData.level,
@@ -79,8 +95,8 @@ const ClassModal = ({ classData, onClose }) => {
                 if (scheduleLower.includes('weekday')) setScheduleType('weekday');
                 else if (scheduleLower.includes('weekend')) setScheduleType('weekend');
 
-                // Try to find matching time slot string
-                const timePart = timeSlots.find(s => scheduleLower.includes(s.time.toLowerCase().replace(/\s/g, '')))?.time;
+                // Try to find matching time slot string - with safety check for s.time
+                const timePart = timeSlots.find(s => s.time && scheduleLower.includes(s.time.toLowerCase().replace(/\s/g, '')))?.time;
                 if (timePart) setSelectedTime(timePart);
                 else {
                     // Fallback for custom strings

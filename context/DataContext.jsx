@@ -261,15 +261,19 @@ export const DataProvider = ({ children }) => {
             return prev.map(s => updatedMap.has(s.id) ? updatedMap.get(s.id) : s);
         });
     const deleteStudent = async (id) => {
+        // 1. Update Students
         setStudents(prev => prev.filter(s => s.id !== id));
+        
+        // 2. Cleanup Related Records (Cascade)
+        setEnrollments(prev => prev.filter(e => e.studentId !== id));
+        setAttendance(prev => prev.filter(a => a.studentId !== id));
+        setGrades(prev => prev.filter(g => g.studentId !== id));
+
         try {
             await apiService.deleteRecord('students', id);
             if (navigator.onLine) setLastSyncedAt(new Date());
         } catch (err) {
             console.error('Failed to delete student from Supabase:', err);
-            // Re-add the student to local state if Supabase deletion fails
-            // This is a temporary measure, the real fix might be in core.js's deleted_queue handling
-            // For now, re-throwing for better error propagation to UI
             throw err;
         }
     };
@@ -305,20 +309,33 @@ export const DataProvider = ({ children }) => {
     });
     const updateClass = (updated) => performUpdate((d) => apiService.saveClasses(d), setClasses, (prev) => prev.map(c => c.id === updated.id ? updated : c));
     const deleteClass = async (id) => {
+        // 1. Update Classes
         setClasses(prev => prev.filter(c => c.id !== id));
+
+        // 2. Cleanup Related Records (Cascade)
+        setEnrollments(prev => prev.filter(e => e.classId !== id));
+        setAttendance(prev => prev.filter(a => a.classId !== id));
+        setGrades(prev => prev.filter(g => g.classId !== id));
+
         try {
             await apiService.deleteRecord('classes', id);
             if (navigator.onLine) setLastSyncedAt(new Date());
-        } catch (err) {}
+        } catch (err) {
+            console.error('Failed to delete class from Supabase:', err);
+        }
     };
 
     const addEnrollment = (data) => addEnrollments([data]);
     const addEnrollments = (data) => performUpdate((d) => apiService.saveEnrollments(d), setEnrollments, (prev) => {
-        const newItems = data.map((enr, i) => ({ 
-            ...enr, 
-            id: enr.id || `enr_${Date.now()}_${i}` 
-        }));
-        return [...prev, ...newItems];
+        // Prevent duplicates in the state before adding
+        const existingMap = new Set(prev.map(e => `${e.studentId}|${e.classId}`));
+        const newOnes = data
+            .map((enr, i) => ({ 
+                ...enr, 
+                id: enr.id || `enr_${Date.now()}_${i}` 
+            }))
+            .filter(enr => !existingMap.has(`${enr.studentId}|${enr.classId}`));
+        return [...prev, ...newOnes];
     });
     const deleteEnrollment = (id) => {
         setEnrollments(prev => prev.filter(e => e.id !== id));

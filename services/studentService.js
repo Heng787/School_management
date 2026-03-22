@@ -12,6 +12,18 @@ export const studentService = {
     getAttendance: async () => fetchCollection('attendance', mapAttendance.fromDb),
     saveAttendance: async (attendance) => pushCollection('attendance', attendance, mapAttendance.toDb),
 
-    getEnrollments: async () => fetchCollection('enrollments', mapEnrollment.fromDb),
+    getEnrollments: async () => {
+        const enr = await fetchCollection('enrollments', mapEnrollment.fromDb);
+        const uniqueEnr = [];
+        const seenEnr = new Set();
+        enr.forEach(item => {
+            const key = `${item.studentId}_${item.classId}`;
+            if (!seenEnr.has(key)) {
+                seenEnr.add(key);
+                uniqueEnr.push(item);
+            }
+        });
+        return uniqueEnr;
+    },
     saveEnrollments: async (enrollments) => pushCollection('enrollments', enrollments, mapEnrollment.toDb),
 };

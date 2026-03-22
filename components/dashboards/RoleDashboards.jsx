@@ -19,10 +19,11 @@ export const AdminDashboard = ({ navigate }) => {
 
     // 1. Student Lifecycle & Attendance
     const today = new Date().toLocaleDateString('en-CA');
-    const todaysAttendance = attendance.filter(a => a.date === today);
+    const studentIds = new Set(students.map(s => s.id));
+    const todaysAttendance = attendance.filter(a => a.date === today && studentIds.has(a.studentId));
     const uniquePresentStudents = new Set(todaysAttendance.filter(a => a.status === AttendanceStatus.Present).map(a => a.studentId));
     const totalMarkedToday = new Set(todaysAttendance.map(a => a.studentId)).size;
-    const attendanceRate = totalMarkedToday > 0 ? Math.round((uniquePresentStudents.size / totalMarkedToday) * 100) : 100;
+    const attendanceRate = totalMarkedToday > 0 ? Math.round((uniquePresentStudents.size / totalMarkedToday) * 100) : 0;
 
     const currentMonth = new Date().getMonth();
     const newAdmissions = students.filter(s => new Date(s.enrollmentDate).getMonth() === currentMonth).length;

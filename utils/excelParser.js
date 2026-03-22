@@ -30,14 +30,19 @@ export const parseExcelFile = async (file) => {
                             for (let j = 0; j < row.length; j++) {
                                 const cell = String(row[j] || '').trim().toLowerCase();
                                 const val = String(row[j + 1] || '').trim();
-                                if (cell === 'br:' || cell === 'branch') branch = val;
+                                if (cell.includes('br:') || cell.includes('branch')) branch = val;
                                 if (cell === 'level:' || cell === 'level') level = val;
-                                if (cell === 'time:' || cell === 'schedule:') time = val;
+                                if (cell.includes('time') || cell.includes('schedule')) time = val;
                                 if (cell === 'room:' || cell === 'room') room = val;
-                                if (cell === 'tr:' || cell === 'teacher:') teacherName = val;
+                                if (cell === 'tr:' || cell.includes('teacher')) teacherName = val;
                             }
                         }
+                        
                         if (level && room) {
+                            // Enforce app's strict schedule formatting prefix
+                            if (time && !time.toLowerCase().includes('weekday') && !time.toLowerCase().includes('weekend')) {
+                                time = `Weekday ${time.replace(':', ':')}`;
+                            }
                             results.classes.push({ name: room, level, schedule: time, teacherName, branch, id: 'cls_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4) });
                         }
                     }
@@ -45,9 +50,11 @@ export const parseExcelFile = async (file) => {
                     // --- B. STUDENT LIST SCAN ---
                     let colMapping = { name: -1, sex: -1, phone: -1 };
                     let headerRowIdx = -1;
+                    // Find header row by looking for 'name' column
                     for (let i = 0; i < Math.min(sheet.length, 30); i++) {
                         const row = sheet[i];
                         if (!row) continue;
+                        
                         let foundName = false;
                         for (let j = 0; j < row.length; j++) {
                             const val = String(row[j] || '').trim().toLowerCase();
@@ -58,33 +65,57 @@ export const parseExcelFile = async (file) => {
                             if (val === 'sex' || val === 'gender') colMapping.sex = j;
                             if (val.includes('phone') || val.includes('contact')) colMapping.phone = j;
                         }
-                        if (foundName) { headerRowIdx = i; break; }
+                        if (foundName) { 
+                            headerRowIdx = i; 
+                            break; 
+                        }
                     }
 
+                    // Track students added in this specific sheet
+                    let sheetStudentIds = [];
+                    
                     if (headerRowIdx !== -1) {
                         for (let i = headerRowIdx + 1; i < sheet.length; i++) {
                             const row = sheet[i];
-                            if (!row || !row[colMapping.name] || String(row[colMapping.name]).trim() === '') continue;
-                            const cell0 = String(row[0]||'').toLowerCase();
-                            if (cell0 === 'no' || cell0 === 'name') continue;
-
-                            const name = String(row[colMapping.name]).trim();
-                            // Avoid duplicates in the same import session
-                            if (results.students.find(s => s.name === name)) continue;
-
-                            const studentObj = {
-                                id: 'stu_imp_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 3),
-                                name,
-                                sex: (String(row[colMapping.sex] || '').toUpperCase().startsWith('M')) ? 'Male' : 'Female',
-                                phone: String(row[colMapping.phone] || '').trim(),
-                                dob: '2015-01-01',
-                                status: 'Active',
-                                enrollmentDate: new Date().toISOString().split('T')[0]
-                            };
-                            results.students.push(studentObj);
-                            if (results.classes.length > 0) {
-                                results.enrollments.push({ studentId: studentObj.id, classId: results.classes[results.classes.length - 1].id });
+                            if (!row || !row[colMapping.name]) {
+                                // Break consecutive empty rows
+                                if (i > headerRowIdx + 20) break;
+                                continue;
                             }
+                            
+                            const nameVal = String(row[colMapping.name]).trim();
+                            // Stop parsing if we hit an empty name, "name", "no", or just a number which usually indicates the end of a list.
+                            if (!nameVal || nameVal.toLowerCase() === 'name' || nameVal.toLowerCase() === 'no' || !isNaN(nameVal)) {
+                                continue;
+                            }
+
+                            // Avoid duplicates globally but keep track of ID for this sheet
+                            let existingStudent = results.students.find(s => s.name.toLowerCase() === nameVal.toLowerCase());
+                            let studentId;
+                            
+                            if (existingStudent) {
+                                studentId = existingStudent.id;
+                            } else {
+                                studentId = 'stu_imp_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 3);
+                                
+                                let rawPhone = String(row[colMapping.phone] || '').trim();
+                                if (rawPhone && !rawPhone.startsWith('0') && rawPhone.replace(/\s/g, '').length >= 8) {
+                                    rawPhone = '0' + rawPhone;
+                                }
+
+                                const studentObj = {
+                                    id: studentId,
+                                    name: nameVal,
+                                    sex: (String(row[colMapping.sex] || '').toUpperCase().startsWith('M')) ? 'Male' : 'Female',
+                                    phone: rawPhone,
+                                    dob: '2015-01-01',
+                                    status: 'Active',
+                                    enrollmentDate: new Date().toISOString().split('T')[0]
+                                };
+                                results.students.push(studentObj);
+                            }
+                            
+                            sheetStudentIds.push(studentId);
                         }
                     }
 
@@ -96,15 +127,58 @@ export const parseExcelFile = async (file) => {
                     
                     let term = 'Midterm';
                     if (sheetName.toLowerCase().includes('promotion')) term = 'Promotion';
+                    
+                    // Scan top rows for a dynamic term title (like 'MIDTERM DAILY SCORE SHEET')
+                    for (let i = 0; i < Math.min(sheet.length, 6); i++) {
+                        const row = sheet[i];
+                        if (!row) continue;
+                        for (let j = 0; j < row.length; j++) {
+                            const val = String(row[j] || '').trim().toLowerCase();
+                            if (val.includes('score sheet')) {
+                                const cleanTitle = val.replace('score sheet', '').trim();
+                                if (cleanTitle.length > 3) {
+                                    // Capitalize words for clean term formatting
+                                    term = cleanTitle.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                }
+                            }
+                        }
+                    }
 
-                    // Look for Subject names in headers (columns 4+)
+                    // Look for Subject names in headers
                     if (headerRowIdx !== -1) {
-                        const headerRow = sheet[headerRowIdx];
+                        let headerRow = sheet[headerRowIdx];
+                        
+                        // Fix to prevent parser from locking onto the red "10 points" sub-row as headers
+                        let pointsCount = 0;
+                        for (let j = 0; j < headerRow.length; j++) {
+                            if (String(headerRow[j]).toLowerCase().includes('point')) pointsCount++;
+                        }
+                        if (pointsCount >= 3 && headerRowIdx > 0) {
+                            headerRowIdx = headerRowIdx - 1; // Shift up one row to the true subjects!
+                            headerRow = sheet[headerRowIdx];
+                        }
+
                         let subjectCols = [];
+                        let lastSubject = '';
+                        // Identify subject columns. Support merged multi-columns by appending numeric identifiers
                         for (let j = 0; j < headerRow.length; j++) {
                             const val = String(headerRow[j] || '').trim();
-                            if (val && !['no','name','sex','phone','total','avg','result','mention'].includes(val.toLowerCase())) {
+                            const lowerVal = val.toLowerCase();
+                            
+                            const isExcluded = ['no','name','sex','phone','total','avg','result','mention'].includes(lowerVal) 
+                                                || lowerVal.includes('change') 
+                                                || lowerVal.includes('stop')
+                                                || lowerVal.includes('point');
+
+                            if (val && !isExcluded) {
                                 subjectCols.push({ col: j, name: val });
+                                lastSubject = val;
+                            } else if (!val && lastSubject && j > 3) {
+                                // Cell is blank but follows a parsed subject; highly likely this is a merged cell dual-column system.
+                                subjectCols.push({ col: j, name: `${lastSubject} Part 2` });
+                                lastSubject = ''; // Prevent cascade linking
+                            } else {
+                                lastSubject = '';
                             }
                         }
 
@@ -136,12 +210,55 @@ export const parseExcelFile = async (file) => {
                     }
                 });
 
-                // Dedup classes (if multiple sheets had metadata)
-                results.classes = results.classes.filter((v, i, a) => a.findIndex(t => (t.name === v.name && t.level === v.level)) === i);
+                // Dedup classes globally
+                let uniqueClasses = [];
+                let classMap = {}; // Maps old duplicate ID to strict unique ID
+                
+                results.classes.forEach(c => {
+                    const key = `${c.name.toLowerCase()}_${c.level.toLowerCase()}`;
+                    const existing = uniqueClasses.find(uc => `${uc.name.toLowerCase()}_${uc.level.toLowerCase()}` === key);
+                    if (existing) {
+                        classMap[c.id] = existing.id;
+                    } else {
+                        classMap[c.id] = c.id;
+                        uniqueClasses.push(c);
+                    }
+                });
+                results.classes = uniqueClasses;
+
+                // --- B2. ENROLLMENT CREATION (1 Class per Student mapped correctly) ---
+                // We create enrollments AFTER resolving unique classes to prevent 2 classes logic
+                if (results.classes.length > 0) {
+                    // Default to the first mapped unique class to prevent multiple class creations per student across sheets
+                    const primaryClassId = results.classes[0].id; 
+                    
+                    results.students.forEach(student => {
+                        results.enrollments.push({
+                            studentId: student.id,
+                            classId: primaryClassId
+                        });
+                    });
+                }
+                
+                // --- C2. GRADE CLASS ID CLEANUP ---
+                // Ensure grades point to the cleaned up class map
+                results.grades.forEach(g => {
+                   if(classMap[g.classId]) {
+                       g.classId = classMap[g.classId];
+                   } else {
+                       g.classId = results.classes[0]?.id || '';
+                   }
+                });
+
+                // Final deduplication for enrollments just in case
+                results.enrollments = results.enrollments.filter((v, i, a) => 
+                    a.findIndex(t => (t.studentId === v.studentId && t.classId === v.classId)) === i
+                );
 
                 console.log("Parse complete:", {
                     classes: results.classes.length,
                     students: results.students.length,
+                    enrollments: results.enrollments.length,
                     grades: results.grades.length
                 });
 

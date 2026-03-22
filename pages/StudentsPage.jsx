@@ -6,6 +6,7 @@ import { StudentStatus, UserRole } from '../types';
 import { parseStudentCSV } from '../utils/csvParser';
 import { parseExcelFile } from '../utils/excelParser';
 import ImportResultsModal from '../components/ImportResultsModal';
+import ConfirmModal from '../components/ConfirmModal';
 import ReportCardModal from '../components/ReportCardModal';
 import { generateStudentListCSV } from '../utils/reportGenerator';
 
@@ -151,6 +152,17 @@ const StudentModal = ({ studentData, onClose }) => {
                         </button>
                     </div>
                 </form>
+                {isBulkDeleteModalOpen && (
+                    <ConfirmModal
+                        isOpen={isBulkDeleteModalOpen}
+                        onClose={() => setIsBulkDeleteModalOpen(false)}
+                        onConfirm={handleBulkDelete}
+                        title="Delete Selected Students"
+                        message={`Are you sure you want to permanently delete ${selectedStudentIds.size} selected students? This will also remove their enrollments, attendance, and grades.`}
+                        confirmText={`Delete ${selectedStudentIds.size} Students`}
+                        confirmColor="red"
+                    />
+                )}
             </div>
         </div>
     );
@@ -164,19 +176,22 @@ const ITEMS_PER_PAGE = 20;
  */
 const StudentsPage = () => {
     // --- 1. STATE & REFS ---
-    const { students, staff, deleteStudent, highlightedStudentId, setHighlightedStudentId, addStudents, addClasses, addEnrollments, saveGradeBatch, loading, enrollments, classes, currentUser } = useData();
+    const { students, staff, deleteStudent, highlightedStudentId, setHighlightedStudentId, addStudents, addClasses, addEnrollments, saveGradeBatch, loading, enrollments, classes, currentUser, levels, subjects, addLevel, addSubject, updateStudentsBatch } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
     const [selectedReportStudent, setSelectedReportStudent] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [isDeletingId, setIsDeletingId] = useState(null);
-    const [deletingStudentId, setDeletingStudentId] = useState(null);
+    const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+    const [studentToDelete, setStudentToDelete] = useState(null);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importResults, setImportResults] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const fileInputRef = useRef(null);
     const highlightedRowRef = useRef(null);
+    const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
+    const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
     const isAdmin = currentUser?.role === UserRole.Admin;
     const isOffice = currentUser?.role === UserRole.OfficeWorker;
@@ -244,10 +259,40 @@ const StudentsPage = () => {
         setIsModalOpen(true);
     };
 
-    /**
-     * Handles the deletion of a student record without native confirmation.
-     */
+    const handleBulkDelete = async () => {
+        const ids = Array.from(selectedStudentIds);
+        for (const id of ids) {
+            await deleteStudent(id);
+        }
+        setSelectedStudentIds(new Set());
+        setIsBulkDeleteModalOpen(false);
+    };
+
+    const toggleSelect = (id) => {
+        const next = new Set(selectedStudentIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedStudentIds(next);
+    };
+
+    const toggleSelectAllOnPage = () => {
+        const pageIds = paginatedStudents.map(s => s.id);
+        const allSelected = pageIds.every(id => selectedStudentIds.has(id));
+        const next = new Set(selectedStudentIds);
+        if (allSelected) {
+            pageIds.forEach(id => next.delete(id));
+        } else {
+            pageIds.forEach(id => next.add(id));
+        }
+        setSelectedStudentIds(next);
+    };
+    const handleDeleteRequest = (student) => {
+        setStudentToDelete(student);
+        setIsConfirmDeleteOpen(true);
+    };
+
     const handleDelete = async (id) => {
+        if (!id) return;
         try {
             setIsDeletingId(id);
             await deleteStudent(id);
@@ -256,7 +301,7 @@ const StudentsPage = () => {
             alert('Deletion failed. Please try again.');
         } finally {
             setIsDeletingId(null);
-            setDeletingStudentId(null);
+            setStudentToDelete(null);
         }
     };
 
@@ -339,6 +384,7 @@ const StudentsPage = () => {
                 // --- 2. SMART STUDENT MATCHING & ID PREPARATION ---
                 const studentIDMap = {};
                 const studentsToAdd = [];
+                const studentsToUpdate = [];
                 let lastStuId = students.map(s => parseInt(s.id.substring(1), 10)).filter(id => !isNaN(id)).reduce((max, curr) => Math.max(max, curr), 0);
                 
                 if (result.students && result.students.length > 0) {
@@ -350,6 +396,10 @@ const StudentsPage = () => {
                         
                         if (existing) {
                             studentIDMap[impStu.id] = existing.id;
+                            // Patch missing phones
+                            if (!existing.phone && impStu.phone) {
+                                studentsToUpdate.push({ ...existing, phone: impStu.phone });
+                            }
                         } else {
                             const finalStuId = `s${++lastStuId}`;
                             const newStu = { ...impStu, id: finalStuId };
@@ -358,6 +408,7 @@ const StudentsPage = () => {
                         }
                     }
                     if (studentsToAdd.length > 0) await addStudents(studentsToAdd);
+                    if (studentsToUpdate.length > 0) await updateStudentsBatch(studentsToUpdate);
                 }
                 
                 // --- 3. SMART ENROLLMENT MATCHING ---
@@ -367,9 +418,14 @@ const StudentsPage = () => {
                         classId: classIDMap[enr.classId] || enr.classId,
                         enrollmentDate: new Date().toISOString().split('T')[0],
                         status: 'Enrolled'
-                    })).filter(enr => {
-                        // Crucially check if this enrollment combination already exists in the system
-                        return !enrollments.find(e => e.studentId === enr.studentId && e.classId === enr.classId);
+                    })).filter((enr, idx, self) => {
+                        // 1. Check against the current state
+                        const alreadyInSystem = enrollments.some(e => e.studentId === enr.studentId && e.classId === enr.classId);
+                        if (alreadyInSystem) return false;
+
+                        // 2. Check against previous items in the same import list (self deduplication)
+                        const repeatInImport = self.findIndex(s => s.studentId === enr.studentId && s.classId === enr.classId) !== idx;
+                        return !repeatInImport;
                     });
                     
                     if (mappedEnrollments.length > 0) await addEnrollments(mappedEnrollments);
@@ -384,6 +440,22 @@ const StudentsPage = () => {
                         id: `grd_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
                     }));
                     if (saveGradeBatch) await saveGradeBatch(mappedGrades);
+                    
+                    // Check for untracked subjects and add them globally to Settings
+                    const newSubjects = new Set();
+                    result.grades.forEach(g => {
+                        if (g.subject && !subjects.includes(g.subject)) newSubjects.add(g.subject);
+                    });
+                    newSubjects.forEach(sub => addSubject(sub));
+                }
+
+                // Check for untracked levels and add them globally to Settings
+                if (result.classes && result.classes.length > 0) {
+                    const newLevels = new Set();
+                    result.classes.forEach(c => {
+                        if (c.level && !levels.includes(c.level)) newLevels.add(c.level);
+                    });
+                    newLevels.forEach(lvl => addLevel(lvl));
                 }
                 
                 setImportResults({
@@ -434,7 +506,17 @@ const StudentsPage = () => {
                     />
                 </div>
 
-                <div className="flex flex-wrap gap-2 w-full md:w-auto mt-2 md:mt-0">
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                    {selectedStudentIds.size > 0 && isAdmin && (
+                        <button 
+                            type="button" 
+                            onClick={() => setIsBulkDeleteModalOpen(true)}
+                            className="bg-red-50 text-red-600 border border-red-100 px-4 py-2 rounded-lg hover:bg-red-100 text-sm font-bold flex items-center transition-all animate-in fade-in zoom-in duration-200"
+                        >
+                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            Delete ({selectedStudentIds.size})
+                        </button>
+                    )}
                     {(isAdmin || isOffice) && (
                         <>
                             <button type="button" onClick={handleExportCSV} className="bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold flex items-center transition-colors">Export</button>
@@ -451,6 +533,14 @@ const StudentsPage = () => {
                     <table className="min-w-full divide-y divide-slate-100">
                         <thead className="bg-slate-50">
                             <tr>
+                                <th className="px-4 py-4 w-10 text-center">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer w-4 h-4"
+                                        checked={paginatedStudents.length > 0 && paginatedStudents.every(s => selectedStudentIds.has(s.id))}
+                                        onChange={toggleSelectAllOnPage}
+                                    />
+                                </th>
                                 <th className="px-4 py-4 w-16 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">ID</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Name</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Gender</th>
@@ -464,6 +554,7 @@ const StudentsPage = () => {
                             {paginatedStudents.map(student => {
                                 const isHighlighted = student.id === highlightedStudentId;
                                 const isDeleting = isDeletingId === student.id;
+                                const isSelected = selectedStudentIds.has(student.id);
 
                                 // For teachers, show only the class they teach. For admin/office, show all classes the student is enrolled in.
                                 const studentEnrollments = enrollments.filter(e => e.studentId === student.id);
@@ -487,7 +578,15 @@ const StudentsPage = () => {
                                 }
 
                                 return (
-                                    <tr key={student.id} ref={isHighlighted ? highlightedRowRef : null} className={`transition-all duration-700 ${isHighlighted ? 'bg-primary-50' : 'hover:bg-slate-50'}`}>
+                                    <tr key={student.id} ref={isHighlighted ? highlightedRowRef : null} className={`transition-all duration-300 ${isHighlighted ? 'bg-primary-50 ring-2 ring-inset ring-primary-200' : isSelected ? 'bg-primary-50/40' : 'hover:bg-slate-50'}`}>
+                                        <td className="px-4 py-4 text-center">
+                                            <input 
+                                                type="checkbox" 
+                                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer w-4 h-4"
+                                                checked={isSelected}
+                                                onChange={() => toggleSelect(student.id)}
+                                            />
+                                        </td>
                                         <td className="px-4 py-4 w-16 whitespace-nowrap text-sm font-medium text-slate-400">{student.id}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700">{student.name}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{student.sex}</td>
@@ -550,42 +649,44 @@ const StudentsPage = () => {
                                                 {student.status.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold">
-                                            <div className="flex items-center justify-end gap-5">
+                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold">
+                                            <div className="flex items-center justify-end gap-3">
+                                                 {(isAdmin || isOffice) && (
+                                                    <div className="flex items-center gap-2">
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => handleOpenModal(student)} 
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all border border-transparent hover:border-blue-100"
+                                                            title="Edit Student"
+                                                        >
+                                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                        {isAdmin && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteRequest(student)}
+                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100 disabled:opacity-50"
+                                                                title="Delete Student"
+                                                            >
+                                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={() => {
                                                         setSelectedReportStudent(student);
                                                         setIsReportModalOpen(true);
                                                     }}
-                                                    className="text-emerald-600 hover:text-emerald-800 transition-colors"
+                                                    className="px-3 py-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-all text-sm font-bold"
                                                 >
                                                     Report Card
                                                 </button>
-                                                {(isAdmin || isOffice) && (
-                                                    <>
-                                                        {deletingStudentId === student.id ? (
-                                                            <div className="flex items-center justify-end space-x-2 animate-in fade-in zoom-in duration-200">
-                                                                <span className="text-xs font-bold text-red-600 uppercase tracking-wider mr-2">Confirm?</span>
-                                                                <button onClick={() => setDeletingStudentId(null)} disabled={!!isDeletingId} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-colors text-xs font-bold disabled:opacity-50">Cancel</button>
-                                                                <button onClick={() => handleDelete(student.id)} disabled={!!isDeletingId} className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-bold shadow-sm shadow-red-200 disabled:opacity-50 inline-flex items-center justify-center min-w-[60px]">
-                                                                    {isDeleting ? '...' : 'Delete'}
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-5">
-                                                                <button type="button" onClick={() => handleOpenModal(student)} className="text-primary-600 hover:text-primary-800 transition-colors">Edit</button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setDeletingStudentId(student.id)}
-                                                                    className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -615,6 +716,24 @@ const StudentsPage = () => {
                 />
             )}
             {isImportModalOpen && <ImportResultsModal results={importResults} onClose={() => setIsImportModalOpen(false)} />}
+            <ConfirmModal 
+                isOpen={isConfirmDeleteOpen} 
+                onClose={() => setIsConfirmDeleteOpen(false)} 
+                onConfirm={() => handleDelete(studentToDelete?.id)}
+                title="Delete Student"
+                message={`Are you sure you want to delete ${studentToDelete?.name}? This action cannot be undone.`}
+            />
+            {isBulkDeleteModalOpen && (
+                <ConfirmModal
+                    isOpen={isBulkDeleteModalOpen}
+                    onClose={() => setIsBulkDeleteModalOpen(false)}
+                    onConfirm={handleBulkDelete}
+                    title="Delete Selected Students"
+                    message={`Are you sure you want to permanently delete ${selectedStudentIds.size} selected students? This will also remove their enrollments, attendance, and grades.`}
+                    confirmText={`Delete ${selectedStudentIds.size} Students`}
+                    confirmColor="red"
+                />
+            )}
         </div>
     );
 };

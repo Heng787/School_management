@@ -174,10 +174,10 @@ const MarksEntry = () => {
                             <option value="">Choose a class...</option>
                             {classes.map(c => {
                                 const teacher = staff?.find(s => s.id === c.teacherId);
-                                const tName = teacher ? ` (Teacher: ${teacher.name})` : '';
+                                const tName = teacher ? ` (Tr: ${teacher.name})` : ' (No Teacher)';
                                 return (
                                     <option key={c.id} value={c.id}>
-                                        {c.name} ({c.level}){tName} | {c.schedule}
+                                        {c.name} | {c.level}{tName} | {c.schedule || 'No Schedule'}
                                     </option>
                                 );
                             })}
