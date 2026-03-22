@@ -114,6 +114,36 @@ export const generateClassProgressData = (
 };
 
 /**
+ * Generates structured Area of Arrays (AoA) for a specific class following the detailed Excel template.
+ * This perfectly matches the requested "(1).Classes" template.
+ */
+export const generateClassExcelDataAOA = (cls, teacher, classStudents) => {
+    const aoa = [];
+    aoa.push(['Br:', 'C2']);
+    aoa.push(['Level:', cls?.level || 'K1B']);
+    aoa.push(['Time:', cls?.schedule || '']);
+    aoa.push(['Room:', cls?.name?.replace('Room ', '') || '']);
+    aoa.push(['Tr:', teacher?.name || '']);
+    aoa.push(['NO', 'NAME', 'SEX', 'PHONE']);
+    
+    classStudents.forEach((student, index) => {
+        aoa.push([
+            index + 1,
+            student.name,
+            student.sex === 'Female' ? 'F' : 'M',
+            student.phone || ''
+        ]);
+    });
+    
+    // Fill until 30 rows
+    const startIdx = classStudents.length + 1;
+    for (let i = startIdx; i <= 30; i++) {
+        aoa.push([i, '', '', '']);
+    }
+    return aoa;
+};
+
+/**
  * Generates a simple CSV list of students with basic information.
  */
 export const generateStudentListCSV = (students) => {

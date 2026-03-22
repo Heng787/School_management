@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { StudentStatus, UserRole } from '../types';
 import { parseStudentCSV } from '../utils/csvParser';
+import { parseExcelFile } from '../utils/excelParser';
 import ImportResultsModal from '../components/ImportResultsModal';
 import ReportCardModal from '../components/ReportCardModal';
 import { generateStudentListCSV } from '../utils/reportGenerator';
@@ -163,7 +164,7 @@ const ITEMS_PER_PAGE = 20;
  */
 const StudentsPage = () => {
     // --- 1. STATE & REFS ---
-    const { students, staff, deleteStudent, highlightedStudentId, setHighlightedStudentId, addStudents, loading, enrollments, classes, currentUser } = useData();
+    const { students, staff, deleteStudent, highlightedStudentId, setHighlightedStudentId, addStudents, addClasses, addEnrollments, loading, enrollments, classes, currentUser } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
@@ -285,20 +286,50 @@ const StudentsPage = () => {
     };
 
     /**
-     * Processes a CSV file upload for importing students.
+     * Processes a CSV or XLSX file upload for importing students.
      * Checks for duplicates before adding.
      */
     const handleFileChange = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const { validStudents, errors } = parseStudentCSV(await file.text());
-        const existingIdentifiers = new Set(students.map(s => `${s.name.toLowerCase()}|${s.sex.toLowerCase()}`));
-        const nonDuplicateStudents = validStudents.filter(s => !existingIdentifiers.has(`${s.name.toLowerCase()}|${s.sex.toLowerCase()}`));
-        if (nonDuplicateStudents.length > 0) {
-            await addStudents(nonDuplicateStudents);
+        
+        if (file.name.endsWith('.csv')) {
+            const { validStudents, errors } = parseStudentCSV(await file.text());
+            const existingIdentifiers = new Set(students.map(s => `${s.name.toLowerCase()}|${s.sex.toLowerCase()}`));
+            const nonDuplicateStudents = validStudents.filter(s => !existingIdentifiers.has(`${s.name.toLowerCase()}|${s.sex.toLowerCase()}`));
+            if (nonDuplicateStudents.length > 0) {
+                await addStudents(nonDuplicateStudents);
+            }
+            setImportResults({ successCount: nonDuplicateStudents.length, errorCount: errors.length, errors: errors });
+            setIsImportModalOpen(true);
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            try {
+                const result = await parseExcelFile(file);
+                
+                if (result.classes && result.classes.length > 0) {
+                    await addClasses(result.classes);
+                }
+                
+                if (result.students && result.students.length > 0) {
+                    if (addStudents) await addStudents(result.students);
+                }
+                
+                if (result.enrollments && result.enrollments.length > 0) {
+                    if (addEnrollments) await addEnrollments(result.enrollments);
+                }
+                
+                setImportResults({
+                    successCount: (result.classes?.length || 0) + (result.students?.length || 0),
+                    errorCount: result.errors?.length || 0,
+                    errors: result.errors?.map(err => ({ message: err })) || [],
+                    message: "Successfully imported classes and kids from Score Sheet."
+                });
+                setIsImportModalOpen(true);
+            } catch (err) {
+                 alert("Failed to parse Excel file: " + err.message);
+            }
         }
-        setImportResults({ successCount: nonDuplicateStudents.length, errorCount: errors.length, errors: errors });
-        setIsImportModalOpen(true);
+        
         e.target.value = '';
     };
 
@@ -340,8 +371,8 @@ const StudentsPage = () => {
                         <>
                             <button type="button" onClick={handleExportCSV} className="bg-white text-slate-600 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold flex items-center transition-colors">Export</button>
                             <button type="button" onClick={handleDownloadTemplate} className="bg-white text-emerald-600 border border-emerald-100 px-4 py-2 rounded-lg hover:bg-emerald-50 text-sm font-semibold flex items-center transition-colors">Template</button>
-                            <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-semibold transition-all">Import CSV</button>
-                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-semibold transition-all">Import CSV/XLSX</button>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv, .xlsx, .xls" className="hidden" />
                             <button type="button" onClick={() => handleOpenModal()} className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-bold shadow-lg shadow-primary-200 transition-all">+ New Student</button>
                         </>
                     )}

@@ -4,6 +4,7 @@ import { StaffRole, UserRole } from '../types';
 import ClassModal from '../components/ClassModal';
 import { generateSingleClassCSV, generateBulkClassCSV } from '../utils/reportGenerator';
 import { parseClassCSV } from '../utils/csvParser';
+import { parseExcelFile } from '../utils/excelParser';
 import ImportResultsModal from '../components/ImportResultsModal';
 import { LevelManager, SessionManager, SubjectManager } from '../components/ClassAcademicConfig';
 
@@ -14,7 +15,7 @@ import { LevelManager, SessionManager, SubjectManager } from '../components/Clas
  */
 const ClassesPage = () => {
     // --- 1. GLOBAL DATA & STATE ---
-    const { classes, staff, students, timeSlots, levels, deleteClass, addClasses, highlightedClassId, setHighlightedClassId, enrollments, currentUser } = useData();
+    const { classes, staff, students, timeSlots, levels, deleteClass, addClasses, addStudents, addEnrollments, highlightedClassId, setHighlightedClassId, enrollments, currentUser } = useData();
     const isAdmin = currentUser?.role === UserRole.Admin;
     const isOffice = currentUser?.role === UserRole.OfficeWorker;
 
@@ -184,25 +185,53 @@ const ClassesPage = () => {
     };
 
     /**
-     * Processes a CSV file upload for importing classes.
+     * Processes a CSV or XLSX file upload for importing classes and students.
      */
     const handleFileChange = async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        const fileContent = await file.text();
-        const { validClasses, errors } = parseClassCSV(fileContent, staff);
+        if (file.name.endsWith('.csv')) {
+            const fileContent = await file.text();
+            const { validClasses, errors } = parseClassCSV(fileContent, staff);
 
-        if (validClasses.length > 0) {
-            await addClasses(validClasses);
+            if (validClasses.length > 0) {
+                await addClasses(validClasses);
+            }
+
+            setImportResults({
+                successCount: validClasses.length,
+                errorCount: errors.length,
+                errors: errors,
+            });
+            setIsImportModalOpen(true);
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            try {
+                const result = await parseExcelFile(file);
+                
+                if (result.classes && result.classes.length > 0) {
+                    await addClasses(result.classes);
+                }
+                
+                if (result.students && result.students.length > 0) {
+                    if (addStudents) await addStudents(result.students);
+                }
+                
+                if (result.enrollments && result.enrollments.length > 0) {
+                    if (addEnrollments) await addEnrollments(result.enrollments);
+                }
+                
+                setImportResults({
+                    successCount: (result.classes?.length || 0) + (result.students?.length || 0),
+                    errorCount: result.errors?.length || 0,
+                    errors: result.errors?.map(e => ({ message: e })) || [],
+                    message: "Successfully imported classes and kids from Score Sheet."
+                });
+                setIsImportModalOpen(true);
+            } catch (err) {
+                 alert("Failed to parse Excel file: " + err.message);
+            }
         }
-
-        setImportResults({
-            successCount: validClasses.length,
-            errorCount: errors.length,
-            errors: errors,
-        });
-        setIsImportModalOpen(true);
 
         if (event.target) {
             event.target.value = '';
@@ -287,7 +316,7 @@ const ClassesPage = () => {
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileChange}
-                                accept=".csv"
+                                accept=".csv, .xlsx, .xls"
                                 className="hidden"
                             />
                             <button

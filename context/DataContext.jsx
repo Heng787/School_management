@@ -304,6 +304,7 @@ export const DataProvider = ({ children }) => {
     };
 
     const addEnrollment = (data) => performUpdate((d) => apiService.saveEnrollments(d), setEnrollments, (prev) => [...prev, { ...data, id: `enr_${Date.now()}` }]);
+    const addEnrollments = (data) => performUpdate((d) => apiService.saveEnrollments(d), setEnrollments, (prev) => [...prev, ...data.map((enr, i) => ({ ...enr, id: `enr_${Date.now()}_${i}` }))]);
     const deleteEnrollment = (id) => {
         setEnrollments(prev => prev.filter(e => e.id !== id));
         apiService.deleteRecord('enrollments', id).catch(() => {});
@@ -482,7 +483,7 @@ export const DataProvider = ({ children }) => {
         addAttendance, updateAttendance, saveAttendanceBatch, deleteAttendance,
         addStaffPermission, updateStaffPermission, deleteStaffPermission,
         addDailyLog, addIncidentReport, updateRoomStatus,
-        addEnrollment, deleteEnrollment, updateClassEnrollments,
+        addEnrollment, addEnrollments, deleteEnrollment, updateClassEnrollments,
         addEvent, updateEvent, deleteEvent,
         addSubject, updateSubject, deleteSubject,
         addLevel, updateLevel, deleteLevel,

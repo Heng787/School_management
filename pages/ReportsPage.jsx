@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { Page, AttendanceStatus } from '../types';
-import { generateClassProgressData } from '../utils/reportGenerator';
+import { generateClassProgressData, generateClassExcelDataAOA } from '../utils/reportGenerator';
 import { gradeId } from '../services/mappers';
 import * as XLSX from 'xlsx';
 
@@ -358,32 +358,39 @@ const ExportCenter = () => {
     }, [students, selectedClass, selectedLevel, exportMode, enrollments, classes]);
 
     // --- 2.2. ACTION HANDLERS ---
-    /**
-     * Generates and downloads the student progress report file.
-     */
     const handleDownloadReport = () => {
         if (targetStudents.length === 0) return;
 
-        let exportGrades = grades;
-        let exportAttendance = attendance;
+        const workbook = XLSX.utils.book_new();
 
         if (exportMode === 'class' && selectedClass) {
-            exportGrades = grades.filter(g => g.classId === selectedClass.id);
-            exportAttendance = attendance.filter(a => a.classId === selectedClass.id);
+            const classEnrolls = enrollments.filter(e => e.classId === selectedClass.id);
+            const sIds = classEnrolls.map(e => e.studentId);
+            const classStuds = students.filter(s => sIds.includes(s.id));
+            const teacher = staff?.find(s => s.id === selectedClass.teacherId);
+            
+            const aoaData = generateClassExcelDataAOA(selectedClass, teacher, classStuds);
+            const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
+            XLSX.utils.book_append_sheet(workbook, worksheet, '(1).Classes');
+            
         } else if (exportMode === 'level' && selectedLevel) {
-            const levelClassIds = classes.filter(c => c.level === selectedLevel).map(c => c.id);
-            exportGrades = grades.filter(g => levelClassIds.includes(g.classId));
-            exportAttendance = attendance.filter(a => levelClassIds.includes(a.classId));
+            const levelClasses = classes.filter(c => c.level === selectedLevel);
+            levelClasses.forEach((cls) => {
+                const classEnrolls = enrollments.filter(e => e.classId === cls.id);
+                const sIds = classEnrolls.map(e => e.studentId);
+                const classStuds = students.filter(s => sIds.includes(s.id));
+                const teacher = staff?.find(s => s.id === cls.teacherId);
+                
+                const aoaData = generateClassExcelDataAOA(cls, teacher, classStuds);
+                const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
+                // Sheet names must be max 31 chars and unique
+                let sheetName = `${cls.name} (${cls.level})`;
+                if (sheetName.length > 31) sheetName = sheetName.substring(0, 31);
+                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+            });
         }
 
         const titleName = exportMode === 'class' ? (selectedClass?.name || 'Class') : (`Level_${selectedLevel}`);
-        const exportData = generateClassProgressData(titleName, targetStudents, exportGrades, exportAttendance);
-
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Progress');
-
-        // Let xlsx handle the download natively
         const fileName = `${exportMode}_export_${titleName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(workbook, fileName);
     };
