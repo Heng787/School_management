@@ -209,27 +209,81 @@ const ClassesPage = () => {
             try {
                 const result = await parseExcelFile(file);
                 
+                // --- 1. SMART CLASS MATCHING ---
+                const classIDMap = {};
+                const classesToAdd = [];
+                
                 if (result.classes && result.classes.length > 0) {
-                    await addClasses(result.classes);
+                    for (const impClass of result.classes) {
+                        const existing = classes.find(c => 
+                            c.name.toLowerCase() === impClass.name.toLowerCase() && 
+                            c.level.toLowerCase() === impClass.level.toLowerCase() &&
+                            c.schedule.toLowerCase() === impClass.schedule.toLowerCase()
+                        );
+                        
+                        if (existing) {
+                            classIDMap[impClass.id] = existing.id;
+                        } else {
+                            // Find teacher ID if possible
+                            const teacher = staff.find(s => s.name.toLowerCase().includes(impClass.teacherName.toLowerCase()));
+                            const newClass = { ...impClass, teacherId: teacher?.id || 'unassigned' };
+                            classesToAdd.push(newClass);
+                            classIDMap[impClass.id] = newClass.id;
+                        }
+                    }
+                    if (classesToAdd.length > 0) await addClasses(classesToAdd);
                 }
+                
+                // --- 2. SMART STUDENT MATCHING ---
+                const studentIDMap = {};
+                const studentsToAdd = [];
                 
                 if (result.students && result.students.length > 0) {
-                    if (addStudents) await addStudents(result.students);
+                    for (const impStu of result.students) {
+                        const existing = students.find(s => 
+                            s.name.toLowerCase() === impStu.name.toLowerCase() &&
+                            s.sex.toLowerCase() === impStu.sex.toLowerCase()
+                        );
+                        
+                        if (existing) {
+                            studentIDMap[impStu.id] = existing.id;
+                        } else {
+                            studentsToAdd.push(impStu);
+                            studentIDMap[impStu.id] = impStu.id;
+                        }
+                    }
+                    if (studentsToAdd.length > 0) await addStudents(studentsToAdd);
                 }
                 
+                // --- 3. SMART ENROLLMENT MATCHING ---
                 if (result.enrollments && result.enrollments.length > 0) {
-                    if (addEnrollments) await addEnrollments(result.enrollments);
+                    const mappedEnrollments = result.enrollments.map(enr => ({
+                        studentId: studentIDMap[enr.studentId] || enr.studentId,
+                        classId: classIDMap[enr.classId] || enr.classId,
+                        enrollmentDate: new Date().toISOString().split('T')[0],
+                        status: 'Enrolled'
+                    })).filter(enr => {
+                        return !enrollments.find(e => e.studentId === enr.studentId && e.classId === enr.classId);
+                    });
+                    
+                    if (mappedEnrollments.length > 0) await addEnrollments(mappedEnrollments);
                 }
                 
+                // --- 4. SMART GRADE MATCHING ---
                 if (result.grades && result.grades.length > 0) {
-                    if (saveGradeBatch) await saveGradeBatch(result.grades);
+                    const mappedGrades = result.grades.map(grd => ({
+                        ...grd,
+                        studentId: studentIDMap[grd.studentId] || grd.studentId,
+                        classId: classIDMap[grd.classId] || grd.classId
+                    }));
+                    if (saveGradeBatch) await saveGradeBatch(mappedGrades);
                 }
                 
                 setImportResults({
-                    successCount: (result.classes?.length || 0) + (result.students?.length || 0) + (result.grades?.length || 0),
+                    successCount: classesToAdd.length + studentsToAdd.length + (result.grades?.length || 0),
                     errorCount: result.errors?.length || 0,
                     errors: result.errors?.map(e => ({ message: e })) || [],
-                    message: `Successfully imported ${result.classes?.length || 0} classes, ${result.students?.length || 0} kids, and ${result.grades?.length || 0} marks.`
+                    message: `Imported ${classesToAdd.length} new classes, ${studentsToAdd.length} new students, and ${result.grades?.length || 0} marks.`
                 });
                 setIsImportModalOpen(true);
             } catch (err) {
