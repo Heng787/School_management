@@ -16,7 +16,7 @@ import { LevelManager, SessionManager, SubjectManager } from '../components/Clas
  */
 const ClassesPage = () => {
     // --- 1. GLOBAL DATA & STATE ---
-    const { classes, staff, students, timeSlots, levels, deleteClass, addClasses, addStudents, addEnrollments, saveGradeBatch, highlightedClassId, setHighlightedClassId, enrollments, currentUser } = useData();
+    const { classes, staff, students, timeSlots, levels, deleteClass, addClasses, addStudents, addEnrollments, saveGradeBatch, highlightedClassId, setHighlightedClassId, enrollments, currentUser, addStaffBatch, updateClassesBatch, updateStudentsBatch, addTimeSlotsBatch } = useData();
     const isAdmin = currentUser?.role === UserRole.Admin;
     const isOffice = currentUser?.role === UserRole.OfficeWorker;
 
@@ -179,6 +179,22 @@ const ClassesPage = () => {
     };
 
     /**
+     * Deletes all currently selected classes after confirmation.
+     */
+    const handleDeleteSelected = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedClassIds.size} selected class${selectedClassIds.size > 1 ? 'es' : ''}? This action cannot be undone.`)) {
+            return;
+        }
+        
+        // Loop and delete each
+        for (const id of selectedClassIds) {
+            deleteClass(id);
+        }
+        
+        setSelectedClassIds(new Set());
+    };
+
+    /**
      * Generates and downloads a CSV template for class imports.
      */
     const handleDownloadTemplate = () => {
@@ -231,10 +247,55 @@ const ClassesPage = () => {
                 // --- 1. SMART CLASS MATCHING & ID PREPARATION ---
                 const classIDMap = {};
                 const classesToAdd = [];
+                const classesToUpdate = [];
+                const newStaffToCreate = [];
+                const newStaffMap = new Map(); // track staff to-be-created in this batch
+                const newTimeSlotsToCreate = [];
+                const newTimeSlotsMap = new Map(); // track time slots to-be-created
                 let classNextIdx = Date.now();
                 
                 if (result.classes && result.classes.length > 0) {
                     for (const impClass of result.classes) {
+                        // --- A. Resolve teacher first ---
+                        const targetTeacherName = (impClass.teacherName || '').trim();
+                        let teacher = null;
+                        
+                        if (targetTeacherName) {
+                            // 1. Check existing staff
+                            teacher = staff.find(s => {
+                                const sName = (s.name || '').toLowerCase();
+                                const tName = targetTeacherName.toLowerCase();
+                                return (sName.length >= 5 && tName.includes(sName)) ||
+                                       (tName.length >= 5 && sName.includes(tName));
+                            });
+                            
+                            // 2. Check staff already queued for creation in this batch
+                            if (!teacher) {
+                                for (const [name, rec] of newStaffMap.entries()) {
+                                    if (name === targetTeacherName.toLowerCase()) {
+                                        teacher = rec;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // 3. Create if still not found
+                            if (!teacher) {
+                                const newStaffRecord = {
+                                    id: `tr_imp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                                    name: targetTeacherName,
+                                    role: StaffRole.Teacher,
+                                    contact: '',
+                                    hireDate: new Date().toISOString().split('T')[0],
+                                    status: 'Active'
+                                };
+                                newStaffToCreate.push(newStaffRecord);
+                                newStaffMap.set(targetTeacherName.toLowerCase(), newStaffRecord);
+                                teacher = newStaffRecord;
+                            }
+                        }
+
+                        // --- B. Match Class ---
                         const existing = classes.find(c => 
                             c.name.toLowerCase() === impClass.name.toLowerCase() && 
                             c.level.toLowerCase() === impClass.level.toLowerCase() &&
@@ -243,35 +304,86 @@ const ClassesPage = () => {
                         
                         if (existing) {
                             classIDMap[impClass.id] = existing.id;
+                            // Update existing class with teacher if it was missing or matching by name
+                            if (teacher && existing.teacherId !== teacher.id) {
+                                classesToUpdate.push({ ...existing, teacherId: teacher.id });
+                            }
                         } else {
-                            // Find teacher ID if possible (flexible match)
-                            const teacher = staff.find(s => 
-                                s.name.toLowerCase().includes(impClass.teacherName.toLowerCase()) ||
-                                impClass.teacherName.toLowerCase().includes(s.name.toLowerCase())
-                            );
                             const finalClassId = `class_imp_${classNextIdx++}`;
-                            const newClass = { ...impClass, id: finalClassId, teacherId: teacher?.id || 'unassigned' };
+                            const newClass = { ...impClass, id: finalClassId, teacherId: teacher?.id || null };
                             classesToAdd.push(newClass);
                             classIDMap[impClass.id] = finalClassId;
                         }
+
+                        // --- C. Auto-create Missing Time Slot (Session) ---
+                        if (impClass.schedule && impClass.schedule.trim()) {
+                            let rawTime = impClass.schedule.trim();
+                            let scheduleType = 'weekday';
+                            
+                            const lowerSched = rawTime.toLowerCase();
+                            if (lowerSched.startsWith('weekday ')) {
+                                rawTime = rawTime.substring(8).trim();
+                            } else if (lowerSched.startsWith('weekend ')) {
+                                scheduleType = 'weekend';
+                                rawTime = rawTime.substring(8).trim();
+                            } else if (lowerSched.includes('weekend')) {
+                                scheduleType = 'weekend';
+                            }
+                            
+                            const existingSlot = timeSlots.find(ts => 
+                                ts.type === scheduleType && 
+                                ts.time.toLowerCase().replace(/\s/g, '') === rawTime.toLowerCase().replace(/\s/g, '')
+                            );
+                            
+                            if (!existingSlot) {
+                                const lookupKey = `${scheduleType}_${rawTime}`.toLowerCase();
+                                if (!newTimeSlotsMap.has(lookupKey)) {
+                                    const newSlot = { 
+                                        id: `slot_imp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                                        type: scheduleType, 
+                                        time: rawTime 
+                                    };
+                                    newTimeSlotsMap.set(lookupKey, newSlot);
+                                    newTimeSlotsToCreate.push(newSlot);
+                                }
+                            }
+                        }
                     }
+
+                    if (newTimeSlotsToCreate.length > 0) await addTimeSlotsBatch(newTimeSlotsToCreate);
+                    if (newStaffToCreate.length > 0) await addStaffBatch(newStaffToCreate);
                     if (classesToAdd.length > 0) await addClasses(classesToAdd);
+                    if (classesToUpdate.length > 0) await updateClassesBatch(classesToUpdate);
                 }
                 
                 // --- 2. SMART STUDENT MATCHING & ID PREPARATION ---
                 const studentIDMap = {};
                 const studentsToAdd = [];
+                const studentsToUpdate = [];
                 let lastStuId = students.map(s => parseInt(s.id.substring(1), 10)).filter(id => !isNaN(id)).reduce((max, curr) => Math.max(max, curr), 0);
                 
                 if (result.students && result.students.length > 0) {
                     for (const impStu of result.students) {
                         const existing = students.find(s => 
-                            s.name.toLowerCase() === impStu.name.toLowerCase() &&
+                            s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase() &&
                             s.sex.toLowerCase() === impStu.sex.toLowerCase()
                         );
                         
                         if (existing) {
                             studentIDMap[impStu.id] = existing.id;
+                            
+                            // Patch missing info on existing student
+                            let needsUpdate = false;
+                            const updatedStu = { ...existing };
+                            
+                            if (!existing.phone && impStu.phone) { updatedStu.phone = impStu.phone; needsUpdate = true; }
+                            if (!existing.dob && impStu.dob) { updatedStu.dob = impStu.dob; needsUpdate = true; }
+                            if (!existing.level && impStu.level) { updatedStu.level = impStu.level; needsUpdate = true; }
+                            if (existing.status !== impStu.status && impStu.status) { updatedStu.status = impStu.status; needsUpdate = true; }
+                            
+                            if (needsUpdate) {
+                                studentsToUpdate.push(updatedStu);
+                            }
                         } else {
                             const finalStuId = `s${++lastStuId}`;
                             const newStu = { ...impStu, id: finalStuId };
@@ -280,6 +392,7 @@ const ClassesPage = () => {
                         }
                     }
                     if (studentsToAdd.length > 0) await addStudents(studentsToAdd);
+                    if (studentsToUpdate.length > 0) await updateStudentsBatch(studentsToUpdate);
                 }
                 
                 // --- 3. SMART ENROLLMENT MATCHING ---
@@ -308,10 +421,10 @@ const ClassesPage = () => {
                 }
                 
                 setImportResults({
-                    successCount: classesToAdd.length + studentsToAdd.length + (result.grades?.length || 0),
+                    successCount: classesToAdd.length + studentsToAdd.length + newStaffToCreate.length + (result.grades?.length || 0),
                     errorCount: result.errors?.length || 0,
                     errors: result.errors?.map(e => ({ message: e })) || [],
-                    message: `Successfully linked everything! Added ${classesToAdd.length} new classes, ${studentsToAdd.length} new students, and ${result.grades?.length || 0} marks.`
+                    message: `Import complete! Added ${newStaffToCreate.length} new staff, ${classesToAdd.length} new classes, ${studentsToAdd.length} new students, and ${result.grades?.length || 0} marks.`
                 });
                 setIsImportModalOpen(true);
             } catch (err) {
@@ -327,8 +440,13 @@ const ClassesPage = () => {
     /**
      * Retrieves the name of a teacher by their ID.
      */
-    const getTeacherName = (teacherId) => {
-        return staff.find(t => t.id === teacherId)?.name || 'Unassigned';
+    const getTeacherName = (teacherId, cls) => {
+        const staffMember = staff.find(t => t.id === teacherId);
+        // Fall back to the teacherName field on the class if staff not found or name is too short
+        if (!staffMember || staffMember.name.length < 5) {
+            return cls?.teacherName || 'Unassigned';
+        }
+        return staffMember.name;
     };
 
     /**
@@ -374,13 +492,22 @@ const ClassesPage = () => {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 w-[calc(100%+2rem)] md:w-auto">
                     {selectedClassIds.size > 0 && isAdmin && (
-                        <button
-                            onClick={handleExportSelected}
-                            className="bg-slate-800 text-white px-4 py-2.5 rounded-xl hover:bg-slate-900 transition-colors flex items-center gap-2 text-xs sm:text-sm font-bold shadow-sm shrink-0"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
-                            <span>Export ({selectedClassIds.size})</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleDeleteSelected}
+                                className="bg-red-50 text-red-600 border border-red-200 px-4 py-2.5 rounded-xl hover:bg-red-100 transition-colors flex items-center gap-2 text-xs sm:text-sm font-bold shadow-sm shrink-0"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                <span>Delete ({selectedClassIds.size})</span>
+                            </button>
+                            <button
+                                onClick={handleExportSelected}
+                                className="bg-slate-800 text-white px-4 py-2.5 rounded-xl hover:bg-slate-900 transition-colors flex items-center gap-2 text-xs sm:text-sm font-bold shadow-sm shrink-0"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+                                <span>Export ({selectedClassIds.size})</span>
+                            </button>
+                        </div>
                     )}
                     {isAdmin && (
                         <>
@@ -537,7 +664,7 @@ const ClassesPage = () => {
                                     {slotClasses.map(cls => {
                                         const isHighlighted = cls.id === highlightedClassId;
                                         const isSelected = selectedClassIds.has(cls.id);
-                                        const teacherName = getTeacherName(cls.teacherId);
+                                        const teacherName = getTeacherName(cls.teacherId, cls);
                                         const studentCount = enrollments.filter(e => e.classId === cls.id).length;
                                         // Assume capacity 30 for visualization
                                         const capacity = 30;
@@ -546,7 +673,8 @@ const ClassesPage = () => {
                                         const enrolledStudentsInClass = enrollments
                                             .filter(e => e.classId === cls.id)
                                             .map(e => students.find(s => s.id === e.studentId))
-                                            .filter(Boolean);
+                                            .filter(Boolean)
+                                            .sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
 
                                         return (
                                             <div

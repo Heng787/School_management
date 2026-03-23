@@ -18,32 +18,121 @@ export const parseExcelFile = async (file) => {
 
                 // Scan all sheets for relevant data
                 workbook.SheetNames.forEach(sheetName => {
+                    const lSheetName = sheetName.toLowerCase().trim();
+                    // Skip templates, guides, summaries, or purely numeric sheets (individual student reports)
+                    if (lSheetName === 'guide' || lSheetName === 'classes' || lSheetName.includes('to update') || /^\d+$/.test(lSheetName)) {
+                        console.log(`Skipping non-class sheet: ${sheetName}`);
+                        return;
+                    }
+                    
                     const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
                     console.log(`Processing sheet: ${sheetName}, Rows: ${sheet.length}`);
                     
-                    // --- A. CLASS METADATA SCAN (Look for Level, Time, Room, Teacher) ---
-                    if (sheetName.toLowerCase().includes('classes') || sheetName.toLowerCase().includes('score') || results.classes.length === 0) {
-                        let branch = '', level = '', time = '', room = '', teacherName = '';
-                        for (let i = 0; i < Math.min(sheet.length, 15); i++) {
-                            const row = sheet[i];
-                            if (!row) continue;
-                            for (let j = 0; j < row.length; j++) {
-                                const cell = String(row[j] || '').trim().toLowerCase();
-                                const val = String(row[j + 1] || '').trim();
-                                if (cell.includes('br:') || cell.includes('branch')) branch = val;
-                                if (cell === 'level:' || cell === 'level') level = val;
-                                if (cell.includes('time') || cell.includes('schedule')) time = val;
-                                if (cell === 'room:' || cell === 'room') room = val;
-                                if (cell === 'tr:' || cell.includes('teacher')) teacherName = val;
+                    // --- A. CLASS / CONTEXT SCAN ---
+                    let level = '';
+                    let room = '';
+                    let time = '';
+                    let teacherName = '';
+                    let branch = 'Primary'; // Default
+
+                    // 1. Try scanning top cells for Room 5, K1, Teacher names, etc.
+                    for (let i = 0; i < Math.min(sheet.length, 10); i++) {
+                        const row = sheet[i];
+                        if (!row) continue;
+                        for (let j = 0; j < row.length; j++) {
+                            const val = String(row[j] || '').trim();
+                            const nextVal = String(row[j+1] || '').trim();
+                            const lowerVal = val.toLowerCase();
+                            
+                            if (!level && (lowerVal.startsWith('k') || lowerVal.startsWith('g')) && val.length <= 4) {
+                                if (/\d/.test(val)) level = val.toUpperCase();
+                            }
+                            
+                            if (!room && lowerVal.includes('room')) {
+                                if (lowerVal === 'room' || lowerVal === 'room:' || lowerVal === 'room :') {
+                                    if (nextVal && nextVal.length < 15) room = nextVal;
+                                } else {
+                                    room = val;
+                                }
+                            }
+                            
+                            if (!time && (lowerVal.includes(':') || lowerVal.includes('am') || lowerVal.includes('pm'))) {
+                                if (val.length > 5 && val.length < 20 && /\d/.test(val)) time = val;
+                            }
+                            
+                            if (!teacherName && (lowerVal.includes('teacher') || lowerVal.includes('tr:'))) {
+                                if (lowerVal === 'teacher' || lowerVal === 'teacher:' || lowerVal === 'tr:') {
+                                     if (nextVal && nextVal.length > 3) teacherName = nextVal;
+                                } else {
+                                    const parts = val.split(/[:\s]/);
+                                    if (parts.length > 1 && parts[1] && parts[1].trim()) {
+                                        teacherName = parts.slice(1).join(' ').trim();
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    // 2. FALLBACK FROM SHEET NAME: Try decoding sheet name (e.g. "K1B" or "K2 - Room 5")
+                    const sName = sheetName.toUpperCase();
+                    if (!level) {
+                        const levelMatch = sName.match(/[KG][1-9]/);
+                        if (levelMatch) level = levelMatch[0];
+                    }
+                    if (!room) {
+                        if (sName.includes('ROOM')) {
+                            const roomMatch = sName.match(/ROOM\s*\d+/);
+                            if (roomMatch) room = roomMatch[0];
+                        } else if (level && sName.length <= 5) {
+                            room = sName;
+                        }
+                    }
+                    
+                    // 3. FALLBACK FROM FILENAME or SHEET PARENTHESES: Look for teacher name (e.g. "Hong Leeheng")
+                    if (!teacherName) {
+                        const searchString = sheetName + ' ' + (file?.name || '');
+                        const matches = [...searchString.matchAll(/\(([^)]+)\)/g)];
                         
-                        if (level && room) {
-                            // Enforce app's strict schedule formatting prefix
-                            if (time && !time.toLowerCase().includes('weekday') && !time.toLowerCase().includes('weekend')) {
-                                time = `Weekday ${time.replace(':', ':')}`;
+                        for (const match of matches) {
+                            if (match && match[1]) {
+                                const candidate = match[1].trim();
+                                // Simple heuristic: if it has a space and doesn't look like a level/room indicator like 'i' or 'ii'
+                                if (candidate.includes(' ') && candidate.length > 5 && !/^[ivx]+$/i.test(candidate)) {
+                                    teacherName = candidate;
+                                    break;
+                                }
                             }
-                            results.classes.push({ name: room, level, schedule: time, teacherName, branch, id: 'cls_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4) });
+                        }
+                    }
+
+                    // FINAL FALLBACK: If we still don't have a room but have a level, don't leave it blank
+                    if (level && (!room || room.toLowerCase() === 'room' || room.toLowerCase() === 'room:')) {
+                        room = sheetName.length < 15 ? sheetName : level;
+                    }
+                    
+                    let currentSheetClassId = '';
+                    if (level && room) {
+                        let finalRoom = room;
+                        if (!finalRoom.toLowerCase().includes('room')) finalRoom = `Room ${finalRoom}`;
+                        
+                        if (time && !time.toLowerCase().includes('weekday') && !time.toLowerCase().includes('weekend')) {
+                            time = `Weekday ${time}`;
+                        }
+                        
+                        const isDup = results.classes.some(c => 
+                            c.name.toLowerCase() === finalRoom.toLowerCase() && 
+                            c.level.toLowerCase() === level.toLowerCase()
+                        );
+
+                        currentSheetClassId = `cls_imp_${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
+                        if (!isDup) {
+                            results.classes.push({ 
+                                name: finalRoom, level, schedule: time, teacherName, branch, 
+                                id: currentSheetClassId
+                            });
+                        } else {
+                            const existing = results.classes.find(c => c.name.toLowerCase() === finalRoom.toLowerCase() && c.level.toLowerCase() === level.toLowerCase());
+                            currentSheetClassId = existing.id;
                         }
                     }
 
@@ -58,12 +147,12 @@ export const parseExcelFile = async (file) => {
                         let foundName = false;
                         for (let j = 0; j < row.length; j++) {
                             const val = String(row[j] || '').trim().toLowerCase();
-                            if (val === 'name' || val === 'student name' || val === 'student') {
+                            if (colMapping.name === -1 && (val === 'name' || val === 'student name' || val === 'student')) {
                                 colMapping.name = j;
                                 foundName = true;
                             }
-                            if (val === 'sex' || val === 'gender') colMapping.sex = j;
-                            if (val.includes('phone') || val.includes('contact')) colMapping.phone = j;
+                            if (colMapping.sex === -1 && (val === 'sex' || val === 'gender')) colMapping.sex = j;
+                            if (colMapping.phone === -1 && (val.includes('phone') || val.includes('contact'))) colMapping.phone = j;
                         }
                         if (foundName) { 
                             headerRowIdx = i; 
@@ -85,29 +174,44 @@ export const parseExcelFile = async (file) => {
                             
                             const nameVal = String(row[colMapping.name]).trim();
                             // Stop parsing if we hit an empty name, "name", "no", or just a number which usually indicates the end of a list.
-                            if (!nameVal || nameVal.toLowerCase() === 'name' || nameVal.toLowerCase() === 'no' || !isNaN(nameVal)) {
+                            if (!nameVal || nameVal.toLowerCase() === 'name' || nameVal.toLowerCase() === 'no' || (!isNaN(nameVal) && nameVal.length < 3)) {
                                 continue;
                             }
 
                             // Avoid duplicates globally but keep track of ID for this sheet
-                            let existingStudent = results.students.find(s => s.name.toLowerCase() === nameVal.toLowerCase());
+                            let existingStudentInResults = results.students.find(s => s.name.toLowerCase() === nameVal.toLowerCase());
                             let studentId;
                             
-                            if (existingStudent) {
-                                studentId = existingStudent.id;
+                            if (existingStudentInResults) {
+                                studentId = existingStudentInResults.id;
+                                
+                                let rawPhone = colMapping.phone >= 0 ? String(row[colMapping.phone] || '').trim() : '';
+                                if (rawPhone && !rawPhone.startsWith('0') && rawPhone.replace(/\s/g, '').length >= 8 && rawPhone !== 'undefined') {
+                                    rawPhone = '0' + rawPhone;
+                                }
+                                
+                                // Enrich existing student with phone if they were missing it from a previous sheet
+                                if (!existingStudentInResults.phone && rawPhone && rawPhone !== 'undefined') {
+                                    existingStudentInResults.phone = rawPhone;
+                                }
+                                // Include level if missing
+                                if (!existingStudentInResults.level && level) {
+                                    existingStudentInResults.level = level;
+                                }
                             } else {
                                 studentId = 'stu_imp_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 3);
                                 
-                                let rawPhone = String(row[colMapping.phone] || '').trim();
-                                if (rawPhone && !rawPhone.startsWith('0') && rawPhone.replace(/\s/g, '').length >= 8) {
+                                let rawPhone = colMapping.phone >= 0 ? String(row[colMapping.phone] || '').trim() : '';
+                                if (rawPhone && !rawPhone.startsWith('0') && rawPhone.replace(/\s/g, '').length >= 8 && rawPhone !== 'undefined') {
                                     rawPhone = '0' + rawPhone;
                                 }
 
                                 const studentObj = {
                                     id: studentId,
                                     name: nameVal,
-                                    sex: (String(row[colMapping.sex] || '').toUpperCase().startsWith('M')) ? 'Male' : 'Female',
-                                    phone: rawPhone,
+                                    sex: (colMapping.sex >= 0 && String(row[colMapping.sex] || '').toUpperCase().startsWith('M')) ? 'Male' : 'Female',
+                                    phone: rawPhone !== 'undefined' ? rawPhone : '',
+                                    level: level || 'K1',
                                     dob: '2015-01-01',
                                     status: 'Active',
                                     enrollmentDate: new Date().toISOString().split('T')[0]
@@ -115,7 +219,9 @@ export const parseExcelFile = async (file) => {
                                 results.students.push(studentObj);
                             }
                             
-                            sheetStudentIds.push(studentId);
+                            if (currentSheetClassId) {
+                                results.enrollments.push({ studentId: studentId, classId: currentSheetClassId });
+                            }
                         }
                     }
 
@@ -196,7 +302,7 @@ export const parseExcelFile = async (file) => {
                                         results.grades.push({
                                             id: `grd_${Date.now()}_${Math.random().toString(36).substr(2,5)}`,
                                             studentId: student.id,
-                                            classId: results.classes[0]?.id || '',
+                                            classId: currentSheetClassId || results.classes[0]?.id || '',
                                             subject: sub.name,
                                             score: score,
                                             type: type === 'Result' ? 'Exam' : type, // Map Result to Exam for consistency
@@ -226,19 +332,12 @@ export const parseExcelFile = async (file) => {
                 });
                 results.classes = uniqueClasses;
 
-                // --- B2. ENROLLMENT CREATION (1 Class per Student mapped correctly) ---
-                // We create enrollments AFTER resolving unique classes to prevent 2 classes logic
-                if (results.classes.length > 0) {
-                    // Default to the first mapped unique class to prevent multiple class creations per student across sheets
-                    const primaryClassId = results.classes[0].id; 
-                    
-                    results.students.forEach(student => {
-                        results.enrollments.push({
-                            studentId: student.id,
-                            classId: primaryClassId
-                        });
-                    });
-                }
+                // --- B2. ENROLLMENT CLEANUP ---
+                // We already created enrollments per student per sheet in the main loop.
+                // Here we just map them to the unified uniqueClasses if they changed.
+                results.enrollments.forEach(enr => {
+                    if (classMap[enr.classId]) enr.classId = classMap[enr.classId];
+                });
                 
                 // --- C2. GRADE CLASS ID CLEANUP ---
                 // Ensure grades point to the cleaned up class map
@@ -250,10 +349,35 @@ export const parseExcelFile = async (file) => {
                    }
                 });
 
-                // Final deduplication for enrollments just in case
-                results.enrollments = results.enrollments.filter((v, i, a) => 
-                    a.findIndex(t => (t.studentId === v.studentId && t.classId === v.classId)) === i
-                );
+                // --- FINAL DEDUPLICATION OF CLASSES AND ENROLLMENTS ---
+                const validEnrollmentClassIds = new Set();
+                results.enrollments = results.enrollments.filter((enr, idx, self) => {
+                    const firstIdx = self.findIndex(e => e.studentId === enr.studentId && e.classId === enr.classId);
+                    if (firstIdx === idx) {
+                        validEnrollmentClassIds.add(enr.classId);
+                        return true;
+                    }
+                    return false;
+                });
+
+                // ONLY KEEP classes that actually received at least one valid student enrollment
+                results.classes = results.classes.filter(c => validEnrollmentClassIds.has(c.id));
+                
+                // Final unique classes
+                // This block seems to be a duplicate of the earlier class deduplication,
+                // but it's included in the user's snippet.
+                // Re-deduplicate classes based on name+level after filtering by enrollments.
+                const finalUniqueClasses = [];
+                const finalClassMap = {};
+                results.classes.forEach(c => {
+                    const key = (c.name + '|' + c.level).toLowerCase();
+                    if (!finalClassMap[key]) {
+                        finalClassMap[key] = c.id;
+                        finalUniqueClasses.push(c);
+                    }
+                });
+                results.classes = finalUniqueClasses;
+
 
                 console.log("Parse complete:", {
                     classes: results.classes.length,

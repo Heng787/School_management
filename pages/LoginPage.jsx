@@ -69,7 +69,7 @@ const LoginPage = ({ onLogin }) => {
             // Check if staff exists with this identifier (case-insensitive name OR contact) and password
             const searchId = identifier.trim().toLowerCase();
             const foundStaff = staff.find(s =>
-                (s.name.toLowerCase() === searchId || s.contact.toLowerCase() === searchId)
+                ((s.name || '').toLowerCase() === searchId || (s.contact || '').toLowerCase() === searchId)
                 && s.role === selectedRole
             );
 
@@ -190,7 +190,7 @@ const LoginPage = ({ onLogin }) => {
                             name="password"
                             type="password"
                             autoComplete="current-password"
-                            required={selectedRole === UserRole.Admin || staff.some(s => (s.name.toLowerCase() === identifier.trim().toLowerCase() || s.contact.toLowerCase() === identifier.trim().toLowerCase()) && s.password)}
+                            required={selectedRole === UserRole.Admin || staff.some(s => ((s.name || '').toLowerCase() === identifier.trim().toLowerCase() || (s.contact || '').toLowerCase() === identifier.trim().toLowerCase()) && s.password)}
                             value={password}
                             onChange={(e) => {
                                 setPassword(e.target.value);

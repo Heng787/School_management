@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext';
 import { StaffRole, UserRole } from '../types';
 import { generateStaffCSV } from '../utils/reportGenerator';
 import { parseStaffCSV } from '../utils/csvParser';
+import { parseExcelFile } from '../utils/excelParser';
 import ImportResultsModal from '../components/ImportResultsModal';
 import StaffPermissionModal from '../components/StaffPermissionModal';
 import InviteStaffModal from '../components/InviteStaffModal';
@@ -174,8 +175,8 @@ const StaffPage = () => {
     // Filter staff logic
     const filteredStaff = useMemo(() => {
         return staff.filter(s => {
-            const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                s.contact.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (s.contact || '').toLowerCase().includes(searchQuery.toLowerCase());
 
             const isTeaching = s.role === StaffRole.Teacher || s.role === StaffRole.AssistantTeacher;
             const matchesTab = activeTab === 'all' || s.role === activeTab || (activeTab === 'teaching' && isTeaching) || (activeTab === 'support' && !isTeaching);
@@ -268,11 +269,50 @@ const StaffPage = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const { validStaff, errors } = parseStaffCSV(await file.text());
+        let validStaff = [];
+        let errors = [];
+
+        if (file.name.endsWith('.csv')) {
+            const result = parseStaffCSV(await file.text());
+            validStaff = result.validStaff;
+            errors = result.errors;
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            try {
+                const excelResult = await parseExcelFile(file);
+                
+                // Extract unique teachers from classes/sheets metadata
+                const teacherNames = new Set();
+                if (excelResult.classes && excelResult.classes.length > 0) {
+                    excelResult.classes.forEach(c => {
+                        if (c.teacherName && c.teacherName.trim()) {
+                            teacherNames.add(c.teacherName.trim());
+                        }
+                    });
+                }
+                
+                teacherNames.forEach(name => {
+                    validStaff.push({
+                        name: name,
+                        role: StaffRole.Teacher,
+                        contact: '',
+                        hireDate: new Date().toISOString().split('T')[0],
+                        status: 'Active'
+                    });
+                });
+            } catch (err) {
+                console.error("Excel parse error:", err);
+                alert("Failed to parse Excel file: " + err.message);
+                return;
+            }
+        } else {
+            alert("Please upload a CSV or Excel file.");
+            return;
+        }
 
         // --- Duplicate Checking ---
         // Identify uniqueness by Name + Contact
-        const existingIdentifiers = new Set(staff.map(s => `${s.name.toLowerCase()}|${s.contact.toLowerCase()}`));
+        const existingNames = new Set(staff.map(s => s.name.toLowerCase()));
+        const existingFullIDs = new Set(staff.map(s => `${s.name.toLowerCase()}|${s.contact.toLowerCase()}`));
 
         const internalNewIdentifiers = new Set();
         const nonDuplicateStaff = [];
@@ -280,10 +320,12 @@ const StaffPage = () => {
 
         validStaff.forEach((s, idx) => {
             const id = `${s.name.toLowerCase()}|${s.contact.toLowerCase()}`;
-            if (existingIdentifiers.has(id) || internalNewIdentifiers.has(id)) {
+            const alreadyExists = existingFullIDs.has(id) || (s.contact === '' && existingNames.has(s.name.toLowerCase()));
+            
+            if (alreadyExists || internalNewIdentifiers.has(id)) {
                 duplicateErrors.push({
                     row: idx + 2,
-                    message: `Staff member '${s.name}' with contact '${s.contact}' already exists and was skipped.`
+                    message: `Staff member '${s.name}' ${s.contact ? `with contact '${s.contact}'` : ''} already exists and was skipped.`
                 });
             } else {
                 internalNewIdentifiers.add(id);
@@ -298,11 +340,10 @@ const StaffPage = () => {
         setImportResults({
             successCount: nonDuplicateStaff.length,
             errorCount: errors.length + duplicateErrors.length,
-            errors
+            errors: [...errors, ...duplicateErrors]
         });
-
         setIsImportModalOpen(true);
-        e.target.value = '';
+        e.target.value = ''; // Reset input
     };
 
     /**
@@ -339,7 +380,7 @@ const StaffPage = () => {
                         Template
                     </button>
                     <button onClick={() => fileInputRef.current?.click()} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-semibold transition-all">Import CSV</button>
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv, .xlsx, .xls" className="hidden" />
                     <button onClick={() => handleOpenModal()} className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2 font-bold shadow-lg shadow-primary-200">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
                         <span>Add Staff</span>
@@ -460,7 +501,7 @@ const StaffPage = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                             <div className="flex flex-col gap-1">
-                                                {s.contact.includes('|') ? (
+                                                {(s.contact || '').includes('|') ? (
                                                     <>
                                                         <div className="flex items-center gap-1.5" title="Phone">
                                                             <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
@@ -473,18 +514,18 @@ const StaffPage = () => {
                                                     </>
                                                 ) : (
                                                     <div className="flex items-center gap-1.5">
-                                                        {s.contact.includes('@') ? (
+                                                        {(s.contact || '').includes('@') ? (
                                                             <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                                                         ) : (
                                                             <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                                                         )}
-                                                        <span>{s.contact}</span>
+                                                        <span>{s.contact || 'No contact'}</span>
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {new Date(s.hireDate).toLocaleDateString()}
+                                            {new Date(s.hireDate || s.joinedDate || new Date()).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex justify-end items-center gap-2">
@@ -504,13 +545,24 @@ const StaffPage = () => {
                                                         }
                                                     }}>
                                                         <summary className="cursor-pointer list-none ml-1">
-                                                            <div className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 border border-transparent transition-colors">
+                                                            <div className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-transparent transition-colors">
                                                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
                                                             </div>
                                                         </summary>
-                                                        <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden py-1 z-50">
-                                                            <button onClick={() => setInviteStaff(s)} className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-slate-50 font-medium">Invite System</button>
-                                                            <button onClick={() => setPermissionStaff(s)} className="w-full text-left px-4 py-2 text-sm text-amber-600 hover:bg-slate-50 font-medium">Permissions</button>
+                                                        <div className="absolute right-0 bottom-full mb-2 w-48 bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl rounded-xl overflow-hidden py-1 z-[100] origin-bottom-right ring-1 ring-slate-900/5 transition-all">
+                                                            <button onClick={() => setInviteStaff(s)} className="w-full flex items-center justify-start gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/80 transition-all">
+                                                                <div className="bg-indigo-100/50 p-1.5 rounded-md text-indigo-500 shrink-0">
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                                                                </div>
+                                                                Invite User
+                                                            </button>
+                                                            <div className="h-px bg-slate-100/80 mx-3 my-0.5"></div>
+                                                            <button onClick={() => setPermissionStaff(s)} className="w-full flex items-center justify-start gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:text-amber-600 hover:bg-amber-50/80 transition-all">
+                                                                <div className="bg-amber-100/50 p-1.5 rounded-md text-amber-500 shrink-0">
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                                                </div>
+                                                                Permissions
+                                                            </button>
                                                         </div>
                                                     </details>
                                                 </div>

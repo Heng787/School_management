@@ -282,6 +282,7 @@ export const DataProvider = ({ children }) => {
     const addStaffBatch = (newData) =>
         performUpdate((data) => apiService.saveStaff(data), setStaff, (current) => {
             const newItems = newData.map((data, idx) => {
+                if (data.id) return data;
                 const shortName = data.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'staff';
                 const suffix = Date.now().toString().slice(-3) + idx;
                 return { ...data, id: `${shortName}_${suffix}` };
@@ -307,7 +308,11 @@ export const DataProvider = ({ children }) => {
         }));
         return [...prev, ...newItems];
     });
-    const updateClass = (updated) => performUpdate((d) => apiService.saveClasses(d), setClasses, (prev) => prev.map(c => c.id === updated.id ? updated : c));
+    const updateClass = (updated) => updateClassesBatch([updated]);
+    const updateClassesBatch = (records) => performUpdate((d) => apiService.saveClasses(d), setClasses, (prev) => {
+        const updatedMap = new Map(records.map(r => [r.id, r]));
+        return prev.map(c => updatedMap.has(c.id) ? updatedMap.get(c.id) : c);
+    });
     const deleteClass = async (id) => {
         // 1. Update Classes
         setClasses(prev => prev.filter(c => c.id !== id));
@@ -466,7 +471,11 @@ export const DataProvider = ({ children }) => {
     };
     const deleteLevel = (target) => performUpdate(apiService.saveLevels, setLevels, (prev) => prev.filter(l => l !== target));
 
-    const addTimeSlot = (slot) => performUpdate((d) => apiService.saveTimeSlots(d), setTimeSlots, (prev) => [...prev, { ...slot, id: `slot_${Date.now()}` }]);
+    const addTimeSlot = (slot) => addTimeSlotsBatch([slot]);
+    const addTimeSlotsBatch = (records) => performUpdate((d) => apiService.saveTimeSlots(d), setTimeSlots, (prev) => {
+        const newItems = records.map((r, i) => ({ ...r, id: r.id || `slot_${Date.now()}_${i}` }));
+        return [...prev, ...newItems];
+    });
     const updateTimeSlot = (id, updatedSlot) => performUpdate((d) => apiService.saveTimeSlots(d), setTimeSlots, (prev) => prev.map(s => s.id === id ? { ...s, ...updatedSlot } : s));
     const deleteTimeSlot = (id) => performUpdate((d) => apiService.saveTimeSlots(d), setTimeSlots, (prev) => prev.filter(s => s.id !== id));
 
@@ -510,7 +519,7 @@ export const DataProvider = ({ children }) => {
         highlightedStaffId, setHighlightedStaffId, highlightedClassId, setHighlightedClassId,
         addStudent, addStudents, updateStudent, updateStudentsBatch, deleteStudent,
         addStaff, addStaffBatch, updateStaff, deleteStaff,
-        addClass, addClasses, updateClass, deleteClass,
+        addClass, addClasses, updateClass, updateClassesBatch, deleteClass,
         addGrade, updateGrade, saveGradeBatch, deleteGrade,
         addAttendance, updateAttendance, saveAttendanceBatch, deleteAttendance,
         addStaffPermission, updateStaffPermission, deleteStaffPermission,
@@ -519,7 +528,7 @@ export const DataProvider = ({ children }) => {
         addEvent, updateEvent, deleteEvent,
         addSubject, updateSubject, deleteSubject,
         addLevel, updateLevel, deleteLevel,
-        addTimeSlot, updateTimeSlot, deleteTimeSlot, setAdminPassword,
+        addTimeSlot, addTimeSlotsBatch, updateTimeSlot, deleteTimeSlot, setAdminPassword,
         importAllData, triggerSync
     };
 
