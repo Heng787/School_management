@@ -67,9 +67,17 @@ export const mapAttendance = {
         let classId = null;
         // Check if ID is in the new format: att_classId_date_studentId
         // classId itself looks like 'class_1772611464540'
-        const parts = d.id ? d.id.split('_') : [];
-        if (parts.length >= 5 && parts[0] === 'att' && parts[1] === 'class') {
-            classId = parts[1] + '_' + parts[2];
+        // Format: att_{classId}_{date}_{studentId}
+        // Use regex or string manipulation to extract the middle classId section robustly
+        if (d.id && d.id.startsWith('att_')) {
+            const suffix = `_${d.date}_${d.student_id}`;
+            if (d.id.endsWith(suffix)) {
+                classId = d.id.substring(4, d.id.length - suffix.length);
+            } else {
+                // Fallback for older formats or mismatches
+                const parts = d.id.split('_');
+                if (parts.length >= 5) classId = parts.slice(1, -2).join('_');
+            }
         }
         return {
             id: d.id,
@@ -155,57 +163,3 @@ export const mapClass = {
     })
 };
 
-export const mapDailyLog = {
-    toDb: (l) => ({
-        id: l.id,
-        staff_id: l.staffId,
-        type: l.type,
-        person_name: l.personName,
-        purpose: l.purpose,
-        timestamp: l.timestamp
-    }),
-    fromDb: (d)=> ({
-        id: d.id,
-        staffId: d.staff_id,
-        type: d.type,
-        personName: d.person_name,
-        purpose: d.purpose,
-        timestamp: d.timestamp
-    })
-};
-
-export const mapIncidentReport = {
-    toDb: (r) => ({
-        id: r.id,
-        staff_id: r.staffId,
-        title: r.title,
-        description: r.description,
-        severity: r.severity,
-        timestamp: r.timestamp
-    }),
-    fromDb: (d)=> ({
-        id: d.id,
-        staffId: d.staff_id,
-        title: d.title,
-        description: d.description,
-        severity: d.severity,
-        timestamp: d.timestamp
-    })
-};
-
-export const mapRoomStatus = {
-    toDb: (s) => ({
-        id: s.id,
-        room_name: s.roomName,
-        status: s.status,
-        last_updated_by: s.lastUpdatedBy,
-        timestamp: s.timestamp
-    }),
-    fromDb: (d)=> ({
-        id: d.id,
-        roomName: d.room_name,
-        status: d.status,
-        lastUpdatedBy: d.last_updated_by,
-        timestamp: d.timestamp
-    })
-};

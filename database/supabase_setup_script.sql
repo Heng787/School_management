@@ -1,3 +1,18 @@
+-- 0. Wipe existing data (drop all tables used in this script)
+drop table if exists public.audit_log cascade;
+drop table if exists public.school_events cascade;
+drop table if exists public.attendance cascade;
+drop table if exists public.grades cascade;
+drop table if exists public.enrollments cascade;
+drop table if exists public.classes cascade;
+drop table if exists public.daily_logs cascade;
+drop table if exists public.incident_reports cascade;
+drop table if exists public.room_statuses cascade;
+drop table if exists public.staff_permissions cascade;
+drop table if exists public.settings cascade;
+drop table if exists public.students cascade;
+drop table if exists public.staff cascade;
+
 -- 1. Students Table
 create table if not exists public.students (
   id text primary key,
@@ -237,14 +252,23 @@ alter table public.settings enable row level security;
 alter table public.audit_log enable row level security;
 
 -- Policies
+drop policy if exists "Enable all access for authenticated users" on public.students;
 create policy "Enable all access for authenticated users" on public.students for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.staff;
 create policy "Enable all access for authenticated users" on public.staff for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.classes;
 create policy "Enable all access for authenticated users" on public.classes for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.enrollments;
 create policy "Enable all access for authenticated users" on public.enrollments for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.grades;
 create policy "Enable all access for authenticated users" on public.grades for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.attendance;
 create policy "Enable all access for authenticated users" on public.attendance for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.school_events;
 create policy "Enable all access for authenticated users" on public.school_events for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.settings;
 create policy "Enable all access for authenticated users" on public.settings for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.audit_log;
 create policy "Enable all access for authenticated users" on public.audit_log for all to authenticated using (true) with check (true);
 
 -- 10. Staff Permissions Table
@@ -260,9 +284,11 @@ create table if not exists public.staff_permissions (
 
 -- Enable RLS
 alter table public.staff_permissions enable row level security;
+drop policy if exists "Enable all access for authenticated users" on public.staff_permissions;
 create policy "Enable all access for authenticated users" on public.staff_permissions for all to authenticated using (true) with check (true);
 
 -- Add Audit Trigger
+drop trigger if exists on_staff_permissions_change on public.staff_permissions;
 create trigger on_staff_permissions_change
 after insert or update or delete on public.staff_permissions
 for each row execute function public.process_audit_log();
@@ -301,11 +327,17 @@ alter table public.daily_logs enable row level security;
 alter table public.incident_reports enable row level security;
 alter table public.room_statuses enable row level security;
 
+drop policy if exists "Enable all access for authenticated users" on public.daily_logs;
 create policy "Enable all access for authenticated users" on public.daily_logs for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.incident_reports;
 create policy "Enable all access for authenticated users" on public.incident_reports for all to authenticated using (true) with check (true);
+drop policy if exists "Enable all access for authenticated users" on public.room_statuses;
 create policy "Enable all access for authenticated users" on public.room_statuses for all to authenticated using (true) with check (true);
 
 -- Audit Triggers
+drop trigger if exists on_daily_logs_change on public.daily_logs;
 create trigger on_daily_logs_change after insert or update or delete on public.daily_logs for each row execute function public.process_audit_log();
+drop trigger if exists on_incident_reports_change on public.incident_reports;
 create trigger on_incident_reports_change after insert or update or delete on public.incident_reports for each row execute function public.process_audit_log();
+drop trigger if exists on_room_statuses_change on public.room_statuses;
 create trigger on_room_statuses_change after insert or update or delete on public.room_statuses for each row execute function public.process_audit_log();

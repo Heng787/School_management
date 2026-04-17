@@ -18,18 +18,14 @@ export const DataProvider = ({ children }) => {
     const [grades, setGrades] = useState([]);
     const [attendance, setAttendance] = useState([]);
     const [enrollments, setEnrollments] = useState([]);
-
-    // --- 2. FACILITY & OPERATIONS STATE ---
     const [staffPermissions, setStaffPermissions] = useState([]);
-    const [dailyLogs, setDailyLogs] = useState([]);
-    const [incidentReports, setIncidentReports] = useState([]);
-    const [roomStatuses, setRoomStatuses] = useState([]);
-
-    // --- 3. CONFIGURATION STATE ---
     const [subjects, setSubjects] = useState([]);
     const [levels, setLevels] = useState([]);
     const [timeSlots, setTimeSlots] = useState([]);
     const [adminPassword, setAdminPasswordState] = useState('admin123');
+
+
+    // --- 3. CONFIGURATION STATE ---
 
     // --- 4. SYSTEM & UI STATE ---
     const [loading, setLoading] = useState(true);
@@ -72,7 +68,7 @@ export const DataProvider = ({ children }) => {
         const loadInitialData = async () => {
             try {
                 setLoading(true);
-                const [s, st, c, e, g, att, enr, sub, pwd, slots, lvls, sp, logs, reports, rooms] = await Promise.all([
+                const [s, st, c, e, g, att, enr, sp, sub, lvls, slots, pwd] = await Promise.all([
                     apiService.getStudents(),
                     apiService.getStaff(),
                     apiService.getClasses(),
@@ -80,30 +76,24 @@ export const DataProvider = ({ children }) => {
                     apiService.getGrades(),
                     apiService.getAttendance(),
                     apiService.getEnrollments(),
-                    apiService.getSubjects(),
-                    apiService.getAdminPassword(),
-                    apiService.getTimeSlots(),
-                    apiService.getLevels(),
                     apiService.getStaffPermissions(),
-                    apiService.getDailyLogs(),
-                    apiService.getIncidentReports(),
-                    apiService.getRoomStatuses()
+                    apiService.getSubjects(),
+                    apiService.getLevels(),
+                    apiService.getTimeSlots(),
+                    apiService.getAdminPassword()
                 ]);
-                setStudents(s);
-                setStaff(st);
-                setClasses(c);
-                setEvents(e);
-                setGrades(g);
-                setAttendance(att);
-                setEnrollments(enr);
-                setSubjects(sub);
-                setAdminPasswordState(pwd);
-                setTimeSlots(slots);
-                setLevels(lvls);
-                setStaffPermissions(sp);
-                setDailyLogs(logs);
-                setIncidentReports(reports);
-                setRoomStatuses(rooms);
+                if (s) setStudents(s);
+                if (st) setStaff(st);
+                if (c) setClasses(c);
+                if (e) setEvents(e);
+                if (g) setGrades(g);
+                if (att) setAttendance(att);
+                if (enr) setEnrollments(enr);
+                if (sp) setStaffPermissions(sp);
+                if (sub) setSubjects(sub);
+                if (lvls) setLevels(lvls);
+                if (slots) setTimeSlots(slots);
+                if (pwd) setAdminPasswordState(pwd);
 
                 if (navigator.onLine) setLastSyncedAt(new Date());
             } catch (err) {
@@ -135,9 +125,6 @@ export const DataProvider = ({ children }) => {
                 grades,
                 attendance,
                 enrollments,
-                dailyLogs,
-                incidentReports,
-                roomStatuses,
                 config: [
                     { key: 'subjects', value: subjects },
                     { key: 'levels', value: levels },
@@ -155,7 +142,7 @@ export const DataProvider = ({ children }) => {
             isSyncingRef.current = false;
             setIsSyncing(false);
         }
-    }, [students, staff, classes, events, grades, attendance, enrollments, subjects, levels, timeSlots, adminPassword, loading, staffPermissions, dailyLogs, incidentReports, roomStatuses]);
+    }, [students, staff, classes, events, grades, attendance, enrollments, subjects, levels, timeSlots, adminPassword, loading, staffPermissions]);
 
     useEffect(() => {
         const handleOnline = () => triggerSync();
@@ -184,7 +171,7 @@ export const DataProvider = ({ children }) => {
             triggerSync();
         }, 500); 
         return () => clearTimeout(timer);
-    }, [students, staff, staffPermissions, dailyLogs, incidentReports, roomStatuses, classes, events, grades, attendance, enrollments, subjects, levels, timeSlots, triggerSync]);
+    }, [students, staff, staffPermissions, classes, events, grades, attendance, enrollments, subjects, levels, timeSlots, triggerSync]);
 
     // --- PERIODIC REMOTE REFRESH ---
     // Pull fresh data from Supabase periodically so that changes made in other
@@ -425,13 +412,7 @@ export const DataProvider = ({ children }) => {
         } catch (err) { }
     };
 
-    const addDailyLog = (data) => performUpdate((d) => apiService.saveDailyLogs(d), setDailyLogs, (prev) => [...prev, { ...data, id: `log_${Date.now()}` }]);
-    const addIncidentReport = (data) => performUpdate((d) => apiService.saveIncidentReports(d), setIncidentReports, (prev) => [...prev, { ...data, id: `inc_${Date.now()}` }]);
-    const updateRoomStatus = (updated) => performUpdate((d) => apiService.saveRoomStatuses(d), setRoomStatuses, (prev) => {
-        const exists = prev.find(s => s.id === updated.id);
-        if (exists) return prev.map(s => s.id === updated.id ? updated : s);
-        return [...prev, updated];
-    });
+    // Operations & Facility management are currently disabled due to missing database tables.
 
     // --- 12. ACADEMIC CONFIG & EVENTS ---
     const addEvent = (data) => performUpdate((d) => apiService.saveEvents(d), setEvents, (prev) => [...prev, { ...data, id: `evt_${Date.now()}` }].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
@@ -514,7 +495,7 @@ export const DataProvider = ({ children }) => {
     }, []);
 
     const value = {
-        students, staff, classes, events, grades, attendance, enrollments, staffPermissions, dailyLogs, incidentReports, roomStatuses, subjects, levels, timeSlots, adminPassword,
+        students, staff, classes, events, grades, attendance, enrollments, staffPermissions, subjects, levels, timeSlots, adminPassword,
         loading, isSyncing, lastSyncedAt, error, currentUser, setCurrentUser: handleSetCurrentUser, highlightedStudentId, setHighlightedStudentId,
         highlightedStaffId, setHighlightedStaffId, highlightedClassId, setHighlightedClassId,
         addStudent, addStudents, updateStudent, updateStudentsBatch, deleteStudent,
@@ -523,7 +504,6 @@ export const DataProvider = ({ children }) => {
         addGrade, updateGrade, saveGradeBatch, deleteGrade,
         addAttendance, updateAttendance, saveAttendanceBatch, deleteAttendance,
         addStaffPermission, updateStaffPermission, deleteStaffPermission,
-        addDailyLog, addIncidentReport, updateRoomStatus,
         addEnrollment, addEnrollments, deleteEnrollment, updateClassEnrollments,
         addEvent, updateEvent, deleteEvent,
         addSubject, updateSubject, deleteSubject,

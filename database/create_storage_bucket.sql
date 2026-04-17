@@ -1,26 +1,33 @@
 -- Run this in the Supabase SQL Editor to create the public bucket for message attachments
+-- Safe to re-run at any time (idempotent).
 
--- 1. Create the bucket
-insert into storage.buckets (id, name, public)
-values ('attachments', 'attachments', true)
-on conflict (id) do nothing;
+-- 1. Create the bucket (no-op if already exists)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('attachments', 'attachments', true)
+ON CONFLICT (id) DO NOTHING;
 
--- 2. allow everyone to read
-create policy "Public Access"
-on storage.objects for select
-using ( bucket_id = 'attachments' );
+-- 2. Drop existing policies before re-creating (PostgreSQL has no CREATE POLICY IF NOT EXISTS)
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Auth Insert"   ON storage.objects;
+DROP POLICY IF EXISTS "Auth Update"   ON storage.objects;
+DROP POLICY IF EXISTS "Auth Delete"   ON storage.objects;
 
--- 3. allow authenticated users to insert
-create policy "Auth Insert"
-on storage.objects for insert
-with check ( bucket_id = 'attachments' );
+-- 3. Allow everyone to read attachments
+CREATE POLICY "Public Access"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'attachments');
 
--- 4. allow authenticated users to update
-create policy "Auth Update"
-on storage.objects for update
-using ( bucket_id = 'attachments' );
+-- 4. Allow anyone to insert into attachments
+CREATE POLICY "Auth Insert"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'attachments');
 
--- 5. allow authenticated users to delete
-create policy "Auth Delete"
-on storage.objects for delete
-using ( bucket_id = 'attachments' );
+-- 5. Allow anyone to update attachments
+CREATE POLICY "Auth Update"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'attachments');
+
+-- 6. Allow anyone to delete attachments
+CREATE POLICY "Auth Delete"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'attachments');

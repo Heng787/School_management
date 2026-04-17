@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Allow all for messages" ON messages FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for messages" ON messages;
+CREATE POLICY "Allow all for messages" ON messages FOR ALL USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS messages_recipient_idx ON messages(recipient_id);
 CREATE INDEX IF NOT EXISTS messages_sender_idx ON messages(sender_id);

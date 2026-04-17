@@ -9,11 +9,11 @@ const NavItem = ({ icon, label, isActive, onClick, badge }) => (
     <li
         onClick={onClick}
         className={`group flex items-center px-3 py-2.5 mb-1 rounded-md cursor-pointer transition-all duration-200 ${isActive
-            ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-            : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800 border-l-2 border-transparent'
+            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-l-2 border-emerald-500'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border-l-2 border-transparent'
             }`}
     >
-        <span className={`relative ${isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-100'}`}>
+        <span className={`relative ${isActive ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-100'}`}>
             {icon}
             {/* Tiny dot on icon when there's an unread badge */}
             {badge != null && badge > 0 && (
@@ -91,17 +91,17 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
     return (
         <>
             <div
-                className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 transition-opacity duration-300 lg:hidden ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 bg-slate-900/20 dark:bg-slate-900/50 backdrop-blur-sm z-30 transition-opacity duration-300 lg:hidden ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                 onClick={onClose}
             />
 
-            <aside className={`fixed left-0 top-0 w-64 h-screen bg-slate-900 border-r border-slate-800 shadow-xl z-40 transition-transform duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex items-center justify-between px-6 h-16 border-b border-slate-800/50 bg-slate-900">
+            <aside className={`fixed left-0 top-0 w-64 h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-xl z-40 transition-all duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex items-center justify-between px-6 h-16 border-b border-slate-100 dark:border-slate-800/50 bg-white dark:bg-slate-900">
                     <div className="flex items-center">
                         <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
                             S
                         </div>
-                        <h2 className="ml-3 text-lg font-bold text-slate-100 tracking-tight">School<span className="text-emerald-500">Admin</span></h2>
+                        <h2 className="ml-3 text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">School<span className="text-emerald-500">Admin</span></h2>
                     </div>
                     <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-white transition-colors">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
 
                     {(isAdmin || isOffice) && (
                         <>
-                            <div className="mt-8 mb-2 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Analytics</div>
+                            <div className="mt-8 mb-2 px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Analytics</div>
                             <ul>
                                 <li className="mb-1">
                                     <div
@@ -150,12 +150,12 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
                                             }
                                         }}
                                         className={`group flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer transition-all duration-200 ${currentPage === Page.Reports
-                                                ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                                                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800 border-l-2 border-transparent'
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-l-2 border-emerald-500'
+                                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border-l-2 border-transparent'
                                             }`}
                                     >
                                         <div className="flex items-center">
-                                            <span className={`relative ${currentPage === Page.Reports ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-100'}`}>
+                                            <span className={`relative ${currentPage === Page.Reports ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-100'}`}>
                                                 <ReportsIcon />
                                             </span>
                                             <span className="mx-3 text-sm font-medium">{Page.Reports}</span>
@@ -170,9 +170,9 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
                                     
                                     {isReportsOpen && (
                                         <ul className="ml-9 mt-1 space-y-1 overflow-hidden transition-all duration-200 animate-in slide-in-from-top-2 opacity-100">
-                                            <li onClick={() => handleReportTabClick('marks')} className={`px-3 py-2 text-sm rounded-md cursor-pointer transition-colors ${currentPage === Page.Reports && reportsTab === 'marks' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}>Marks Entry</li>
-                                            <li onClick={() => handleReportTabClick('attendance')} className={`px-3 py-2 text-sm rounded-md cursor-pointer transition-colors ${currentPage === Page.Reports && reportsTab === 'attendance' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}>Attendance</li>
-                                            <li onClick={() => handleReportTabClick('export')} className={`px-3 py-2 text-sm rounded-md cursor-pointer transition-colors ${currentPage === Page.Reports && reportsTab === 'export' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}>Export Data</li>
+                                            <li onClick={() => handleReportTabClick('marks')} className={`px-3 py-2 text-sm rounded-md cursor-pointer transition-colors ${currentPage === Page.Reports && reportsTab === 'marks' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Marks Entry</li>
+                                            <li onClick={() => handleReportTabClick('attendance')} className={`px-3 py-2 text-sm rounded-md cursor-pointer transition-colors ${currentPage === Page.Reports && reportsTab === 'attendance' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Attendance</li>
+                                            <li onClick={() => handleReportTabClick('export')} className={`px-3 py-2 text-sm rounded-md cursor-pointer transition-colors ${currentPage === Page.Reports && reportsTab === 'export' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Export Data</li>
                                         </ul>
                                     )}
                                 </li>
@@ -181,8 +181,8 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
                     )}
                 </nav>
 
-                <div className="p-4 border-t border-slate-800/50 bg-slate-900">
-                    <div onClick={() => navigate(Page.Settings)} className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${currentPage === Page.Settings ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800/50 bg-white dark:bg-slate-900">
+                    <div onClick={() => navigate(Page.Settings)} className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${currentPage === Page.Settings ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
                         <SettingsIcon />
                         <div className="ml-3">
                             <p className="text-sm font-medium">Settings</p>

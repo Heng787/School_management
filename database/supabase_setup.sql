@@ -1,172 +1,228 @@
--- SUPABASE SETUP SCRIPT
--- Run this in the Supabase SQL Editor to create the necessary tables and sync logic.
+-- ============================================================
+-- SCHOOL ADMIN — SUPABASE COMPLETE SETUP SCRIPT
+-- Safe to re-run at any time (idempotent).
+-- Copy-paste the entire file into the Supabase SQL Editor and click Run.
+-- ============================================================
 
--- 1. Create Tables
-CREATE TABLE IF NOT EXISTS enrollments (
-    id TEXT PRIMARY KEY,
-    student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
-    class_id TEXT REFERENCES classes(id) ON DELETE CASCADE,
-    academic_year TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- ============================================================
+-- SECTION 1: TABLES
+-- Order matters — referenced (parent) tables must come first.
+-- ============================================================
 
+-- Core entities
 CREATE TABLE IF NOT EXISTS students (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    sex TEXT,
-    dob DATE,
-    phone TEXT,
-    enrollment_date DATE,
-    status TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id               TEXT PRIMARY KEY,
+    name             TEXT NOT NULL,
+    sex              TEXT,
+    dob              DATE,
+    phone            TEXT,
+    enrollment_date  DATE,
+    status           TEXT,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS staff (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    role TEXT,
-    subject TEXT,
-    contact TEXT,
-    hire_date DATE,
-    password TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    role        TEXT,
+    subject     TEXT,
+    contact     TEXT,
+    hire_date   DATE,
+    password    TEXT,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS classes (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    teacher_id TEXT REFERENCES staff(id) ON DELETE SET NULL,
-    schedule TEXT,
-    level TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    teacher_id  TEXT REFERENCES staff(id) ON DELETE SET NULL,
+    schedule    TEXT,
+    level       TEXT,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Child tables (depend on the above)
+CREATE TABLE IF NOT EXISTS enrollments (
+    id             TEXT PRIMARY KEY,
+    student_id     TEXT REFERENCES students(id) ON DELETE CASCADE,
+    class_id       TEXT REFERENCES classes(id)  ON DELETE CASCADE,
+    academic_year  TEXT,
+    created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS grades (
-    id TEXT PRIMARY KEY,
-    student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
-    subject TEXT,
-    score NUMERIC,
-    term TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id          TEXT PRIMARY KEY,
+    student_id  TEXT REFERENCES students(id) ON DELETE CASCADE,
+    subject     TEXT,
+    score       NUMERIC,
+    term        TEXT,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS attendance (
-    id TEXT PRIMARY KEY,
-    student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
-    date DATE,
-    status TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id          TEXT PRIMARY KEY,
+    student_id  TEXT REFERENCES students(id) ON DELETE CASCADE,
+    date        DATE,
+    status      TEXT,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Staff permissions (leave / absence records)
+CREATE TABLE IF NOT EXISTS staff_permissions (
+    id          TEXT PRIMARY KEY,
+    staff_id    TEXT REFERENCES staff(id) ON DELETE CASCADE,
+    type        TEXT,
+    start_date  DATE,
+    end_date    DATE,
+    reason      TEXT,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Key-value config store (subjects, levels, time slots, admin password, principal_signature_url …)
 CREATE TABLE IF NOT EXISTS config (
-    key TEXT PRIMARY KEY,
-    value JSONB,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    key         TEXT PRIMARY KEY,
+    value       JSONB,
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS audit_log (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    table_name TEXT,
-    record_id TEXT,
-    action TEXT,
-    old_data JSONB,
-    new_data JSONB,
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- School calendar events
+CREATE TABLE IF NOT EXISTS events (
+    id          TEXT PRIMARY KEY,
+    title       TEXT,
+    date        DATE,
+    type        TEXT,
+    description TEXT,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2. Create Batch Sync RPC Function
--- This function allows the app to send ALL local changes in one single network request.
-CREATE OR REPLACE FUNCTION sync_school_data_v2(
-    p_students JSONB[],
-    p_staff JSONB[],
-    p_classes JSONB[],
-    p_enrollments JSONB[],
-    p_grades JSONB[],
-    p_attendance JSONB[],
-    p_config JSONB[]
-) RETURNS VOID 
-SECURITY DEFINER SET search_path = public
-AS $$
-DECLARE
-    item JSONB;
-BEGIN
-    -- Upsert Students
-    FOREACH item IN ARRAY p_students LOOP
-        INSERT INTO students (id, name, sex, dob, phone, enrollment_date, status)
-        VALUES (item->>'id', item->>'name', item->>'sex', NULLIF(item->>'dob', '')::DATE, item->>'phone', NULLIF(item->>'enrollment_date', '')::DATE, item->>'status')
-        ON CONFLICT (id) DO UPDATE SET
-            name = EXCLUDED.name, sex = EXCLUDED.sex, dob = EXCLUDED.dob, phone = EXCLUDED.phone, 
-            enrollment_date = EXCLUDED.enrollment_date, status = EXCLUDED.status;
-    END LOOP;
+-- Messaging between admin and staff
+-- Columns match messageService.js: sender_id, sender_name, recipient_id, type, content, metadata, is_read
+CREATE TABLE IF NOT EXISTS messages (
+    id           TEXT PRIMARY KEY,
+    sender_id    TEXT,
+    sender_name  TEXT,
+    recipient_id TEXT,
+    type         TEXT DEFAULT 'message',
+    content      TEXT,
+    metadata     JSONB DEFAULT '{}',
+    is_read      BOOLEAN DEFAULT FALSE,
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    -- Upsert Staff
-    FOREACH item IN ARRAY p_staff LOOP
-        INSERT INTO staff (id, name, role, subject, contact, hire_date, password)
-        VALUES (item->>'id', item->>'name', item->>'role', item->>'subject', item->>'contact', NULLIF(item->>'hire_date', '')::DATE, item->>'password')
-        ON CONFLICT (id) DO UPDATE SET
-            name = EXCLUDED.name, role = EXCLUDED.role, subject = EXCLUDED.subject, 
-            contact = EXCLUDED.contact, hire_date = EXCLUDED.hire_date, password = EXCLUDED.password;
-    END LOOP;
-
-    -- Upsert Classes
-    FOREACH item IN ARRAY p_classes LOOP
-        INSERT INTO classes (id, name, teacher_id, schedule, level)
-        VALUES (item->>'id', item->>'name', item->>'teacher_id', item->>'schedule', item->>'level')
-        ON CONFLICT (id) DO UPDATE SET
-            name = EXCLUDED.name, teacher_id = EXCLUDED.teacher_id, schedule = EXCLUDED.schedule, level = EXCLUDED.level;
-    END LOOP;
-
-    -- Upsert Enrollments
-    FOREACH item IN ARRAY p_enrollments LOOP
-        INSERT INTO enrollments (id, student_id, class_id, academic_year)
-        VALUES (item->>'id', item->>'student_id', item->>'class_id', item->>'academic_year')
-        ON CONFLICT (id) DO UPDATE SET
-            student_id = EXCLUDED.student_id, class_id = EXCLUDED.class_id, academic_year = EXCLUDED.academic_year;
-    END LOOP;
-
-    -- Upsert Grades
-    FOREACH item IN ARRAY p_grades LOOP
-        INSERT INTO grades (id, student_id, subject, score, term)
-        VALUES (item->>'id', item->>'student_id', item->>'subject', (item->>'score')::NUMERIC, item->>'term')
-        ON CONFLICT (id) DO UPDATE SET
-            student_id = EXCLUDED.student_id, subject = EXCLUDED.subject, score = EXCLUDED.score, term = EXCLUDED.term;
-    END LOOP;
-
-    -- Upsert Attendance
-    FOREACH item IN ARRAY p_attendance LOOP
-        INSERT INTO attendance (id, student_id, date, status)
-        VALUES (item->>'id', item->>'student_id', NULLIF(item->>'date', '')::DATE, item->>'status')
-        ON CONFLICT (id) DO UPDATE SET
-            student_id = EXCLUDED.student_id, date = EXCLUDED.date, status = EXCLUDED.status;
-    END LOOP;
-
-    -- Upsert Config
-    FOREACH item IN ARRAY p_config LOOP
-        INSERT INTO config (key, value)
-        VALUES (item->>'key', item->'value')
-        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
-    END LOOP;
-END;
-$$ LANGUAGE plpgsql;
-
--- 3. Automatic Backup System (Recycle Bin)
--- This tracks all changes (Add, Edit, Delete) and saves them for 30 days.
+-- Audit / backup log (recycle bin)
 CREATE TABLE IF NOT EXISTS system_backups (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    table_name TEXT NOT NULL,
-    record_id TEXT NOT NULL,
-    action TEXT NOT NULL, -- 'INSERT', 'UPDATE', 'DELETE'
-    old_data JSONB,
-    new_data JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '30 days')
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    table_name  TEXT NOT NULL,
+    record_id   TEXT NOT NULL,
+    action      TEXT NOT NULL,   -- 'INSERT' | 'UPDATE' | 'DELETE'
+    old_data    JSONB,
+    new_data    JSONB,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at  TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '30 days')
 );
 
--- Backup Trigger Function
+-- ============================================================
+-- SECTION 2: INDEXES
+-- ============================================================
+
+CREATE INDEX IF NOT EXISTS idx_enrollments_student  ON enrollments(student_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_class     ON enrollments(class_id);
+CREATE INDEX IF NOT EXISTS idx_grades_student        ON grades(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_student    ON attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_date       ON attendance(date);
+CREATE INDEX IF NOT EXISTS idx_staff_permissions_staff ON staff_permissions(staff_id);
+CREATE INDEX IF NOT EXISTS idx_messages_recipient    ON messages(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender       ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created      ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_backups_table  ON system_backups(table_name);
+CREATE INDEX IF NOT EXISTS idx_system_backups_exp    ON system_backups(expires_at);
+
+-- ============================================================
+-- SECTION 3: ROW LEVEL SECURITY
+-- Enable RLS on every table, then open access for the anon key.
+-- NOTE: PostgreSQL has NO "CREATE POLICY IF NOT EXISTS".
+--       Use DROP ... IF EXISTS before every CREATE POLICY.
+-- ============================================================
+
+ALTER TABLE students          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE classes           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enrollments       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE grades            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE config            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_backups    ENABLE ROW LEVEL SECURITY;
+
+-- students
+DROP POLICY IF EXISTS "Allow all for students"          ON students;
+CREATE POLICY          "Allow all for students"          ON students          FOR ALL USING (true) WITH CHECK (true);
+
+-- staff
+DROP POLICY IF EXISTS "Allow all for staff"             ON staff;
+CREATE POLICY          "Allow all for staff"             ON staff             FOR ALL USING (true) WITH CHECK (true);
+
+-- classes
+DROP POLICY IF EXISTS "Allow all for classes"           ON classes;
+CREATE POLICY          "Allow all for classes"           ON classes           FOR ALL USING (true) WITH CHECK (true);
+
+-- enrollments
+DROP POLICY IF EXISTS "Allow all for enrollments"       ON enrollments;
+CREATE POLICY          "Allow all for enrollments"       ON enrollments       FOR ALL USING (true) WITH CHECK (true);
+
+-- grades
+DROP POLICY IF EXISTS "Allow all for grades"            ON grades;
+CREATE POLICY          "Allow all for grades"            ON grades            FOR ALL USING (true) WITH CHECK (true);
+
+-- attendance
+DROP POLICY IF EXISTS "Allow all for attendance"        ON attendance;
+CREATE POLICY          "Allow all for attendance"        ON attendance        FOR ALL USING (true) WITH CHECK (true);
+
+-- staff_permissions
+DROP POLICY IF EXISTS "Allow all for staff_permissions" ON staff_permissions;
+CREATE POLICY          "Allow all for staff_permissions" ON staff_permissions FOR ALL USING (true) WITH CHECK (true);
+
+-- config
+DROP POLICY IF EXISTS "Allow all for config"            ON config;
+CREATE POLICY          "Allow all for config"            ON config            FOR ALL USING (true) WITH CHECK (true);
+
+-- events
+DROP POLICY IF EXISTS "Allow all for events"            ON events;
+CREATE POLICY          "Allow all for events"            ON events            FOR ALL USING (true) WITH CHECK (true);
+
+-- messages
+DROP POLICY IF EXISTS "Allow all for messages"          ON messages;
+CREATE POLICY          "Allow all for messages"          ON messages          FOR ALL USING (true) WITH CHECK (true);
+
+-- system_backups
+DROP POLICY IF EXISTS "Allow all for system_backups"    ON system_backups;
+CREATE POLICY          "Allow all for system_backups"    ON system_backups    FOR ALL USING (true) WITH CHECK (true);
+
+-- ============================================================
+-- SECTION 4: STORAGE — signatures bucket
+-- DO NOT manage storage.objects policies via SQL.
+-- Supabase auto-creates a "Public Access" policy when you toggle
+-- a bucket to Public in the dashboard, and that policy is owned
+-- by the storage service role — it CANNOT be created or dropped
+-- via the SQL Editor (error 42710 / permission denied).
+--
+-- Instead, configure the "signatures" bucket through the UI:
+--   Supabase Dashboard → Storage → signatures → Policies
+-- Set it to Public, or add your own policies there.
+-- ============================================================
+
+-- ============================================================
+-- SECTION 5: AUDIT / BACKUP TRIGGER
+-- Automatically records every INSERT / UPDATE / DELETE
+-- for students, staff, classes, grades, attendance, config.
+-- ============================================================
+
 CREATE OR REPLACE FUNCTION handle_audit_backup()
-RETURNS TRIGGER 
+RETURNS TRIGGER
 SECURITY DEFINER SET search_path = public
-AS $$
+LANGUAGE plpgsql AS $$
 DECLARE
     rec_id TEXT;
 BEGIN
@@ -188,29 +244,40 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Attach Triggers to Tables
-DO $$ 
+-- Attach triggers (drops first so re-running is safe)
+DO $$
 DECLARE
-    t_name TEXT;
+    t TEXT;
 BEGIN
-    FOR t_name IN SELECT table_name FROM information_schema.tables 
-                 WHERE table_schema = 'public' 
-                 AND table_name IN ('students', 'staff', 'classes', 'grades', 'attendance', 'config')
+    FOREACH t IN ARRAY ARRAY['students','staff','classes','grades','attendance','config']
     LOOP
-        EXECUTE format('DROP TRIGGER IF EXISTS tr_audit_%I ON %I', t_name, t_name);
-        EXECUTE format('CREATE TRIGGER tr_audit_%I AFTER INSERT OR UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION handle_audit_backup()', t_name, t_name);
+        EXECUTE format('DROP TRIGGER IF EXISTS tr_audit_%I ON %I', t, t);
+        EXECUTE format(
+            'CREATE TRIGGER tr_audit_%I
+             AFTER INSERT OR UPDATE OR DELETE ON %I
+             FOR EACH ROW EXECUTE FUNCTION handle_audit_backup()',
+            t, t
+        );
     END LOOP;
 END $$;
 
--- Optional: Cleanup Function for old backups
--- You can run `SELECT cleanup_old_backups();` periodically to delete records older than 30 days.
+-- ============================================================
+-- SECTION 6: HELPER FUNCTIONS
+-- ============================================================
+
+-- Cleanup expired backup records (run periodically via cron or manually)
 CREATE OR REPLACE FUNCTION cleanup_old_backups()
-RETURNS VOID 
+RETURNS VOID
 SECURITY DEFINER SET search_path = public
-AS $$
+LANGUAGE plpgsql AS $$
 BEGIN
     DELETE FROM system_backups WHERE expires_at < NOW();
 END;
-$$ LANGUAGE plpgsql;
+$$;
+-- Usage: SELECT cleanup_old_backups();
+
+-- ============================================================
+-- DONE. All tables, indexes, RLS policies, triggers created.
+-- ============================================================

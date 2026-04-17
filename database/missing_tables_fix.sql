@@ -64,8 +64,17 @@ ALTER TABLE incident_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE room_statuses ENABLE ROW LEVEL SECURITY;
 
 -- Allow all operations (anon key) - same as your other tables
-CREATE POLICY IF NOT EXISTS "Allow all for staff_permissions" ON staff_permissions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Allow all for events" ON events FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Allow all for daily_logs" ON daily_logs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Allow all for incident_reports" ON incident_reports FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Allow all for room_statuses" ON room_statuses FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for staff_permissions" ON staff_permissions;
+CREATE POLICY "Allow all for staff_permissions" ON staff_permissions FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for events" ON events;
+CREATE POLICY "Allow all for events" ON events FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for daily_logs" ON daily_logs;
+CREATE POLICY "Allow all for daily_logs" ON daily_logs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for incident_reports" ON incident_reports;
+CREATE POLICY "Allow all for incident_reports" ON incident_reports FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for room_statuses" ON room_statuses;
+CREATE POLICY "Allow all for room_statuses" ON room_statuses FOR ALL USING (true) WITH CHECK (true);

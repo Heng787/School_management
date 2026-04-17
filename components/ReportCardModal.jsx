@@ -1,14 +1,30 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 // Report Card Modal for displaying and printing student academic progress.
 import { useData } from '../context/DataContext';
+import { configService } from '../services/configService';
 
 const ReportCardModal = ({ student, onClose }) => {
-    const { classes, grades, attendance, enrollments } = useData();
+    const { classes, grades, attendance, enrollments, staff, currentUser } = useData();
 
     const studentEnrollment = enrollments.find(e => e.studentId === student.id);
     const studentClassObj = studentEnrollment ? classes.find(c => c.id === studentEnrollment.classId) : null;
     const displayLevel = studentClassObj ? `${studentClassObj.name} (${studentClassObj.level})` : 'Unassigned';
+
+    // Resolve teacher name from the class's teacherId
+    const classTeacher = studentClassObj ? staff.find(s => s.id === studentClassObj.teacherId) : null;
+    const teacherName = classTeacher?.name || null;
+
+    // Use the logged-in admin's name as principal
+    const principalName = currentUser?.name || 'Administrator';
+
+    // Fetch principal signature URL from Supabase config
+    const [principalSignatureUrl, setPrincipalSignatureUrl] = useState(null);
+    useEffect(() => {
+        configService.getPrincipalSignatureUrl().then((url) => {
+            if (url) setPrincipalSignatureUrl(url);
+        });
+    }, []);
 
     const studentGrades = grades.filter(g => g.studentId === student.id);
     const studentAttendance = attendance.filter(a => a.studentId === student.id);
@@ -157,11 +173,26 @@ const ReportCardModal = ({ student, onClose }) => {
                         <div className="text-center">
                             <div className="border-t border-slate-900 pt-2">
                                 <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Class Teacher</p>
+                                {teacherName && (
+                                    <p className="text-sm font-bold text-slate-700 mt-1">{teacherName}</p>
+                                )}
                             </div>
                         </div>
                         <div className="text-center">
+                            {/* Signature image floats above the line */}
+                            {principalSignatureUrl && (
+                                <div className="flex justify-center mb-2">
+                                    <img
+                                        src={principalSignatureUrl}
+                                        alt="Principal signature"
+                                        className="h-14 object-contain principal-sig-img"
+                                        style={{ mixBlendMode: 'multiply' }}
+                                    />
+                                </div>
+                            )}
                             <div className="border-t border-slate-900 pt-2">
                                 <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Principal's Signature</p>
+                                <p className="text-sm font-bold text-slate-700 mt-1">{principalName}</p>
                             </div>
                         </div>
                     </div>
@@ -184,6 +215,12 @@ const ReportCardModal = ({ student, onClose }) => {
                     .print\\:rounded-none { border-radius: 0 !important; }
                     .print\\:max-w-none { max-width: none !important; }
                     .print\\:w-full { width: 100% !important; }
+                    .principal-sig-img {
+                        display: block !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        mix-blend-mode: multiply !important;
+                    }
                 }
             `}} />
         </div>

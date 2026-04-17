@@ -8,16 +8,14 @@ export const UserRole = {
     Admin: 'Admin',
     Teacher: 'Teacher',
     OfficeWorker: 'Office Worker',
-    Guard: 'Guard',
-    Cleaner: 'Cleaner',
 };
 
 export const StaffRole = {
     Teacher: 'Teacher',
     AssistantTeacher: 'Assistant Teacher',
-    Cleaner: 'Cleaner',
-    Guard: 'Guard',
     OfficeWorker: 'Office Worker',
+    Guard: 'Guard',
+    Cleaner: 'Cleaner',
 };
 
 export const Page = {
@@ -41,6 +39,7 @@ export const AttendanceStatus = {
     Present: 'Present',
     Absent: 'Absent',
     Late: 'Late',
+    Permission: 'Permission',
 };
 
 export const LeaveType = {

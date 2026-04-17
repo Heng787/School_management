@@ -1,946 +1,133 @@
+import React, { useState, useEffect } from "react";
+import {
+  MarksEntry,
+  ExportCenter,
+  AttendanceReport,
+} from "../components/reportspage";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useData } from '../context/DataContext';
-import { Page, AttendanceStatus } from '../types';
-import { generateClassProgressData, generateClassExcelDataAOA } from '../utils/reportGenerator';
-import { gradeId } from '../services/mappers';
-import * as XLSX from 'xlsx';
-
-
-// --- 1. MARKS ENTRY COMPONENT ---
-/**
- * COMPONENT: MarksEntry
- * DESCRIPTION: Allows teachers/admins to enter grades for students by class and subject.
- */
-const MarksEntry = () => {
-    // --- 1.1. STATE & DATA ---
-    const { students, classes, subjects, loading, grades, addGrade, updateGrade, saveGradeBatch, enrollments, staff } = useData();
-    const [selectedClassId, setSelectedClassId] = useState(() => sessionStorage.getItem('reports_marks_class') || '');
-    const [selectedTerm, setSelectedTerm] = useState(() => sessionStorage.getItem('reports_marks_term') || 'Midterm');
-    const [localGrades, setLocalGrades] = useState({});
-
-    useEffect(() => {
-        if (selectedClassId) sessionStorage.setItem('reports_marks_class', selectedClassId);
-        else sessionStorage.removeItem('reports_marks_class');
-    }, [selectedClassId]);
-
-    useEffect(() => {
-        sessionStorage.setItem('reports_marks_term', selectedTerm);
-    }, [selectedTerm]);
-
-    const [modifiedStudents, setModifiedStudents] = useState(new Set());
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveSuccess, setSaveSuccess] = useState(false);
-
-    const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
-
-    const classStudents = useMemo(() => {
-        if (!selectedClass) return [];
-        const classEnrollments = enrollments.filter(e => e.classId === selectedClass.id);
-        const studentIds = classEnrollments.map(e => e.studentId);
-        return students.filter(s => studentIds.includes(s.id));
-    }, [students, selectedClass, enrollments]);
-
-    // --- 1.2. SIDE EFFECTS ---
-    // Track unsaved changes to warn before close/navigate
-    useEffect(() => {
-        const handleBeforeUnload = (e) => {
-            if (modifiedStudents.size > 0) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [modifiedStudents]);
-
-    // Initialize local grades when class or students change
-    useEffect(() => {
-        const initialGrades = {};
-        classStudents.forEach(student => {
-            initialGrades[student.id] = {};
-            subjects.forEach(subject => {
-                const existingGrade = grades.find(g => g.studentId === student.id && g.subject === subject && g.classId === selectedClassId && g.term === selectedTerm);
-                initialGrades[student.id][subject] = existingGrade ? existingGrade.score : '';
-            });
-        });
-        setLocalGrades(initialGrades);
-        setModifiedStudents(new Set());
-        setSaveSuccess(false);
-    }, [classStudents, subjects, grades, selectedClassId, selectedTerm]);
-
-    // --- 1.3. ACTION HANDLERS ---
-    /**
-     * Handles changes to individual student marks.
-     * Clamps values between 0 and 10.
-     */
-    const handleGradeChange = (studentId, subject, value) => {
-        setSaveSuccess(false);
-
-        setLocalGrades(prev => {
-            const next = { ...prev };
-            if (!next[studentId]) next[studentId] = {};
-
-            if (value === "") {
-                next[studentId][subject] = "";
-            } else {
-                let strVal = value;
-                let num = parseFloat(strVal);
-
-                if (num < 0) {
-                    strVal = "0";
-                } else if (num > 10) {
-                    // Auto-inject decimal for two-digit numbers (e.g. "55" -> "5.5")
-                    if (!strVal.includes('.') && strVal.length === 2) {
-                        strVal = `${strVal[0]}.${strVal[1]}`;
-                    } else if (!strVal.includes('.') && strVal.length === 3 && strVal.startsWith("10")) {
-                        strVal = "10";
-                    } else {
-                        strVal = "10";
-                    }
-                }
-
-                next[studentId][subject] = strVal;
-            }
-            return next;
-        });
-
-        setModifiedStudents(prev => {
-            const next = new Set(prev);
-            next.add(studentId);
-            return next;
-        });
-    };
-
-    /**
-     * Saves all modified marks for the current class to the database.
-     * Iterates through modified students and updates or adds grade records.
-     */
-    const handleSaveAll = async () => {
-        if (modifiedStudents.size === 0) return;
-
-        setIsSaving(true);
-        try {
-            const recordsToSave = [];
-
-            for (const studentId of Array.from(modifiedStudents)) {
-                for (const subject of subjects) {
-                    const score = Number(localGrades[studentId]?.[subject] || 0);
-                    const existingGrade = grades.find(g => g.studentId === studentId && g.subject === subject && g.classId === selectedClassId && g.term === selectedTerm);
-                    const id = existingGrade ? existingGrade.id : gradeId(selectedClassId, studentId, subject, selectedTerm);
-                    recordsToSave.push({ id, studentId, classId: selectedClassId, subject, score, term: selectedTerm });
-                }
-            }
-
-            if (recordsToSave.length > 0) {
-                await saveGradeBatch(recordsToSave);
-            }
-
-            setSaveSuccess(true);
-            setModifiedStudents(new Set());
-            setTimeout(() => setSaveSuccess(false), 3000);
-        } catch (err) {
-            console.error(err);
-            alert('Failed to save grades. Please ensure you are not in private/incognito mode.');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    // --- 1.4. RENDER LOGIC ---
-    if (subjects.length === 0) {
-        return (
-            <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl text-center">
-                <p className="text-amber-800 font-medium">No subjects defined in the system.</p>
-                <p className="text-amber-600 text-sm mt-1">Please go to Settings &gt; Subjects to add subjects first.</p>
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex-1 flex flex-col sm:flex-row gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Class (Marks out of 10.0)</label>
-                        <select
-                            value={selectedClassId}
-                            onChange={(e) => {
-                                if (modifiedStudents.size > 0 && !window.confirm('You have unsaved marks. Switch class and lose changes?')) return;
-                                setSelectedClassId(e.target.value);
-                            }}
-                            className="w-full md:w-96 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                        >
-                            <option value="">Choose a class...</option>
-                            {classes.map(c => {
-                                const teacher = staff?.find(s => s.id === c.teacherId);
-                                const tName = teacher ? ` (Tr: ${teacher.name})` : ' (No Teacher)';
-                                return (
-                                    <option key={c.id} value={c.id}>
-                                        {c.name} | {c.level}{tName} | {c.schedule || 'No Schedule'}
-                                    </option>
-                                );
-                            })}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Term</label>
-                        <select
-                            value={selectedTerm}
-                            onChange={(e) => {
-                                if (modifiedStudents.size > 0 && !window.confirm('You have unsaved marks. Switch term and lose changes?')) return;
-                                setSelectedTerm(e.target.value);
-                            }}
-                            className="w-full sm:w-48 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                        >
-                            <option value="Midterm">Midterm</option>
-                            <option value="Finals">Finals</option>
-                            <option value="Q1">Quarter 1</option>
-                            <option value="Q2">Quarter 2</option>
-                            <option value="Q3">Quarter 3</option>
-                            <option value="Q4">Quarter 4</option>
-                        </select>
-                    </div>
-                </div>
-                {classStudents.length > 0 && (
-                    <div className="flex items-center space-x-4">
-                        {modifiedStudents.size > 0 && (
-                            <span className="text-xs font-bold text-amber-600 animate-pulse flex items-center">
-                                <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                UNSAVED CHANGES
-                            </span>
-                        )}
-                        <button
-                            onClick={handleSaveAll}
-                            disabled={isSaving || modifiedStudents.size === 0}
-                            className={`flex items-center space-x-2 px-6 py-2.5 rounded-lg font-bold text-white shadow-lg transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${saveSuccess ? 'bg-emerald-500' : 'bg-primary-600 hover:bg-primary-700 shadow-primary-200'
-                                }`}
-                        >
-                            {isSaving ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            ) : saveSuccess ? (
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                            ) : (
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-                            )}
-                            <span>{isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save All Marks'}</span>
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {selectedClassId && classStudents.length === 0 ? (
-                <div className="p-12 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl">
-                    <p className="text-slate-500">This class has no students enrolled yet.</p>
-                </div>
-            ) : selectedClassId ? (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
-                    <div className="overflow-auto max-h-[600px]">
-                        <div className="min-w-full inline-block align-middle">
-                            {/* Horizontal Scroll Indicator for Mobile */}
-                            <div className="sm:hidden absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent pointer-events-none z-20"></div>
-
-                            <table className="min-w-full divide-y divide-slate-100 table-fixed border-separate border-spacing-0">
-                                <thead className="bg-slate-50 sticky top-0 z-30 shadow-sm">
-                                    <tr>
-                                        <th className="w-40 sm:w-64 px-4 sm:px-6 py-3 sm:py-4 text-left text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-r border-slate-100 sticky left-0 z-40">Student Name</th>
-                                        {subjects.map(subject => (
-                                            <th key={subject} className="px-2 sm:px-4 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[80px] sm:min-w-[120px]">
-                                                {subject}
-                                            </th>
-                                        ))}
-                                        <th className="w-20 sm:w-24 px-4 sm:px-6 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-l border-slate-100">Avg</th>
-                                    </tr>
-                                </thead>
-                            <tbody className="bg-white divide-y divide-slate-100">
-                                {classStudents.map(student => {
-                                    const scores = subjects.map(sub => Number(localGrades[student.id]?.[sub] || 0));
-                                    const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '0.0';
-                                    const isModified = modifiedStudents.has(student.id);
-
-                                    return (
-                                        <tr key={student.id} className={`transition-colors ${isModified ? 'bg-amber-50/30' : 'hover:bg-slate-50/50'}`}>
-                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap bg-white sticky left-0 z-20 border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                                <div className="flex items-center">
-                                                    <div className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs mr-2 sm:mr-3 shrink-0 ${isModified ? 'bg-amber-100 text-amber-700' : 'bg-primary-100 text-primary-700'}`}>
-                                                        {student.name.charAt(0)}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-xs sm:text-sm font-bold text-slate-800 flex items-center truncate max-w-[80px] sm:max-w-none">
-                                                            {student.name}
-                                                            {isModified && <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Unsaved changes"></span>}
-                                                        </p>
-                                                        <p className="text-[9px] sm:text-[10px] font-medium text-slate-400 hidden sm:block">ID: {student.id}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            {subjects.map(subject => (
-                                                <td key={subject} className="px-1 sm:px-2 py-2 sm:py-3">
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        max="10"
-                                                        step="0.1"
-                                                        placeholder="0.0"
-                                                        name={`admin-score-${student.id}-${subject}`}
-                                                        autoComplete="off"
-                                                        value={localGrades[student.id]?.[subject] ?? ''}
-                                                        onChange={(e) => handleGradeChange(student.id, subject, e.target.value)}
-                                                        onFocus={(e) => e.target.select()}
-                                                        className={`w-full text-center py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${Number(localGrades[student.id]?.[subject]) >= 9.0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
-                                                            Number(localGrades[student.id]?.[subject]) < 5.0 ? 'text-red-600 bg-red-50 border-red-100' :
-                                                                'text-slate-700 bg-white border-slate-200'
-                                                            }`}
-                                                    />
-                                                </td>
-                                            ))}
-                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-center bg-slate-50/30 border-l border-slate-100">
-                                                <span className={`text-xs sm:text-sm font-black ${Number(avg) >= 9.0 ? 'text-emerald-600' : Number(avg) < 5.0 ? 'text-red-600' : 'text-slate-700'}`}>
-                                                    {avg}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                </div>
-            ) : (
-                <div className="p-20 flex flex-col items-center justify-center bg-white rounded-xl border border-dashed border-slate-200 opacity-60">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                        <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-                    </div>
-                    <p className="text-slate-500 font-medium">Select a class from the menu above to begin recording marks (0.0 - 10.0).</p>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// --- 2. EXPORT CENTER COMPONENT ---
-/**
- * COMPONENT: ExportCenter
- * DESCRIPTION: Interface for generating and downloading academic/attendance reports in Excel format.
- */
-const ExportCenter = () => {
-    // --- 2.1. STATE & DATA ---
-    const { students, classes, enrollments, grades, attendance, levels, staff } = useData();
-    const [exportMode, setExportMode] = useState('class');
-    const [selectedClassId, setSelectedClassId] = useState(() => sessionStorage.getItem('reports_export_class') || '');
-    const [selectedLevel, setSelectedLevel] = useState('');
-
-    useEffect(() => {
-        if (selectedClassId) sessionStorage.setItem('reports_export_class', selectedClassId);
-        else sessionStorage.removeItem('reports_export_class');
-    }, [selectedClassId]);
-
-    const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
-
-    const targetStudents = useMemo(() => {
-        if (exportMode === 'class') {
-            if (!selectedClass) return [];
-            const classEnrollments = enrollments.filter(e => e.classId === selectedClass.id);
-            const studentIds = classEnrollments.map(e => e.studentId);
-            return students.filter(s => studentIds.includes(s.id));
-        } else {
-            if (!selectedLevel) return [];
-            // Find all classes in this level
-            const levelClasses = classes.filter(c => c.level === selectedLevel);
-            const classIds = levelClasses.map(c => c.id);
-            const levelEnrollments = enrollments.filter(e => classIds.includes(e.classId));
-            const studentIds = levelEnrollments.map(e => e.studentId);
-            // removing duplicates if any student is enrolled in multiple classes in the same level
-            const uniqueStudentIds = Array.from(new Set(studentIds));
-            return students.filter(s => uniqueStudentIds.includes(s.id));
-        }
-    }, [students, selectedClass, selectedLevel, exportMode, enrollments, classes]);
-
-    // --- 2.2. ACTION HANDLERS ---
-    const handleDownloadReport = () => {
-        if (targetStudents.length === 0) return;
-
-        const workbook = XLSX.utils.book_new();
-
-        if (exportMode === 'class' && selectedClass) {
-            const classEnrolls = enrollments.filter(e => e.classId === selectedClass.id);
-            const sIds = classEnrolls.map(e => e.studentId);
-            const classStuds = students.filter(s => sIds.includes(s.id));
-            const teacher = staff?.find(s => s.id === selectedClass.teacherId);
-            
-            const aoaData = generateClassExcelDataAOA(selectedClass, teacher, classStuds);
-            const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
-            XLSX.utils.book_append_sheet(workbook, worksheet, '(1).Classes');
-            
-        } else if (exportMode === 'level' && selectedLevel) {
-            const levelClasses = classes.filter(c => c.level === selectedLevel);
-            levelClasses.forEach((cls) => {
-                const classEnrolls = enrollments.filter(e => e.classId === cls.id);
-                const sIds = classEnrolls.map(e => e.studentId);
-                const classStuds = students.filter(s => sIds.includes(s.id));
-                const teacher = staff?.find(s => s.id === cls.teacherId);
-                
-                const aoaData = generateClassExcelDataAOA(cls, teacher, classStuds);
-                const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
-                // Sheet names must be max 31 chars and unique
-                let sheetName = `${cls.name} (${cls.level})`;
-                if (sheetName.length > 31) sheetName = sheetName.substring(0, 31);
-                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-            });
-        }
-
-        const titleName = exportMode === 'class' ? (selectedClass?.name || 'Class') : (`Level_${selectedLevel}`);
-        const fileName = `${exportMode}_export_${titleName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(workbook, fileName);
-    };
-
-    // --- 2.3. RENDER LOGIC ---
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-center">
-                <h2 className="text-xl font-bold text-slate-800 mb-2">Data Export Configuration</h2>
-                <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-                    Download a comprehensive roster for a specific Class or an entire Level. The exported file is <strong>automatically formatted (.xlsx)</strong> containing <strong>Attendance %</strong>, <strong>Contact Phone</strong>, <strong>DOB</strong>, and <strong>Letter Grades (A, B, C, D, F)</strong>.
-                </p>
-
-                <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200 mb-6 w-full">
-                    <button
-                        onClick={() => setExportMode('class')}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all ${exportMode === 'class' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        By Class
-                    </button>
-                    <button
-                        onClick={() => setExportMode('level')}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold transition-all ${exportMode === 'level' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        By Level
-                    </button>
-                </div>
-
-                {exportMode === 'class' ? (
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select a Class</label>
-                        <select
-                            value={selectedClassId}
-                            onChange={(e) => setSelectedClassId(e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all font-medium mb-4"
-                        >
-                            <option value="">Choose a class to export...</option>
-                            {classes.map(c => {
-                                const teacher = staff?.find(s => s.id === c.teacherId);
-                                const tName = teacher ? ` (Teacher: ${teacher.name})` : '';
-                                return (
-                                    <option key={c.id} value={c.id}>
-                                        {c.name} ({c.level}){tName} — {c.schedule}
-                                    </option>
-                                );
-                            })}
-                        </select>
-                    </div>
-                ) : (
-                    <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select a Level (e.g. K1, K2)</label>
-                        <select
-                            value={selectedLevel}
-                            onChange={(e) => setSelectedLevel(e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all font-medium mb-4"
-                        >
-                            <option value="">Choose a level to export...</option>
-                            {levels.map(level => (
-                                <option key={level} value={level}>
-                                    {level}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-
-                <p className="text-xs font-bold text-slate-400">
-                    {(exportMode === 'class' && selectedClass) || (exportMode === 'level' && selectedLevel)
-                        ? `${targetStudents.length} Students Selected for Export`
-                        : 'Total 0 Students Selected'}
-                </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mb-4 text-primary-500">
-                    {(exportMode === 'class' && selectedClass) || (exportMode === 'level' && selectedLevel) ? (
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    ) : (
-                        <svg className="w-8 h-8 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                    )}
-                </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Export File</h3>
-                <p className="text-sm border border-slate-100 bg-slate-50 py-1.5 px-3 rounded-md text-slate-500 mb-6 min-w-[200px] truncate max-w-full">
-                    {(exportMode === 'class' && selectedClass)
-                        ? `class_export_${selectedClass.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('en-CA')}.xlsx`
-                        : (exportMode === 'level' && selectedLevel)
-                            ? `level_export_${selectedLevel}_${new Date().toLocaleDateString('en-CA')}.xlsx`
-                            : 'No target selected'}
-                </p>
-
-                <button
-                    onClick={handleDownloadReport}
-                    disabled={targetStudents.length === 0}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 px-6 rounded-xl font-bold shadow-lg shadow-emerald-200 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    <span>Download Excel Report (.xlsx)</span>
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// --- 3. ATTENDANCE REPORT COMPONENT ---
-/**
- * COMPONENT: AttendanceReport
- * DESCRIPTION: Interactive report showing absence/late stats for entire classes and flagged students.
- */
-const AttendanceReport = () => {
-    // --- 3.1. STATE & DATA ---
-    const { students, classes, attendance, enrollments, updateAttendance, currentUser, staff } = useData();
-    const [selectedClassId, setSelectedClassId] = useState(() => sessionStorage.getItem('reports_attendance_class') || '');
-    const [expandedStudentId, setExpandedStudentId] = useState(null);
-    const [flaggedIds, setFlaggedIds] = useState(new Set());
-    const [timeRange, setTimeRange] = useState(() => sessionStorage.getItem('reports_attendance_time') || 'today');
-    
-    useEffect(() => {
-        if (timeRange) sessionStorage.setItem('reports_attendance_time', timeRange);
-        else sessionStorage.removeItem('reports_attendance_time');
-    }, [timeRange]);
-
-    useEffect(() => {
-        if (selectedClassId) sessionStorage.setItem('reports_attendance_class', selectedClassId);
-        else sessionStorage.removeItem('reports_attendance_class');
-    }, [selectedClassId]);
-    
-    const isAdminOrOffice = currentUser?.role === 'Admin' || currentUser?.role === 'Office Worker';
-
-    // --- 3.2. MEMOIZED DATA ---
-    const filteredAttendance = useMemo(() => {
-        const cutoff = new Date();
-        
-        switch (timeRange) {
-            case 'today':
-                break;
-            case '7days':
-                cutoff.setDate(cutoff.getDate() - 7);
-                break;
-            case '30days':
-                cutoff.setDate(cutoff.getDate() - 30);
-                break;
-            case 'thisMonth':
-                cutoff.setDate(1); // 1st of current month
-                break;
-            case '90days':
-                cutoff.setDate(cutoff.getDate() - 90);
-                break;
-            case 'ytd':
-                cutoff.setMonth(0, 1); // Jan 1st of current year
-                break;
-            default:
-                break;
-        }
-        const cutoffStr = cutoff.toLocaleDateString('en-CA');
-        return attendance.filter(a => a.date >= cutoffStr);
-    }, [attendance, timeRange]);
-
-    const topAbsences = useMemo(() => {
-        const absentCounts = {};
-        filteredAttendance.forEach(a => {
-            if (a.status === AttendanceStatus.Absent) {
-                absentCounts[a.studentId] = (absentCounts[a.studentId] || 0) + 1;
-            }
-        });
-        return Object.entries(absentCounts)
-            .sort(([, countA], [, countB]) => countB - countA)
-            .slice(0, 5)
-            .map(([studentId, count]) => ({ student: students.find(s => s.id === studentId), count }))
-            .filter(item => item.student);
-    }, [filteredAttendance, students]);
-
-    const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
-
-    const classStudentsStats = useMemo(() => {
-        if (!selectedClass) return [];
-        const classEnrollments = enrollments.filter(e => e.classId === selectedClass.id);
-        const studentIds = classEnrollments.map(e => e.studentId);
-        return students.filter(s => studentIds.includes(s.id)).map(student => {
-            // Only count attendance records for this specific class (or global ones)
-            const recs = filteredAttendance.filter(a => a.studentId === student.id && (a.classId === selectedClass.id || !a.classId));
-            
-            const present = recs.filter(a => a.status === AttendanceStatus.Present).length;
-            const absent = recs.filter(a => a.status === AttendanceStatus.Absent).length;
-            const late = recs.filter(a => a.status === AttendanceStatus.Late).length;
-            const history = recs
-                .filter(a => a.status === AttendanceStatus.Absent || a.status === AttendanceStatus.Late)
-                .sort((a, b) => b.date.localeCompare(a.date));
-            return { student, present, absent, late, total: present + absent + late, history };
-        });
-    }, [students, selectedClass, enrollments, filteredAttendance]);
-
-    const flaggedStudents = useMemo(() =>
-        classStudentsStats.filter(s => flaggedIds.has(s.student.id)),
-        [classStudentsStats, flaggedIds]
-    );
-
-    // --- 3.3. ACTION HANDLERS ---
-    const toggleFlag = (e, studentId) => {
-        e.stopPropagation();
-        setFlaggedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(studentId)) { next.delete(studentId); } else { next.add(studentId); }
-            return next;
-        });
-    };
-
-    const handleRowClick = (studentId) =>
-        setExpandedStudentId(prev => prev === studentId ? null : studentId);
-
-    const exportStudentCSV = (e, stat) => {
-        e.stopPropagation();
-        const className = selectedClass?.name ?? 'Class';
-        const allRecs = attendance
-            .filter(a => a.studentId === stat.student.id)
-            .sort((a, b) => b.date.localeCompare(a.date));
-        const header = 'Student Name,Student ID,Class,Date,Status';
-        const rows = allRecs.map(r =>
-            `${stat.student.name},${stat.student.id},${className},${r.date},${r.status}`
-        );
-        const csv = [header, ...rows].join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `attendance_${stat.student.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString('en-CA')}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
-    };
-
-    // --- 3.4. RENDER LOGIC ---
-    return (
-        <div className="space-y-6">
-            {/* Campus-wide top absences */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center">
-                        <svg className="w-5 h-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        Most Absent Students
-                    </h3>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Timeframe:</span>
-                        <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-1.5 font-semibold focus:ring-2 focus:ring-red-500 outline-none transition-all cursor-pointer">
-                            <option value="today">Today</option>
-                            <option value="7days">Last 7 Days</option>
-                            <option value="30days">Last 30 Days</option>
-                            <option value="thisMonth">This Month</option>
-                            <option value="90days">Last 3 Months</option>
-                            <option value="ytd">Year to Date (YTD)</option>
-                        </select>
-                    </div>
-                </div>
-                {topAbsences.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {topAbsences.map(item => (
-                            <div key={item.student.id} className="group flex bg-white rounded-xl shadow-sm hover:shadow-md border border-slate-200 overflow-hidden transition-all duration-200">
-                                {/* Thick alert side-stripe */}
-                                <div className="w-2.5 bg-red-500 shrink-0 group-hover:bg-red-600 transition-colors"></div>
-                                <div className="flex flex-1 items-center p-4 gap-4">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5 mb-1.5">
-                                            <svg className="w-3.5 h-3.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none truncate">Student ID: {item.student.id}</p>
-                                        </div>
-                                        <p className="text-base font-bold text-slate-800 truncate">{item.student.name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3 pl-4 border-l border-slate-100 shrink-0">
-                                        <span className="text-3xl font-black text-red-600 tracking-tighter">{item.count}</span>
-                                        <div className="flex flex-col justify-center">
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none">Total</span>
-                                            <span className="text-[10px] font-black text-red-500 uppercase tracking-wider mt-1 leading-none">Absences</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-500">No absence records found. Teachers need to submit attendance first.</div>
-                )}
-            </div>
-
-            {/* Flagged students banner */}
-            {flaggedStudents.length > 0 && (
-                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg">🚩</span>
-                        <p className="text-xs font-bold text-orange-700 uppercase tracking-wider">Students Flagged for Follow-Up ({flaggedStudents.length})</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {flaggedStudents.map(s => (
-                            <span key={s.student.id} className="inline-flex items-center gap-2 bg-orange-100 border border-orange-300 text-orange-800 text-xs font-bold px-3 py-1.5 rounded-full">
-                                🚩 {s.student.name} — {s.absent} absent{s.absent !== 1 ? 's' : ''}
-                                <button onClick={(e) => toggleFlag(e, s.student.id)} className="text-orange-400 hover:text-orange-800 ml-1 font-black">✕</button>
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Class selector */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Detailed Class Report</label>
-                    <select value={selectedClassId} onChange={(e) => { setSelectedClassId(e.target.value); setExpandedStudentId(null); }} className="w-full md:w-96 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all">
-                        <option value="">Choose a class...</option>
-                        {classes.map(c => {
-                            const teacher = staff?.find(s => s.id === c.teacherId);
-                            const tName = teacher ? ` (Teacher: ${teacher.name})` : '';
-                            return <option key={c.id} value={c.id}>{c.name} ({c.level}){tName} | {c.schedule}</option>;
-                        })}
-                    </select>
-                </div>
-                {selectedClassId && <p className="text-xs text-slate-400 italic">Tap a row to view history · 🚩 Flag appears for students with 3+ absences</p>}
-            </div>
-
-            {/* Class table */}
-            {selectedClassId && classStudentsStats.length === 0 ? (
-                <div className="p-12 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl">
-                    <p className="text-slate-500">This class has no students enrolled yet.</p>
-                </div>
-            ) : selectedClassId ? (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-end space-x-8">
-                        <div className="text-center">
-                            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Total Present</p>
-                            <p className="text-xl font-black text-emerald-700">{classStudentsStats.reduce((acc, c) => acc + c.present, 0)}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Total Absent</p>
-                            <p className="text-xl font-black text-red-700">{classStudentsStats.reduce((acc, c) => acc + c.absent, 0)}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Total Late</p>
-                            <p className="text-xl font-black text-amber-700">{classStudentsStats.reduce((acc, c) => acc + c.late, 0)}</p>
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-slate-100">
-                            <thead className="bg-slate-50">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Student Info</th>
-                                    <th className="px-6 py-4 text-center text-xs font-bold text-emerald-600 uppercase tracking-wider">Present</th>
-                                    <th className="px-6 py-4 text-center text-xs font-bold text-red-600 uppercase tracking-wider">Absent</th>
-                                    <th className="px-6 py-4 text-center text-xs font-bold text-amber-600 uppercase tracking-wider">Late</th>
-                                    <th className="px-6 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Flag</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-slate-100">
-                                {classStudentsStats.map(stat => {
-                                    const isFlagged = flaggedIds.has(stat.student.id);
-                                    const isExpanded = expandedStudentId === stat.student.id;
-                                    const canFlag = stat.absent >= 3;
-                                    return (
-                                        <React.Fragment key={stat.student.id}>
-                                            <tr onClick={() => handleRowClick(stat.student.id)} className={`cursor-pointer transition-colors ${isFlagged ? 'bg-orange-50' : isExpanded ? 'bg-primary-50' : 'hover:bg-slate-50'}`}>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs mr-3 ${isFlagged ? 'bg-orange-100 text-orange-700' : isExpanded ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600'}`}>{stat.student.name.charAt(0)}</div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <p className={`text-sm font-bold ${isFlagged ? 'text-orange-700' : isExpanded ? 'text-primary-700' : 'text-slate-800'}`}>
-                                                                    {stat.student.name}
-                                                                    <span className="ml-2 text-[10px] font-normal text-slate-400">{isExpanded ? '▲ hide' : '▼ history'}</span>
-                                                                </p>
-                                                                {isFlagged && <span className="text-[10px] bg-orange-100 text-orange-600 border border-orange-200 font-bold px-1.5 py-0.5 rounded-full">🚩 Flagged</span>}
-                                                            </div>
-                                                            <p className="text-[10px] text-slate-400">ID: {stat.student.id}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center"><span className="text-emerald-700 font-bold bg-emerald-50 px-3 py-1 rounded-lg">{stat.present}</span></td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`font-bold px-3 py-1 rounded-lg ${canFlag ? 'text-red-800 bg-red-100 ring-1 ring-red-300' : 'text-red-700 bg-red-50'}`}>
-                                                        {stat.absent}{canFlag && <span className="ml-1">⚠</span>}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-center"><span className="text-amber-700 font-bold bg-amber-50 px-3 py-1 rounded-lg">{stat.late}</span></td>
-                                                <td className="px-6 py-4 text-center">
-                                                    {canFlag ? (
-                                                        <button onClick={(e) => toggleFlag(e, stat.student.id)} title={isFlagged ? 'Remove flag' : 'Flag for follow-up'}
-                                                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${isFlagged ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white text-orange-500 border-orange-300 hover:bg-orange-50'}`}>
-                                                            🚩 {isFlagged ? 'Flagged' : 'Flag'}
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-slate-300 text-xs">—</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-            {isExpanded && (
-                <tr className={isFlagged ? 'bg-orange-50/70' : 'bg-primary-50/10'}>
-                    <td colSpan={5} className="px-8 py-6 border-b-2 border-primary-100">
-                        <div className="flex items-center justify-between gap-4 mb-4">
-                            <p className="text-sm font-black text-slate-700 uppercase tracking-widest">
-                                History Overview <span className="text-primary-600 font-bold ml-2">({stat.student.name})</span>
-                            </p>
-                            <button
-                                onClick={(e) => exportStudentCSV(e, stat)}
-                                title="Download this student's full attendance"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-primary-400 hover:bg-primary-50 text-slate-600 hover:text-primary-700 rounded-lg text-xs font-bold transition-all shadow-sm"
-                            >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                Export CSV
-                            </button>
-                        </div>
-                        {stat.history.length > 0 ? (
-                            <div className="flex flex-col border-l-2 border-slate-200 ml-2 py-1 space-y-4">
-                                {stat.history.map((record, i) => (
-                                    <div key={i} className="relative pl-6">
-                                        {/* Timeline Dot */}
-                                        <div className={`absolute -left-[9px] top-2.5 w-4 h-4 rounded-full border-4 ${isFlagged ? 'border-orange-50/70' : 'border-primary-50'} ${record.status === AttendanceStatus.Absent ? 'bg-red-500' : 'bg-amber-500'}`}></div>
-                                        
-                                        {/* Activity Card */}
-                                        <div className="flex items-center justify-between bg-white px-5 py-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
-                                            <div className="flex flex-col">
-                                                <span className={`text-sm font-black uppercase tracking-wider ${record.status === AttendanceStatus.Absent ? 'text-red-600' : 'text-amber-600'}`}>
-                                                    {record.status === AttendanceStatus.Absent ? 'Absent' : 'Late'}
-                                                </span>
-                                                <span className="text-xs text-slate-500 font-bold mt-0.5">
-                                                    {new Date(record.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-                                                </span>
-                                            </div>
-                                            
-                                            {isAdminOrOffice && (
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        console.log("Marking present for", record);
-                                                        updateAttendance({ ...record, status: AttendanceStatus.Present });
-                                                    }}
-                                                    title={`Excuse this ${record.status.toLowerCase()} and mark as Present`}
-                                                    className="group flex items-center gap-2 px-4 py-2 bg-slate-100 border border-slate-200 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 hover:border-emerald-200 rounded-lg text-xs font-extrabold transition-all"
-                                                >
-                                                    <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" /></svg>
-                                                    </div>
-                                                    EXCUSE
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3">
-                                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-full">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                </div>
-                                <p className="text-sm text-emerald-800 font-bold">Perfect attendance — no absences or lates recorded!</p>
-                            </div>
-                        )}
-                    </td>
-                </tr>
-            )}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            ) : null}
-        </div>
-    );
-};
-
-// --- 4. MAIN REPORTS PAGE COMPONENT ---
 /**
  * PAGE: ReportsPage
  * DESCRIPTION: Container page that routes between Marks Entry, Attendance, and Export sub-views.
  */
 const ReportsPage = () => {
-    // --- 4.1. STATE & ROUTING ---
-    const getInitialReportsTab = () => {
-        const stored = sessionStorage.getItem('reports_initial_tab');
-        if (stored) {
-            sessionStorage.removeItem('reports_initial_tab');
-            if (stored === 'export' || stored === 'attendance' || stored === 'marks') {
-                return stored;
-            }
-        }
+  // --- STATE & ROUTING ---
+  const getInitialReportsTab = () => {
+    const stored = sessionStorage.getItem("reports_initial_tab");
+    if (stored) {
+      sessionStorage.removeItem("reports_initial_tab");
+      if (
+        stored === "export" ||
+        stored === "attendance" ||
+        stored === "marks"
+      ) {
+        return stored;
+      }
+    }
 
-        const parts = window.location.pathname.split('/');
-        const sub = parts[2]?.toLowerCase();
-        if (sub === 'attendance') return 'attendance';
-        if (sub === 'export') return 'export';
-        return 'marks';
+    const parts = window.location.pathname.split("/");
+    const sub = parts[2]?.toLowerCase();
+    if (sub === "attendance") return "attendance";
+    if (sub === "export") return "export";
+    return "marks";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialReportsTab);
+
+  // --- SIDE EFFECTS ---
+  useEffect(() => {
+    const handleTabChange = (e) => {
+      const tab = e.detail?.tab;
+      if (
+        tab &&
+        (tab === "marks" || tab === "attendance" || tab === "export")
+      ) {
+        setActiveTab(tab);
+      }
     };
-    const [activeTab, setActiveTab] = useState(getInitialReportsTab);
-    
-    // --- 4.2. SIDE EFFECTS ---
-    useEffect(() => {
-        const handleTabChange = (e) => {
-            if (e.detail && (e.detail === 'marks' || e.detail === 'attendance' || e.detail === 'export')) {
-                setActiveTab(e.detail);
-            }
-        };
-        window.addEventListener('reportsTabChange', handleTabChange);
-        return () => window.removeEventListener('reportsTabChange', handleTabChange);
-    }, []);
+    window.addEventListener("reports-tab-change", handleTabChange);
+    return () =>
+      window.removeEventListener("reports-tab-change", handleTabChange);
+  }, []);
 
-    // --- 4.3. RENDER LOGIC ---
-    return (
-        <div className="max-w-7xl mx-auto pb-10">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Academic Records</h1>
-                    <p className="text-slate-500 mt-1">Record marks, track attendance, and export student performance data.</p>
-                </div>
-                <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                    <button
-                        onClick={() => {
-                            setActiveTab('marks');
-                            window.history.replaceState({}, '', '/reports/marks');
-                            document.title = 'Reports / Marks | SchoolAdmin';
-                            window.dispatchEvent(new CustomEvent('reportsTabChange', { detail: 'marks' }));
-                        }}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'marks' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Marks Entry
-                    </button>
-                    <button
-                        onClick={() => {
-                            setActiveTab('attendance');
-                            window.history.replaceState({}, '', '/reports/attendance');
-                            document.title = 'Reports / Attendance | SchoolAdmin';
-                            window.dispatchEvent(new CustomEvent('reportsTabChange', { detail: 'attendance' }));
-                        }}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'attendance' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Attendance
-                    </button>
-                    <button
-                        onClick={() => {
-                            setActiveTab('export');
-                            window.history.replaceState({}, '', '/reports/export');
-                            document.title = 'Reports / Export | SchoolAdmin';
-                            window.dispatchEvent(new CustomEvent('reportsTabChange', { detail: 'export' }));
-                        }}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'export' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Export Data
-                    </button>
-                </div>
-            </div>
-
-            {activeTab === 'marks' ? <MarksEntry /> : activeTab === 'attendance' ? <AttendanceReport /> : <ExportCenter />}
+  // --- RENDER ---
+  return (
+    <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      {/* Tab Navigation Bar */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-20 shadow-sm transition-colors">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
+            <svg
+              className="w-8 h-8 text-primary-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            Academic Reports
+          </h1>
+          <div className="hidden md:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab("marks")}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                activeTab === "marks"
+                  ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              📝 Marks Entry
+            </button>
+            <button
+              onClick={() => setActiveTab("attendance")}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                activeTab === "attendance"
+                  ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              📊 Attendance Report
+            </button>
+            <button
+              onClick={() => setActiveTab("export")}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                activeTab === "export"
+                  ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              📥 Export Data
+            </button>
+          </div>
         </div>
-    );
+        {/* Mobile Tab Selector */}
+        <div className="md:hidden mt-4">
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-all outline-none"
+          >
+            <option value="marks">📝 Marks Entry</option>
+            <option value="attendance">📊 Attendance Report</option>
+            <option value="export">📥 Export Data</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 max-w-7xl mx-auto">
+          {activeTab === "marks" && <MarksEntry />}
+          {activeTab === "attendance" && <AttendanceReport />}
+          {activeTab === "export" && <ExportCenter />}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ReportsPage;

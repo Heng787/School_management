@@ -115,14 +115,14 @@ function App() {
     }
   };
 
-  // Guard to Login if not logged in
+  // Redirect to Login if not logged in
   if (!currentUser) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
   // --- 5. MAIN LAYOUT RENDER ---
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-300">
       <Sidebar
         navigate={navigate}
         currentPage={currentPage}
@@ -140,7 +140,7 @@ function App() {
           isSidebarOpen={isSidebarOpen}
           currentPage={currentPage}
         />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-3 sm:p-6 lg:p-10 relative">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-slate-900 p-3 sm:p-6 lg:p-10 relative transition-colors duration-300">
           {renderPage()}
         </main>
       </div>

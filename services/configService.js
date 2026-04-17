@@ -66,4 +66,20 @@ export const configService = {
         } catch (err) { return local; }
     },
     saveAdminPassword: async (pwd) => pushConfig('admin_password', pwd),
+
+    getPrincipalSignatureUrl: async () => {
+        const client = getSupabase();
+        const local = localStore.get('principal_signature_url', null);
+        if (!client || !navigator.onLine) return local;
+        try {
+            const { data, error } = await client.from('config').select('value').eq('key', 'principal_signature_url').maybeSingle();
+            if (error) throw error;
+            if (data) {
+                localStore.set('principal_signature_url', data.value);
+                return data.value;
+            }
+            return local;
+        } catch (err) { return local; }
+    },
+    savePrincipalSignatureUrl: async (url) => pushConfig('principal_signature_url', url),
 };
