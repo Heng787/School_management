@@ -8,6 +8,7 @@ import {
   SubjectManager,
 } from "../components/ClassAcademicConfig";
 import ImportResultsModal from "../components/ImportResultsModal";
+import ImportPreviewModal from "../components/ImportPreviewModal";
 import ConfirmModal from "../components/ConfirmModal";
 import { useClassesPageState } from "../hooks/useClassesPageState";
 import { useClassFiltering } from "../hooks/useClassFiltering";
@@ -61,6 +62,8 @@ const ClassesPage = () => {
   const isOffice = currentUser?.role === UserRole.OfficeWorker;
 
   const state = useClassesPageState();
+  const [importPreviewData, setImportPreviewData] = React.useState(null);
+
   const {
     filteredClasses,
     availableTeachers,
@@ -211,7 +214,7 @@ const ClassesPage = () => {
             addClasses,
             addStudents,
             addEnrollments,
-            saveGradeBatch,
+            saveGradeBatch: null, // Classes import: skip grades/subjects
             addStaffBatch,
             updateClassesBatch,
             updateStudentsBatch,
@@ -221,13 +224,82 @@ const ClassesPage = () => {
           },
         );
       }
-      state.setImportResults(results);
-      state.setIsImportModalOpen(true);
+      
+      if (results?.requiresPreview) {
+        setImportPreviewData(results.previewData);
+      } else if (results) {
+        state.setImportResults(results);
+        state.setIsImportModalOpen(true);
+      }
     } catch (err) {
       alert("Failed to import file: " + err.message);
     }
 
     if (event.target) event.target.value = "";
+  };
+
+  const handleConfirmImport = async (modifiedStudents) => {
+    if (!importPreviewData) return;
+
+    try {
+      const finalAdd = [];
+      const finalUpdate = [];
+      const tempIdToFinalIdMap = {};
+
+      let lastStuId = students
+        .map((s) => parseInt(s.id.substring(1), 10))
+        .filter((id) => !isNaN(id))
+        .reduce((max, curr) => Math.max(max, curr), 0);
+
+      const COPY_IF_MISSING = ["phone", "dob", "level"];
+
+      modifiedStudents.forEach(impStu => {
+        let finalId;
+        if (impStu._selectedMatchId === 'NEW') {
+          finalId = `s${++lastStuId}`;
+          finalAdd.push({ ...impStu, id: finalId, sex: impStu.sex });
+        } else {
+          finalId = impStu._selectedMatchId;
+          const existing = students.find(s => s.id === finalId) || impStu;
+          
+          const updates = Object.fromEntries(
+            COPY_IF_MISSING.filter((k) => !existing[k] && impStu[k]).map(
+              (k) => [k, impStu[k]],
+            ),
+          );
+          if (impStu.status && existing.status !== impStu.status) updates.status = impStu.status;
+          
+          if (Object.keys(updates).length > 0) {
+            finalUpdate.push({ ...existing, ...updates });
+          }
+        }
+        tempIdToFinalIdMap[impStu._tempId] = finalId;
+      });
+
+      if (finalAdd.length > 0) await addStudents(finalAdd);
+      if (finalUpdate.length > 0) await updateStudentsBatch(finalUpdate);
+
+      const finalEnrollments = (importPreviewData.mappedEnrollments || []).map(e => ({
+        ...e,
+        studentId: tempIdToFinalIdMap[e.studentId] || e.studentId
+      }));
+
+      // No grade handling for Classes import
+      if (finalEnrollments.length > 0) await addEnrollments(finalEnrollments);
+
+      state.setImportResults({
+        successCount: finalAdd.length + (importPreviewData.addedStaffCount || 0) + (importPreviewData.addedClassesCount || 0),
+        errorCount: importPreviewData.errors.length,
+        errors: importPreviewData.errors,
+      });
+
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save imported data.");
+    } finally {
+      setImportPreviewData(null);
+      state.setIsImportModalOpen(true);
+    }
   };
 
   // Utility Functions
@@ -316,6 +388,13 @@ const ClassesPage = () => {
       {/* Modals */}
       {state.isModalOpen && (
         <ClassModal classData={state.editingClass} onClose={handleCloseModal} />
+      )}
+      {importPreviewData && (
+        <ImportPreviewModal
+          students={importPreviewData.studentsToPreview}
+          onConfirm={handleConfirmImport}
+          onCancel={() => setImportPreviewData(null)}
+        />
       )}
       {state.isImportModalOpen && (
         <ImportResultsModal

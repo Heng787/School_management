@@ -68,18 +68,26 @@ export const configService = {
     saveAdminPassword: async (pwd) => pushConfig('admin_password', pwd),
 
     getPrincipalSignatureUrl: async () => {
+        // Signature is stored as base64 in localStorage (no Supabase Storage bucket needed)
+        return localStore.get('principal_signature_url', null);
+    },
+    savePrincipalSignatureUrl: async (url) => {
+        localStore.set('principal_signature_url', url);
+    },
+
+    getPrincipalName: async () => {
         const client = getSupabase();
-        const local = localStore.get('principal_signature_url', null);
+        const local = localStore.get('principal_name', 'Administrator');
         if (!client || !navigator.onLine) return local;
         try {
-            const { data, error } = await client.from('config').select('value').eq('key', 'principal_signature_url').maybeSingle();
+            const { data, error } = await client.from('config').select('value').eq('key', 'principal_name').maybeSingle();
             if (error) throw error;
             if (data) {
-                localStore.set('principal_signature_url', data.value);
+                localStore.set('principal_name', data.value);
                 return data.value;
             }
             return local;
         } catch (err) { return local; }
     },
-    savePrincipalSignatureUrl: async (url) => pushConfig('principal_signature_url', url),
+    savePrincipalName: async (name) => pushConfig('principal_name', name),
 };

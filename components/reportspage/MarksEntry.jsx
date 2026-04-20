@@ -19,10 +19,17 @@ const MarksEntry = () => {
     classes,
     subjects,
     grades,
-    saveGradeBatch,
+    draftGrades,
+    saveDraftGradeBatch,
     enrollments,
     staff,
   } = useData();
+
+  const combinedGrades = useMemo(() => {
+    const merged = new Map(grades.map(g => [g.id, g]));
+    if (draftGrades) draftGrades.forEach(g => merged.set(g.id, g));
+    return Array.from(merged.values());
+  }, [grades, draftGrades]);
 
   // --- INTERNAL STATE ---
   const [selectedClassId, setSelectedClassId] = useSession(
@@ -44,6 +51,25 @@ const MarksEntry = () => {
     [classes, selectedClassId],
   );
 
+  const classSubjects = useMemo(() => {
+    if (!selectedClass) return [];
+    const classId = selectedClass.id;
+    const term = selectedTerm;
+
+    const existingSubs = Array.from(
+      new Set(
+        combinedGrades
+          .filter((g) => g.classId === classId && g.term === term)
+          .map((g) => g.subject),
+      ),
+    );
+    if (existingSubs.length > 0) return existingSubs;
+
+    const level = (selectedClass.level || "").trim().toUpperCase();
+    const category = /^K\s*\d+/.test(level) ? "Kid" : "JuniorSenior";
+    return subjects[category] || [];
+  }, [combinedGrades, selectedClass, selectedTerm, subjects]);
+
   const classStudents = useMemo(() => {
     if (!selectedClass) return [];
     const classEnrollments = enrollments.filter(
@@ -57,8 +83,8 @@ const MarksEntry = () => {
   useEffect(() => {
     const initialGrades = gradesService.initializeLocalGrades(
       classStudents,
-      subjects,
-      grades,
+      classSubjects,
+      combinedGrades,
       selectedClassId,
       selectedTerm,
     );
@@ -67,7 +93,7 @@ const MarksEntry = () => {
     setSaveSuccess(false);
   }, [
     classStudents,
-    subjects,
+    classSubjects,
     grades,
     selectedClassId,
     selectedTerm,
@@ -114,13 +140,13 @@ const MarksEntry = () => {
       const recordsToSave = gradesService.buildGradeRecords(
         modifiedStudents,
         localGrades,
-        subjects,
-        grades,
+        classSubjects,
+        combinedGrades,
         selectedClassId,
         selectedTerm,
       );
       if (recordsToSave.length > 0) {
-        await saveGradeBatch(recordsToSave);
+        await saveDraftGradeBatch(recordsToSave);
       }
 
       setSaveSuccess(true);
@@ -136,7 +162,11 @@ const MarksEntry = () => {
     }
   };
 
-  if (subjects.length === 0) {
+  const hasNoSubjects = useMemo(() => {
+    return Object.values(subjects).every((arr) => arr.length === 0);
+  }, [subjects]);
+
+  if (hasNoSubjects) {
     return (
       <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 p-6 rounded-xl text-center transition-colors">
         <p className="text-amber-800 dark:text-amber-400 font-medium">
@@ -278,7 +308,7 @@ const MarksEntry = () => {
                   ? "Saving..."
                   : saveSuccess
                     ? "Saved!"
-                    : "Save All Marks"}
+                    : "Save Draft Marks"}
               </span>
             </button>
           </div>
@@ -301,7 +331,7 @@ const MarksEntry = () => {
                   <th className="w-40 sm:w-64 px-4 sm:px-6 py-3 sm:py-4 text-left text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 sticky left-0 z-40 transition-colors">
                     Student Name
                   </th>
-                  {subjects.map((subject) => (
+                  {classSubjects.map((subject) => (
                     <th
                       key={subject}
                       className="px-2 sm:px-4 py-3 sm:py-4 text-center text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[80px] sm:min-w-[120px]"
@@ -316,7 +346,7 @@ const MarksEntry = () => {
               </thead>
               <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800 transition-colors">
                 {classStudents.map((student) => {
-                  const scores = subjects.map((sub) =>
+                  const scores = classSubjects.map((sub) =>
                     Number(localGrades[student.id]?.[sub] || 0),
                   );
                   const avg =
@@ -359,7 +389,7 @@ const MarksEntry = () => {
                           </div>
                         </div>
                       </td>
-                      {subjects.map((subject) => (
+                      {classSubjects.map((subject) => (
                         <td key={subject} className="px-1 sm:px-2 py-2 sm:py-3">
                           <input
                             type="number"

@@ -21,11 +21,11 @@ const ClassesPageFilters = ({
   allSessionLabels,
 }) => {
   const selectClasses =
-    "block w-full pl-3 pr-10 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all";
+    "block w-full pl-3 pr-10 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-800 font-medium dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all";
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors duration-300">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-50 dark:border-slate-800 pb-3">
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-sm space-y-4 transition-colors duration-300">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 dark:border-slate-800 pb-3">
         {isAdmin || isOffice ? (
           <SelectAllCheckbox
             checked={
@@ -43,7 +43,7 @@ const ClassesPageFilters = ({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
             Showing:
           </span>
           <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/40 px-2.5 py-1 rounded-full">

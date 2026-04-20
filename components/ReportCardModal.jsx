@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 // Report Card Modal for displaying and printing student academic progress.
 import { useData } from '../context/DataContext';
 import { configService } from '../services/configService';
 
 const ReportCardModal = ({ student, onClose }) => {
-    const { classes, grades, attendance, enrollments, staff, currentUser } = useData();
+    const { classes, grades, attendance, enrollments, staff, currentUser, deleteGrade } = useData();
 
     const studentEnrollment = enrollments.find(e => e.studentId === student.id);
     const studentClassObj = studentEnrollment ? classes.find(c => c.id === studentEnrollment.classId) : null;
@@ -15,19 +15,58 @@ const ReportCardModal = ({ student, onClose }) => {
     const classTeacher = studentClassObj ? staff.find(s => s.id === studentClassObj.teacherId) : null;
     const teacherName = classTeacher?.name || null;
 
-    // Use the logged-in admin's name as principal
-    const principalName = currentUser?.name || 'Administrator';
-
-    // Fetch principal signature URL from Supabase config
+    // Load principal name from config (set by admin in Settings)
+    const [principalName, setPrincipalName] = useState('Administrator');
     const [principalSignatureUrl, setPrincipalSignatureUrl] = useState(null);
+
     useEffect(() => {
+        configService.getPrincipalName().then((name) => {
+            if (name) setPrincipalName(name);
+        });
         configService.getPrincipalSignatureUrl().then((url) => {
             if (url) setPrincipalSignatureUrl(url);
         });
     }, []);
 
-    const studentGrades = grades.filter(g => g.studentId === student.id);
+    // Collect all grades for this student
+    const allStudentGrades = grades.filter(g => g.studentId === student.id);
     const studentAttendance = attendance.filter(a => a.studentId === student.id);
+
+    // Detect distinct terms from grade records
+    const availableTerms = useMemo(() => {
+        const terms = [...new Set(allStudentGrades.map(g => g.term).filter(Boolean))];
+        return terms.length > 0 ? terms : ['Midterm'];
+    }, [allStudentGrades]);
+
+    const [selectedTerm, setSelectedTerm] = useState('');
+
+    // When grades load, auto-select the first available term
+    useEffect(() => {
+        if (!selectedTerm && availableTerms.length > 0) {
+            setSelectedTerm(availableTerms[0]);
+        }
+    }, [availableTerms]);
+
+    // Filter grades by selected term
+    const studentGrades = selectedTerm
+        ? allStudentGrades.filter(g => g.term === selectedTerm)
+        : allStudentGrades;
+
+    const handleDeleteTerm = async () => {
+        if (!selectedTerm) return;
+        const toDelete = allStudentGrades.filter(g => g.term === selectedTerm);
+        if (toDelete.length === 0) return;
+        const confirmed = window.confirm(
+            `Delete all ${toDelete.length} grade records for term "${selectedTerm}"? This cannot be undone.`
+        );
+        if (!confirmed) return;
+        for (const g of toDelete) {
+            await deleteGrade(g.id);
+        }
+        // Move to next available term
+        const remaining = availableTerms.filter(t => t !== selectedTerm);
+        setSelectedTerm(remaining[0] || '');
+    };
 
     const calculateGPA = (records) => {
         if (records.length === 0) return 'N/A';
@@ -50,20 +89,52 @@ const ReportCardModal = ({ student, onClose }) => {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl min-h-[800px] flex flex-col print:shadow-none print:rounded-none print:max-w-none print:w-full">
                 {/* Header - Hidden on Print */}
                 <div className="flex justify-between items-center p-6 border-b border-slate-100 print:hidden">
-                    <h2 className="text-xl font-bold text-slate-800">Report Card Preview</h2>
-                    <div className="flex space-x-3">
-                        <button 
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800">Report Card Preview</h2>
+                        <p className="text-xs text-slate-400 mt-0.5">{student.name}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {/* Term selector */}
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Term:</label>
+                            <select
+                                value={selectedTerm}
+                                onChange={(e) => setSelectedTerm(e.target.value)}
+                                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
+                            >
+                                {availableTerms.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                                {availableTerms.length === 0 && (
+                                    <option value="">No terms</option>
+                                )}
+                            </select>
+                        </div>
+                        {/* Delete term button */}
+                        {selectedTerm && studentGrades.length > 0 && (
+                            <button
+                                onClick={handleDeleteTerm}
+                                title={`Delete all grades for ${selectedTerm}`}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition-all"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete Term
+                            </button>
+                        )}
+                        <button
                             onClick={handlePrint}
-                            className="bg-primary-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all flex items-center"
+                            className="bg-primary-600 text-white px-5 py-1.5 rounded-lg font-bold hover:bg-primary-700 shadow-lg shadow-primary-200 transition-all flex items-center"
                         >
                             <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                             </svg>
-                            Print Report
+                            Print
                         </button>
-                        <button 
+                        <button
                             onClick={onClose}
-                            className="bg-slate-100 text-slate-600 px-6 py-2 rounded-lg font-bold hover:bg-slate-200 transition-all"
+                            className="bg-slate-100 text-slate-600 px-5 py-1.5 rounded-lg font-bold hover:bg-slate-200 transition-all"
                         >
                             Close
                         </button>
@@ -71,14 +142,14 @@ const ReportCardModal = ({ student, onClose }) => {
                 </div>
 
                 {/* Report Content */}
-                <div className="p-10 flex-grow print:p-0">
+                <div id="report-card-printable" className="p-10 flex-grow print:p-0">
                     {/* School Header */}
                     <div className="text-center mb-10 border-b-2 border-slate-900 pb-8">
                         <h1 className="text-4xl font-black text-slate-900 uppercase tracking-widest mb-2">SchoolAdmin Academy</h1>
                         <p className="text-slate-500 font-medium tracking-widest uppercase text-sm">Official Academic Progress Report</p>
                         <div className="mt-4 flex justify-center space-x-8 text-xs font-bold text-slate-400 uppercase">
                             <span>Academic Year: 2025-2026</span>
-                            <span>Term Semester</span>
+                            <span>Term: {selectedTerm || 'All Terms'}</span>
                         </div>
                     </div>
 
@@ -106,43 +177,51 @@ const ReportCardModal = ({ student, onClose }) => {
                         </div>
                     </div>
 
-                    {/* Academic Performance */}
-                    <div className="mb-12">
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">Academic Performance</h3>
-                        <table className="w-full">
-                            <thead>
-                                <tr className="text-left border-b-2 border-slate-900">
-                                    <th className="py-3 text-xs font-black text-slate-900 uppercase">Subject</th>
-                                    <th className="py-3 text-right text-xs font-black text-slate-900 uppercase">Score (0-10)</th>
-                                    <th className="py-3 text-right text-xs font-black text-slate-900 uppercase">Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {studentGrades.length > 0 ? (
-                                    studentGrades.map((grade, idx) => (
-                                        <tr key={idx}>
-                                            <td className="py-4 font-bold text-slate-700">{grade.subject}</td>
-                                            <td className="py-4 text-right font-mono font-bold text-slate-900">{grade.score.toFixed(1)}</td>
-                                            <td className="py-4 text-right font-bold text-slate-700">
-                                                {grade.score >= 9 ? 'A+' : grade.score >= 8 ? 'A' : grade.score >= 7 ? 'B' : grade.score >= 6 ? 'C' : 'D'}
-                                            </td>
+                    {/* Academic Performance — two-column layout */}
+                    <div className="mb-8">
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-3 border-b border-slate-200 pb-2">Academic Performance</h3>
+
+                        {studentGrades.length > 0 ? (() => {
+                            const getGrade = (s) => s >= 9 ? 'A+' : s >= 8 ? 'A' : s >= 7 ? 'B' : s >= 6 ? 'C' : 'D';
+                            const half = Math.ceil(studentGrades.length / 2);
+                            const left = studentGrades.slice(0, half);
+                            const right = studentGrades.slice(half);
+
+                            const SubjectTable = ({ grades }) => (
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b-2 border-slate-900 text-left">
+                                            <th className="py-1.5 text-[10px] font-black text-slate-900 uppercase">Subject</th>
+                                            <th className="py-1.5 text-right text-[10px] font-black text-slate-900 uppercase w-10">Grade</th>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={3} className="py-8 text-center text-slate-400 italic">No grade records available for this term.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                            {studentGrades.length > 0 && (
-                                <tfoot>
-                                    <tr className="border-t-2 border-slate-900">
-                                        <td className="py-4 font-black text-slate-900 uppercase">Semester GPA</td>
-                                        <td colSpan={2} className="py-4 text-right text-2xl font-black text-primary-600">{calculateGPA(studentGrades)}</td>
-                                    </tr>
-                                </tfoot>
-                            )}
-                        </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {grades.map((grade, idx) => (
+                                            <tr key={idx}>
+                                                <td className="py-2 text-xs font-bold text-slate-700">{grade.subject}</td>
+                                                <td className="py-2 text-right text-xs font-black text-slate-900">{getGrade(grade.score)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            );
+
+                            return (
+                                <div className="grid grid-cols-2 gap-6">
+                                    <SubjectTable grades={left} />
+                                    <SubjectTable grades={right} />
+                                </div>
+                            );
+                        })() : (
+                            <p className="py-6 text-center text-slate-400 italic text-sm">No grade records available for this term.</p>
+                        )}
+
+                        {studentGrades.length > 0 && (
+                            <div className="border-t-2 border-slate-900 mt-3 pt-3 flex justify-between items-center">
+                                <span className="text-xs font-black text-slate-900 uppercase tracking-widest">Semester GPA</span>
+                                <span className="text-2xl font-black text-primary-600">{calculateGPA(studentGrades)}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Attendance & Summary */}
@@ -169,7 +248,7 @@ const ReportCardModal = ({ student, onClose }) => {
                     </div>
 
                     {/* Footer / Signatures */}
-                    <div className="mt-20 grid grid-cols-2 gap-20">
+                    <div className="signature-row mt-12 grid grid-cols-2 gap-20">
                         <div className="text-center">
                             <div className="border-t border-slate-900 pt-2">
                                 <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Class Teacher</p>
@@ -206,15 +285,42 @@ const ReportCardModal = ({ student, onClose }) => {
             
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
-                    body { margin: 0; padding: 0; }
-                    .fixed { position: static !important; display: block !important; background: white !important; padding: 0 !important; }
-                    .bg-white { box-shadow: none !important; border-radius: 0 !important; }
-                    .print\\:hidden { display: none !important; }
-                    .print\\:p-0 { padding: 0 !important; }
-                    .print\\:shadow-none { box-shadow: none !important; }
-                    .print\\:rounded-none { border-radius: 0 !important; }
-                    .print\\:max-w-none { max-width: none !important; }
-                    .print\\:w-full { width: 100% !important; }
+                    @page {
+                        size: A4 portrait;
+                        margin: 12mm 15mm 12mm 15mm;
+                    }
+
+                    /* Hide absolutely everything by default */
+                    body * {
+                        visibility: hidden !important;
+                    }
+
+                    /* Then only show the report content */
+                    #report-card-printable,
+                    #report-card-printable * {
+                        visibility: visible !important;
+                    }
+
+                    /* Let content flow naturally on the page — no fixed/clipping */
+                    #report-card-printable {
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        background: white !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
+                        overflow: visible !important;
+                    }
+
+                    /* Prevent page break inside signature row */
+                    #report-card-printable .signature-row {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
                     .principal-sig-img {
                         display: block !important;
                         -webkit-print-color-adjust: exact !important;

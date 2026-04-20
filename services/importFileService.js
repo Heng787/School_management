@@ -83,6 +83,7 @@ export const importFileService = {
               id: `tr_imp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
               name: targetTeacherName,
               role: StaffRole.Teacher,
+              // subject intentionally omitted — not determinable from a class roster
               contact: "",
               hireDate: new Date().toISOString().split("T")[0],
               status: "Active",
@@ -163,61 +164,37 @@ export const importFileService = {
 
     // --- 2. SMART STUDENT MATCHING ---
     const studentIDMap = {};
-    const studentsToAdd = [];
-    const studentsToUpdate = [];
-    let lastStuId = students
-      .map((s) => parseInt(s.id.substring(1), 10))
-      .filter((id) => !isNaN(id))
-      .reduce((max, curr) => Math.max(max, curr), 0);
+    const previewStudents = [];
 
     if (result.students && result.students.length > 0) {
       for (const impStu of result.students) {
-        const existing = students.find(
-          (s) =>
-            s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase() &&
-            s.sex.toLowerCase() === impStu.sex.toLowerCase(),
+        const existingMatches = students.filter(
+          (s) => s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase()
         );
 
-        if (existing) {
-          studentIDMap[impStu.id] = existing.id;
-          let needsUpdate = false;
-          const updatedStu = { ...existing };
+        impStu._tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        studentIDMap[impStu.id] = impStu._tempId;
 
-          if (!existing.phone && impStu.phone) {
-            updatedStu.phone = impStu.phone;
-            needsUpdate = true;
+        if (existingMatches.length > 0) {
+          impStu._possibleMatches = existingMatches;
+          let defaultMatch;
+          if (impStu._genderInferred) {
+            defaultMatch = existingMatches[0];
+          } else {
+            defaultMatch = existingMatches.find((s) => s.sex.toLowerCase() === impStu.sex.toLowerCase());
           }
-          if (!existing.dob && impStu.dob) {
-            updatedStu.dob = impStu.dob;
-            needsUpdate = true;
-          }
-          if (!existing.level && impStu.level) {
-            updatedStu.level = impStu.level;
-            needsUpdate = true;
-          }
-          if (existing.status !== impStu.status && impStu.status) {
-            updatedStu.status = impStu.status;
-            needsUpdate = true;
-          }
-
-          if (needsUpdate) {
-            studentsToUpdate.push(updatedStu);
-          }
+          impStu._selectedMatchId = defaultMatch ? defaultMatch.id : 'NEW';
         } else {
-          const finalStuId = `s${++lastStuId}`;
-          const newStu = { ...impStu, id: finalStuId };
-          studentsToAdd.push(newStu);
-          studentIDMap[impStu.id] = finalStuId;
+          impStu._selectedMatchId = 'NEW';
         }
+        previewStudents.push(impStu);
       }
-      if (studentsToAdd.length > 0) await addStudents(studentsToAdd);
-      if (studentsToUpdate.length > 0)
-        await updateStudentsBatch(studentsToUpdate);
     }
 
-    // --- 3. SMART ENROLLMENT MATCHING ---
+    // --- 3. SMART ENROLLMENT MATCHING (Preview) ---
+    let mappedEnrollments = [];
     if (result.enrollments && result.enrollments.length > 0) {
-      const mappedEnrollments = result.enrollments
+      mappedEnrollments = result.enrollments
         .map((enr) => ({
           studentId: studentIDMap[enr.studentId] || enr.studentId,
           classId: classIDMap[enr.classId] || enr.classId,
@@ -229,30 +206,46 @@ export const importFileService = {
             (e) => e.studentId === enr.studentId && e.classId === enr.classId,
           );
         });
-
-      if (mappedEnrollments.length > 0) await addEnrollments(mappedEnrollments);
     }
 
-    // --- 4. SMART GRADE MATCHING ---
+    // --- 4. SMART GRADE MATCHING (Preview) ---
+    let mappedGrades = [];
     if (result.grades && result.grades.length > 0) {
-      const mappedGrades = result.grades.map((grd) => ({
+      mappedGrades = result.grades.map((grd) => ({
         ...grd,
         studentId: studentIDMap[grd.studentId] || grd.studentId,
         classId: classIDMap[grd.classId] || grd.classId,
         id: `grd_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       }));
-      if (saveGradeBatch) await saveGradeBatch(mappedGrades);
     }
+
+    if (previewStudents.length > 0) {
+      return {
+        requiresPreview: true,
+        previewData: {
+          type: "excel",
+          studentsToPreview: previewStudents,
+          mappedEnrollments,
+          mappedGrades,
+          errors: result.errors?.map((e) => ({ message: e })) || [],
+          addedStaffCount: newStaffToCreate.length,
+          addedClassesCount: classesToAdd.length,
+        }
+      };
+    }
+
+    // If no students were parsed to preview, just commit the grades/enrollments if any and return success.
+    if (mappedEnrollments.length > 0) await addEnrollments(mappedEnrollments);
+    if (mappedGrades.length > 0 && saveGradeBatch) await saveGradeBatch(mappedGrades);
 
     return {
       successCount:
         classesToAdd.length +
-        studentsToAdd.length +
         newStaffToCreate.length +
         (result.grades?.length || 0),
       errorCount: result.errors?.length || 0,
       errors: result.errors?.map((e) => ({ message: e })) || [],
-      message: `Import complete! Added ${newStaffToCreate.length} new staff, ${classesToAdd.length} new classes, ${studentsToAdd.length} new students, and ${result.grades?.length || 0} marks.`,
+      message: `Import complete! Added ${newStaffToCreate.length} new staff, ${classesToAdd.length} new classes, and ${result.grades?.length || 0} marks.`,
     };
   },
 };

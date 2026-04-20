@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { EventType } from '../types';
-import { EventModal, CalendarGrid, MobileEventsList, useCalendarState, formatLocalDate } from '../components/schedule';
+import { EventModal, CalendarGrid, WeekView, DayView, MobileEventsList, useCalendarState, formatLocalDate } from '../components/schedule';
 
 /**
  * PAGE: SchedulePage
@@ -11,6 +11,7 @@ const SchedulePage = () => {
   // --- STATE & DATA ---
   const { events, addEvent } = useData();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState('month'); // 'month', 'week', 'day'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedDateFilter, setSelectedDateFilter] = useState(null);
@@ -32,13 +33,65 @@ const SchedulePage = () => {
   const { calendarGrid, eventsByDate } = useCalendarState(currentDate, events);
 
   // --- ACTION HANDLERS ---
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const handlePrev = () => {
+    if (view === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    } else if (view === 'week') {
+      const d = new Date(currentDate);
+      d.setDate(d.getDate() - 7);
+      setCurrentDate(d);
+    } else if (view === 'day') {
+      const d = new Date(currentDate);
+      d.setDate(d.getDate() - 1);
+      setCurrentDate(d);
+    }
   };
 
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const handleNext = () => {
+    if (view === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    } else if (view === 'week') {
+      const d = new Date(currentDate);
+      d.setDate(d.getDate() + 7);
+      setCurrentDate(d);
+    } else if (view === 'day') {
+      const d = new Date(currentDate);
+      d.setDate(d.getDate() + 1);
+      setCurrentDate(d);
+    }
   };
+
+  const headerDateText = React.useMemo(() => {
+    if (view === 'month') {
+      return currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    } else if (view === 'day') {
+      return currentDate.toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' });
+    } else if (view === 'week') {
+      const d = new Date(currentDate);
+      const day = d.getDay();
+      const start = new Date(d);
+      start.setDate(d.getDate() - day);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      
+      const startMonth = start.toLocaleString('default', { month: 'short' });
+      const endMonth = end.toLocaleString('default', { month: 'short' });
+      const year = end.getFullYear();
+      
+      if (startMonth === endMonth) {
+        return `${startMonth} ${start.getDate()} - ${end.getDate()}, ${year}`;
+      } else {
+        return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}, ${year}`;
+      }
+    }
+  }, [currentDate, view]);
+
+  const weekStart = React.useMemo(() => {
+    const d = new Date(currentDate);
+    const day = d.getDay();
+    d.setDate(d.getDate() - day);
+    return d;
+  }, [currentDate]);
 
   const handleOpenModal = (event = null, dateString = null) => {
     setEditingEvent(event);
@@ -65,20 +118,20 @@ const SchedulePage = () => {
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <div className="hidden md:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-sm font-medium mr-4 shadow-inner transition-colors">
-            <button className="px-3 py-1.5 bg-white dark:bg-slate-700 text-slate-800 dark:text-white rounded-md shadow-sm transition-colors">Month</button>
-            <button className="px-3 py-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md transition-colors">Week</button>
-            <button className="px-3 py-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md transition-colors">Day</button>
+            <button onClick={() => setView('month')} className={`px-3 py-1.5 rounded-md transition-colors ${view === 'month' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Month</button>
+            <button onClick={() => setView('week')} className={`px-3 py-1.5 rounded-md transition-colors ${view === 'week' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Week</button>
+            <button onClick={() => setView('day')} className={`px-3 py-1.5 rounded-md transition-colors ${view === 'day' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Day</button>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={handlePrevMonth} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors" aria-label="Previous month">
+            <button onClick={handlePrev} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors" aria-label="Previous">
               <svg className="w-6 h-6 text-gray-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200 w-48 text-center transition-colors">
-              {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200 w-64 text-center transition-colors">
+              {headerDateText}
             </h2>
-            <button onClick={handleNextMonth} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors" aria-label="Next month">
+            <button onClick={handleNext} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors" aria-label="Next">
               <svg className="w-6 h-6 text-gray-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
               </svg>
@@ -93,14 +146,47 @@ const SchedulePage = () => {
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <CalendarGrid
-        calendarGrid={calendarGrid}
-        eventsByDate={eventsByDate}
-        mobileSelectedDate={mobileSelectedDate}
-        onSelectDate={setMobileSelectedDate}
-        onOpenModal={handleOpenModal}
-      />
+      {/* Desktop Calendar Views */}
+      <div className="hidden md:block">
+        {view === 'month' && (
+          <CalendarGrid
+            calendarGrid={calendarGrid}
+            eventsByDate={eventsByDate}
+            mobileSelectedDate={mobileSelectedDate}
+            onSelectDate={setMobileSelectedDate}
+            onOpenModal={handleOpenModal}
+          />
+        )}
+        {view === 'week' && (
+          <WeekView
+            weekStart={weekStart}
+            eventsByDate={eventsByDate}
+            onOpenModal={handleOpenModal}
+            onSelectDate={(date) => {
+              setMobileSelectedDate(date);
+              setCurrentDate(new Date(date + 'T00:00:00'));
+            }}
+          />
+        )}
+        {view === 'day' && (
+          <DayView
+            selectedDate={formatLocalDate(currentDate)}
+            eventsByDate={eventsByDate}
+            onOpenModal={handleOpenModal}
+          />
+        )}
+      </div>
+
+      {/* Mobile Calendar Grid (Always Month) */}
+      <div className="md:hidden">
+        <CalendarGrid
+          calendarGrid={calendarGrid}
+          eventsByDate={eventsByDate}
+          mobileSelectedDate={mobileSelectedDate}
+          onSelectDate={setMobileSelectedDate}
+          onOpenModal={handleOpenModal}
+        />
+      </div>
 
       {/* Mobile Events List */}
       <MobileEventsList

@@ -125,18 +125,8 @@ const MessagesPage = () => {
   const staffConversations = useMemo(() => {
     const filteredStaff = staff.filter((s) => {
       if (isAdmin) return true;
-      if (s.id === currentUser?.id) return false;
-      if (
-        currentUser?.role === UserRole.Teacher ||
-        currentUser?.role === UserRole.OfficeWorker
-      ) {
-        return (
-          s.role === UserRole.Teacher ||
-          s.role === "Assistant Teacher" ||
-          s.role === UserRole.OfficeWorker
-        );
-      }
-      return false;
+      // Every non-admin user can see and message all other staff members
+      return s.id !== currentUser?.id;
     });
 
     const contacts = filteredStaff.map((s) => {

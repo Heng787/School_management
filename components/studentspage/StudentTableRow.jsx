@@ -49,9 +49,6 @@ const StudentTableRow = ({
           onChange={() => onSelect(student.id)}
         />
       </td>
-      <td className="px-4 py-4 w-16 whitespace-nowrap text-sm font-medium text-slate-400 dark:text-slate-500 font-mono">
-        {student.id}
-      </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700 dark:text-slate-200">
         {student.name}
       </td>

@@ -3,8 +3,8 @@ import { useData } from "../context/DataContext";
 import { StudentStatus, UserRole } from "../types";
 import { parseStudentCSV } from "../utils/csvParser";
 import { parseExcelFile } from "../utils/excelParser";
-import { generateStudentListCSV } from "../utils/reportGenerator";
 import ImportResultsModal from "../components/ImportResultsModal";
+import ImportPreviewModal from "../components/ImportPreviewModal";
 import ConfirmModal from "../components/ConfirmModal";
 import ReportCardModal from "../components/ReportCardModal";
 
@@ -50,9 +50,13 @@ const StudentsPage = () => {
   const [isDeletingId, setIsDeletingId] = useState(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
+  const [importPreviewData, setImportPreviewData] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [classFilter, setClassFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [pageSize, setPageSize] = useState(10);
   const fileInputRef = useRef(null);
   const highlightedRowRef = useRef(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
@@ -92,6 +96,17 @@ const StudentsPage = () => {
       );
     }
 
+    if (statusFilter !== "All") {
+      result = result.filter((s) => s.status === statusFilter);
+    }
+
+    if (classFilter !== "All") {
+      const enrolledStudentIds = new Set(
+        enrollments.filter((e) => e.classId === classFilter).map((e) => e.studentId)
+      );
+      result = result.filter((s) => enrolledStudentIds.has(s.id));
+    }
+
     return result;
   }, [
     students,
@@ -101,6 +116,8 @@ const StudentsPage = () => {
     isAdmin,
     isOffice,
     searchTerm,
+    statusFilter,
+    classFilter,
   ]);
 
   // Build display classes map for each student
@@ -136,7 +153,7 @@ const StudentsPage = () => {
   // --- 3. SIDE EFFECTS ---
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, classFilter, statusFilter, pageSize]);
 
   useEffect(() => {
     if (highlightedStudentId) {
@@ -256,25 +273,41 @@ const StudentsPage = () => {
     if (!file) return;
 
     if (file.name.endsWith(".csv")) {
-      const { validStudents, errors } = parseStudentCSV(await file.text());
-      const existingIdentifiers = new Set(
-        students.map((s) => `${s.name.toLowerCase()}|${s.sex.toLowerCase()}`),
-      );
-      const nonDuplicateStudents = validStudents.filter(
-        (s) =>
-          !existingIdentifiers.has(
-            `${s.name.toLowerCase()}|${s.sex.toLowerCase()}`,
-          ),
-      );
-      if (nonDuplicateStudents.length > 0) {
-        await addStudents(nonDuplicateStudents);
-      }
-      setImportResults({
-        successCount: nonDuplicateStudents.length,
-        errorCount: errors.length,
-        errors: errors,
+      const { validStudents, errors } = await parseStudentCSV(await file.text());
+      const previewStudents = [];
+      validStudents.forEach((impStu) => {
+        const existingMatches = students.filter((s) => s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase());
+        impStu._tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        
+        if (existingMatches.length > 0) {
+          impStu._possibleMatches = existingMatches;
+          let defaultMatch;
+          if (impStu._genderInferred) {
+             defaultMatch = existingMatches[0];
+          } else {
+             defaultMatch = existingMatches.find((s) => s.sex.toLowerCase() === impStu.sex.toLowerCase());
+          }
+          impStu._selectedMatchId = defaultMatch ? defaultMatch.id : 'NEW';
+        } else {
+          impStu._selectedMatchId = 'NEW';
+        }
+        previewStudents.push(impStu);
       });
-      setIsImportModalOpen(true);
+
+      if (previewStudents.length > 0) {
+        setImportPreviewData({
+          type: "csv",
+          studentsToPreview: previewStudents,
+          errors
+        });
+      } else {
+        setImportResults({
+          successCount: 0,
+          errorCount: errors.length,
+          errors: errors,
+        });
+        setIsImportModalOpen(true);
+      }
     } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
       try {
         const result = await parseExcelFile(file);
@@ -303,46 +336,37 @@ const StudentsPage = () => {
         }
 
         // Smart student matching & ID preparation
-        const COPY_IF_MISSING = ["phone", "dob", "level"];
-
         const studentIDMap = {};
+        const previewStudents = [];
         if (result.students?.length > 0) {
           for (const impStu of result.students) {
-            const existing = students.find(
-              (s) =>
-                s.name.trim().toLowerCase() ===
-                  impStu.name.trim().toLowerCase() &&
-                s.sex.toLowerCase() === impStu.sex.toLowerCase(),
+            const existingMatches = students.filter(
+              (s) => s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase()
             );
 
-            if (existing) {
-              studentIDMap[impStu.id] = existing.id;
+            impStu._tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+            studentIDMap[impStu.id] = impStu._tempId;
 
-              const updates = Object.fromEntries(
-                COPY_IF_MISSING.filter((k) => !existing[k] && impStu[k]).map(
-                  (k) => [k, impStu[k]],
-                ),
-              );
-              if (impStu.status && existing.status !== impStu.status)
-                updates.status = impStu.status;
-
-              if (Object.keys(updates).length > 0)
-                studentsToUpdate.push({ ...existing, ...updates });
+            if (existingMatches.length > 0) {
+              impStu._possibleMatches = existingMatches;
+              let defaultMatch;
+              if (impStu._genderInferred) {
+                defaultMatch = existingMatches[0];
+              } else {
+                defaultMatch = existingMatches.find(s => s.sex.toLowerCase() === impStu.sex.toLowerCase());
+              }
+              impStu._selectedMatchId = defaultMatch ? defaultMatch.id : 'NEW';
             } else {
-              const finalStuId = `s${++lastStuId}`;
-              studentsToAdd.push({ ...impStu, id: finalStuId });
-              studentIDMap[impStu.id] = finalStuId;
+              impStu._selectedMatchId = 'NEW';
             }
+            previewStudents.push(impStu);
           }
-
-          if (studentsToAdd.length > 0) await addStudents(studentsToAdd);
-          if (studentsToUpdate.length > 0)
-            await updateStudentsBatch(studentsToUpdate);
-        }
+        } // end of students loop
 
         // Smart enrollment matching
+        let mappedEnrollments = [];
         if (result.enrollments && result.enrollments.length > 0) {
-          const mappedEnrollments = result.enrollments
+          mappedEnrollments = result.enrollments
             .filter((enr) => classIDMap[enr.classId])
             .map((enr) => ({
               studentId: studentIDMap[enr.studentId] || enr.studentId,
@@ -363,14 +387,12 @@ const StudentsPage = () => {
                 ) !== idx;
               return !repeatInImport;
             });
-
-          if (mappedEnrollments.length > 0)
-            await addEnrollments(mappedEnrollments);
         }
 
         // Smart grade matching
+        let mappedGrades = [];
         if (result.grades && result.grades.length > 0) {
-          const mappedGrades = result.grades
+          mappedGrades = result.grades
             .filter((grd) => classIDMap[grd.classId])
             .map((grd) => ({
               ...grd,
@@ -378,14 +400,17 @@ const StudentsPage = () => {
               classId: classIDMap[grd.classId],
               id: `grd_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             }));
-          if (mappedGrades.length > 0) await saveGradeBatch(mappedGrades);
 
           const newSubjects = new Set();
+          const allSubjects = [
+            ...(subjects.Kid || []),
+            ...(subjects.JuniorSenior || []),
+          ];
           result.grades.forEach((g) => {
-            if (g.subject && !subjects.includes(g.subject))
+            if (g.subject && !allSubjects.includes(g.subject))
               newSubjects.add(g.subject);
           });
-          newSubjects.forEach((sub) => addSubject(sub));
+          newSubjects.forEach((sub) => addSubject(sub, "JuniorSenior"));
         }
 
         if (result.classes && result.classes.length > 0) {
@@ -396,19 +421,101 @@ const StudentsPage = () => {
           newLevels.forEach((lvl) => addLevel(lvl));
         }
 
-        setImportResults({
-          successCount: studentsToAdd.length + (result.grades?.length || 0),
-          errorCount: result.errors?.length || 0,
-          errors: result.errors?.map((err) => ({ message: err })) || [],
-          message: `Import complete! Added ${studentsToAdd.length} new students and ${result.grades?.length || 0} marks.`,
-        });
-        setIsImportModalOpen(true);
+        if (previewStudents.length > 0) {
+          setImportPreviewData({
+            type: "excel",
+            studentsToPreview: previewStudents,
+            mappedEnrollments,
+            mappedGrades,
+            errors: result.errors?.map((err) => ({ message: err })) || [],
+          });
+        } else {
+          setImportResults({
+            successCount: (result.grades?.length || 0),
+            errorCount: result.errors?.length || 0,
+            errors: result.errors?.map((err) => ({ message: err })) || [],
+            message: `Import complete! Added ${result.grades?.length || 0} marks.`,
+          });
+          setIsImportModalOpen(true);
+        }
       } catch (err) {
         alert("Failed to parse Excel file: " + err.message);
       }
     }
 
     e.target.value = "";
+  };
+
+  const handleConfirmImport = async (modifiedStudents) => {
+    if (!importPreviewData) return;
+
+    try {
+      const finalAdd = [];
+      const finalUpdate = [];
+      const tempIdToFinalIdMap = {};
+
+      let lastStuId = students
+        .map((s) => parseInt(s.id.substring(1), 10))
+        .filter((id) => !isNaN(id))
+        .reduce((max, curr) => Math.max(max, curr), 0);
+
+      const COPY_IF_MISSING = ["phone", "dob", "level"];
+
+      modifiedStudents.forEach(impStu => {
+        let finalId;
+        if (impStu._selectedMatchId === 'NEW') {
+          finalId = `s${++lastStuId}`;
+          finalAdd.push({ ...impStu, id: finalId, sex: impStu.sex });
+        } else {
+          finalId = impStu._selectedMatchId;
+          const existing = students.find(s => s.id === finalId) || impStu;
+          
+          if (importPreviewData.type === "excel") {
+             const updates = Object.fromEntries(
+                COPY_IF_MISSING.filter((k) => !existing[k] && impStu[k]).map(
+                  (k) => [k, impStu[k]],
+                ),
+             );
+             if (impStu.status && existing.status !== impStu.status) updates.status = impStu.status;
+             
+             if (Object.keys(updates).length > 0) {
+                finalUpdate.push({ ...existing, ...updates });
+             }
+          }
+        }
+        tempIdToFinalIdMap[impStu._tempId] = finalId;
+      });
+
+      if (finalAdd.length > 0) await addStudents(finalAdd);
+      if (finalUpdate.length > 0 && importPreviewData.type === "excel") await updateStudentsBatch(finalUpdate);
+
+      if (importPreviewData.type === "excel") {
+        const finalEnrollments = (importPreviewData.mappedEnrollments || []).map(e => ({
+          ...e,
+          studentId: tempIdToFinalIdMap[e.studentId] || e.studentId
+        }));
+        const finalGrades = (importPreviewData.mappedGrades || []).map(g => ({
+          ...g,
+          studentId: tempIdToFinalIdMap[g.studentId] || g.studentId
+        }));
+
+        if (finalEnrollments.length > 0) await addEnrollments(finalEnrollments);
+        if (finalGrades.length > 0) await saveGradeBatch(finalGrades);
+      }
+
+      setImportResults({
+        successCount: finalAdd.length + (importPreviewData.type === "excel" ? (importPreviewData.mappedGrades?.length || 0) : 0),
+        errorCount: importPreviewData.errors.length,
+        errors: importPreviewData.errors,
+      });
+
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save imported data.");
+    } finally {
+      setImportPreviewData(null);
+      setIsImportModalOpen(true);
+    }
   };
 
   // --- 6. RENDER ---
@@ -435,12 +542,39 @@ const StudentsPage = () => {
         />
       </div>
 
-      <StudentSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <StudentSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <div className="flex gap-2 w-full sm:w-auto">
+          <select
+            value={classFilter}
+            onChange={(e) => setClassFilter(e.target.value)}
+            className="flex-1 sm:flex-none px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
+          >
+            <option value="All">All Classes</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} {c.level ? `/ ${c.level}` : ""}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="flex-1 sm:flex-none px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
+          >
+            <option value="All">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
 
       <StudentTable
         filteredStudents={filteredStudents}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
+        pageSize={pageSize}
+        setPageSize={setPageSize}
         highlightedStudentId={highlightedStudentId}
         displayClassesMap={displayClassesMap}
         staff={staff}
@@ -470,6 +604,13 @@ const StudentsPage = () => {
         <ReportCardModal
           student={selectedReportStudent}
           onClose={() => setIsReportModalOpen(false)}
+        />
+      )}
+      {importPreviewData && (
+        <ImportPreviewModal
+          students={importPreviewData.studentsToPreview}
+          onConfirm={handleConfirmImport}
+          onCancel={() => setImportPreviewData(null)}
         />
       )}
       {isImportModalOpen && (

@@ -36,7 +36,7 @@ const ReportsPage = () => {
   // --- SIDE EFFECTS ---
   useEffect(() => {
     const handleTabChange = (e) => {
-      const tab = e.detail?.tab;
+      const tab = e.detail;
       if (
         tab &&
         (tab === "marks" || tab === "attendance" || tab === "export")
@@ -44,9 +44,9 @@ const ReportsPage = () => {
         setActiveTab(tab);
       }
     };
-    window.addEventListener("reports-tab-change", handleTabChange);
+    window.addEventListener("reportsTabChange", handleTabChange);
     return () =>
-      window.removeEventListener("reports-tab-change", handleTabChange);
+      window.removeEventListener("reportsTabChange", handleTabChange);
   }, []);
 
   // --- RENDER ---
@@ -71,50 +71,6 @@ const ReportsPage = () => {
             </svg>
             Academic Reports
           </h1>
-          <div className="hidden md:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
-            <button
-              onClick={() => setActiveTab("marks")}
-              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-                activeTab === "marks"
-                  ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              📝 Marks Entry
-            </button>
-            <button
-              onClick={() => setActiveTab("attendance")}
-              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-                activeTab === "attendance"
-                  ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              📊 Attendance Report
-            </button>
-            <button
-              onClick={() => setActiveTab("export")}
-              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-                activeTab === "export"
-                  ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              📥 Export Data
-            </button>
-          </div>
-        </div>
-        {/* Mobile Tab Selector */}
-        <div className="md:hidden mt-4">
-          <select
-            value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value)}
-            className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-all outline-none"
-          >
-            <option value="marks">📝 Marks Entry</option>
-            <option value="attendance">📊 Attendance Report</option>
-            <option value="export">📥 Export Data</option>
-          </select>
         </div>
       </div>
 

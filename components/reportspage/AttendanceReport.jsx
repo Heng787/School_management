@@ -161,7 +161,9 @@ const TopAbsences = ({ topAbsences, timeRange, onTimeRangeChange }) => (
         ))}
       </div>
     ) : (
-      <EmptyState message="No absence records found." />
+      <div className="py-2 flex justify-center text-sm font-medium text-slate-500 dark:text-slate-400">
+        No absence records found for this timeframe.
+      </div>
     )}
   </Card>
 );
@@ -338,10 +340,10 @@ const ClassTable = ({
                 label: "Perm",
                 cls: "text-purple-600 dark:text-purple-400 text-center",
               },
-              {
+              /* {
                 label: "Flag",
                 cls: "text-slate-400 dark:text-slate-500 text-center",
-              },
+              }, */
             ].map(({ label, cls }) => (
               <th
                 key={label}
@@ -413,23 +415,6 @@ const ClassTable = ({
                     <span className="text-purple-700 dark:text-purple-400 font-bold bg-purple-50 dark:bg-purple-900/20 px-3 py-1 rounded-lg">
                       {permission}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    {canFlag ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleFlag(student.id);
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${isFlagged ? "bg-orange-500 text-white border-orange-500" : "bg-white dark:bg-slate-800 text-orange-500 border-orange-300 dark:border-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/30"}`}
-                      >
-                        🚩
-                      </button>
-                    ) : (
-                      <span className="text-slate-300 dark:text-slate-700 text-xs">
-                        —
-                      </span>
-                    )}
                   </td>
                 </tr>
                 {isExpanded && (
@@ -582,7 +567,7 @@ const AttendanceReport = () => {
         onTimeRangeChange={setTimeRange}
       />
 
-      <FlaggedBanner flaggedStudents={flaggedStudents} onUnflag={toggleFlag} />
+      {/* <FlaggedBanner flaggedStudents={flaggedStudents} onUnflag={toggleFlag} /> */}
 
       {/* Class Selector */}
       <Card className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -27,11 +27,11 @@ const CalendarGrid = ({
   return (
     <div className="bg-white dark:bg-slate-900 p-2 sm:p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-300">
       <div>
-        <div className="grid grid-cols-7 gap-px rounded-t-lg overflow-hidden border-b border-slate-100">
+        <div className="grid grid-cols-7 gap-px rounded-t-lg overflow-hidden border-b border-slate-200 dark:border-slate-800">
           {weekdays.map((day) => (
             <div
               key={day}
-              className="text-center font-bold text-slate-700 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 py-2 sm:py-3 uppercase tracking-wider text-[10px] sm:text-[11px] transition-colors"
+              className="text-center font-bold text-slate-900 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/50 py-2 sm:py-3 uppercase tracking-wider text-[10px] sm:text-[11px] transition-colors"
             >
               {day}
             </div>
@@ -47,7 +47,7 @@ const CalendarGrid = ({
             return (
               <div
                 key={index}
-                className={`relative min-h-[60px] sm:min-h-[120px] bg-white dark:bg-slate-900 border-r border-b border-slate-100 dark:border-slate-800 p-1 sm:p-2 transition-colors 
+                className={`relative min-h-[60px] sm:min-h-[120px] bg-white dark:bg-slate-900 border-r border-b border-slate-200 dark:border-slate-800 p-1 sm:p-2 transition-colors 
                                         ${day ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 group" : "bg-slate-50/20 dark:bg-slate-950/20"}
                                         ${isSelected ? "ring-2 ring-inset ring-primary-500 bg-primary-50 dark:bg-primary-900/20" : ""}
                                     `}
@@ -61,7 +61,7 @@ const CalendarGrid = ({
                   <>
                     <span
                       className={`absolute top-1 sm:top-1.5 right-1 sm:right-1.5 text-[10px] sm:text-sm font-semibold transition-colors 
-                                                ${isToday ? "bg-primary-600 text-white rounded-full w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center shadow-md dark:shadow-none" : "text-slate-400 dark:text-slate-500 group-hover:text-primary-600 dark:group-hover:text-primary-400"}
+                                                ${isToday ? "bg-primary-600 text-white rounded-full w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center shadow-md dark:shadow-none" : "text-slate-700 dark:text-slate-500 group-hover:text-primary-600 dark:group-hover:text-primary-400"}
                                                 ${isSelected && !isToday ? "!text-primary-600 dark:!text-primary-400 font-bold" : ""}
                                             `}
                     >

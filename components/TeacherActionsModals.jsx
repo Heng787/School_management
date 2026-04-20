@@ -30,7 +30,7 @@ const CloseBtn = ({ onClick }) => (
   </button>
 );
 
-const ActionFooter = ({ onClose, onSave, saveLabel }) => (
+const ActionFooter = ({ onClose, onSave, saveLabel, isModified }) => (
   <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end space-x-3 shrink-0">
     <button
       onClick={onClose}
@@ -40,8 +40,18 @@ const ActionFooter = ({ onClose, onSave, saveLabel }) => (
     </button>
     <button
       onClick={onSave}
-      className="px-5 py-2.5 text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-colors shadow-sm"
+      className={`relative px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-all shadow-sm ${
+        isModified
+          ? "bg-amber-600 hover:bg-amber-700 shadow-amber-200/50 hover:shadow-lg"
+          : "bg-primary-600 hover:bg-primary-700"
+      }`}
     >
+      {isModified && (
+        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 border-2 border-white"></span>
+        </span>
+      )}
       {saveLabel}
     </button>
   </div>
@@ -132,7 +142,7 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
             value={date}
             max={today()}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
           />
         </div>
 
@@ -230,31 +240,44 @@ const StudentNameCell = ({ student }) => (
 );
 
 export const GradesModal = ({ classData, students, onClose }) => {
-  const { grades, subjects: globalSubjects, saveGradeBatch } = useData();
+  const { grades, draftGrades, subjects: globalSubjects, saveDraftGradeBatch } = useData();
   const [term, setTerm] = useState("Midterm");
   const [scoreMap, setScoreMap] = useState({});
+  const [isModified, setIsModified] = useState(false);
+
+  const combinedGrades = useMemo(() => {
+    const merged = new Map(grades.map(g => [g.id, g]));
+    if (draftGrades) {
+      draftGrades.forEach(g => merged.set(g.id, g));
+    }
+    return Array.from(merged.values());
+  }, [grades, draftGrades]);
 
   const availableTerms = useMemo(() => {
     const terms = new Set(
-      grades.filter((g) => g.classId === classData.id).map((g) => g.term),
+      combinedGrades.filter((g) => g.classId === classData.id).map((g) => g.term),
     );
     DEFAULT_TERMS.forEach((t) => terms.add(t));
     return Array.from(terms);
-  }, [grades, classData.id]);
+  }, [combinedGrades, classData.id]);
 
   const classSubjects = useMemo(() => {
-    const subs = Array.from(
+    const existingSubs = Array.from(
       new Set(
-        grades
+        combinedGrades
           .filter((g) => g.classId === classData.id && g.term === term)
           .map((g) => g.subject),
       ),
     );
-    return subs.length > 0 ? subs : globalSubjects;
-  }, [grades, classData.id, term, globalSubjects]);
+    if (existingSubs.length > 0) return existingSubs;
+
+    const level = (classData.level || "").trim().toUpperCase();
+    const category = /^K\s*\d+/.test(level) ? "Kid" : "JuniorSenior";
+    return globalSubjects[category] || [];
+  }, [combinedGrades, classData.id, classData.level, term, globalSubjects]);
 
   useEffect(() => {
-    const existing = grades.filter(
+    const existing = combinedGrades.filter(
       (g) => g.term === term && g.classId === classData.id,
     );
     setScoreMap(
@@ -271,16 +294,18 @@ export const GradesModal = ({ classData, students, onClose }) => {
         ]),
       ),
     );
-  }, [term, students, grades, classSubjects, classData.id]);
+  }, [term, students, combinedGrades, classSubjects, classData.id]);
 
-  const handleScoreChange = (studentId, subject, val) =>
+  const handleScoreChange = (studentId, subject, val) => {
     setScoreMap((p) => ({
       ...p,
       [studentId]: { ...p[studentId], [subject]: clampScore(val) },
     }));
+    setIsModified(true);
+  };
 
   const handleSave = () => {
-    const existing = grades.filter(
+    const existing = combinedGrades.filter(
       (g) => g.term === term && g.classId === classData.id,
     );
     const records = students.flatMap((s) =>
@@ -304,15 +329,43 @@ export const GradesModal = ({ classData, students, onClose }) => {
         }),
     );
 
+    setIsModified(false);
     onClose();
     if (records.length > 0)
-      saveGradeBatch(records).catch((err) =>
-        console.error("Grade save failed:", err),
-      );
+      try {
+        saveDraftGradeBatch(records);
+      } catch (err) {
+        console.error("Draft grade save failed:", err);
+      }
+  };
+
+  const handleClose = () => {
+    if (isModified && !window.confirm("You have unsaved grades. Are you sure you want to discard them?")) {
+      return;
+    }
+    onClose();
+  };
+
+  // Arrow-key navigation between cells
+  const handleKeyNav = (e, rowIdx, colIdx) => {
+    const COLS = classSubjects.length;
+    const ROWS = students.length;
+    let nextRow = rowIdx;
+    let nextCol = colIdx;
+
+    if (e.key === 'ArrowRight') { nextCol = Math.min(colIdx + 1, COLS - 1); }
+    else if (e.key === 'ArrowLeft') { nextCol = Math.max(colIdx - 1, 0); }
+    else if (e.key === 'ArrowDown' || e.key === 'Enter') { nextRow = Math.min(rowIdx + 1, ROWS - 1); }
+    else if (e.key === 'ArrowUp') { nextRow = Math.max(rowIdx - 1, 0); }
+    else return;
+
+    e.preventDefault();
+    const next = document.querySelector(`[data-cell="${nextRow}-${nextCol}"]`);
+    if (next) { next.focus(); next.select(); }
   };
 
   return (
-    <ModalShell size="max-w-5xl">
+    <ModalShell size="max-w-7xl">
       <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-start md:items-center bg-slate-50 shrink-0">
         <div>
           <h2 className="text-xl font-extrabold text-blue-900 uppercase tracking-wide">
@@ -338,7 +391,7 @@ export const GradesModal = ({ classData, students, onClose }) => {
             <select
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-500 outline-none shadow-sm"
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-900 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-500 outline-none shadow-sm"
             >
               {availableTerms.map((t) => (
                 <option key={t} value={t}>
@@ -347,14 +400,14 @@ export const GradesModal = ({ classData, students, onClose }) => {
               ))}
             </select>
           </div>
-          <CloseBtn onClick={onClose} />
+          <CloseBtn onClick={handleClose} />
         </div>
       </div>
 
       <div className="overflow-auto flex-1 bg-white relative">
-        <div className="min-w-full inline-block align-middle">
+        <div className="min-w-max w-full inline-block align-middle">
           <div className="sm:hidden absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent pointer-events-none z-20" />
-          <table className="min-w-full divide-y divide-slate-100 table-fixed border-separate border-spacing-0">
+          <table className="min-w-max w-full divide-y divide-slate-100 border-separate border-spacing-0">
             <thead className="bg-slate-50 sticky top-0 z-30 shadow-sm">
               <tr>
                 <th className="w-40 sm:w-64 px-4 sm:px-6 py-3 sm:py-4 text-left text-[10px] sm:text-xs font-bold text-blue-900 uppercase tracking-wider border-r border-slate-100 bg-slate-50 sticky left-0 z-40">
@@ -399,7 +452,7 @@ export const GradesModal = ({ classData, students, onClose }) => {
                       className="hover:bg-slate-50/50 transition-colors"
                     >
                       <StudentNameCell student={student} />
-                      {classSubjects.map((sub) => (
+                      {classSubjects.map((sub, colIdx) => (
                         <td key={sub} className="px-1 sm:px-2 py-2 sm:py-3">
                           <input
                             type="number"
@@ -409,10 +462,12 @@ export const GradesModal = ({ classData, students, onClose }) => {
                             placeholder="0.0"
                             name={`score-${student.id}-${sub}`}
                             autoComplete="off"
+                            data-cell={`${students.indexOf(student)}-${colIdx}`}
                             value={scoreMap[student.id]?.[sub] ?? ""}
                             onChange={(e) =>
                               handleScoreChange(student.id, sub, e.target.value)
                             }
+                            onKeyDown={(e) => handleKeyNav(e, students.indexOf(student), colIdx)}
                             className={`w-full text-center py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm font-bold transition-all focus:ring-2 focus:ring-primary-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${scoreColor(scoreMap[student.id]?.[sub])}`}
                           />
                         </td>
@@ -430,9 +485,10 @@ export const GradesModal = ({ classData, students, onClose }) => {
       </div>
 
       <ActionFooter
-        onClose={onClose}
+        onClose={handleClose}
         onSave={handleSave}
-        saveLabel="Save All Grades"
+        saveLabel="Save Draft Marks"
+        isModified={isModified}
       />
     </ModalShell>
   );

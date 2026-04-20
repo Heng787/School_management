@@ -162,6 +162,7 @@ const ROLE_SHORTHANDS = {
 
 const normalizeSex = (raw) => {
   const s = raw.trim().toLowerCase();
+  if (!s) return "";
   if (["male", "m"].includes(s)) return "Male";
   if (["female", "f"].includes(s)) return "Female";
   throw new Error("'Sex' must be 'Male' or 'Female'.");
@@ -250,13 +251,28 @@ const validateClass = (staffList) => (get) => {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export const parseStudentCSV = (csvContent) => {
+export const parseStudentCSV = async (csvContent) => {
   const { valid, errors } = parseCSV(
     csvContent,
     buildCanonical("student"),
-    ["name", "sex"],
+    ["name"],
     validateStudent,
   );
+
+  const missingGenderStudents = valid.filter(v => v.sex === "");
+  if (missingGenderStudents.length > 0) {
+    const { inferGenders } = await import('./aiGenderHelper');
+    const namesToInfer = Array.from(new Set(missingGenderStudents.map(s => s.name)));
+    const inferred = await inferGenders(namesToInfer);
+    
+    valid.forEach(s => {
+      if (s.sex === "") {
+        s.sex = String(inferred[s.name] || "").trim().toLowerCase() === "male" ? "Male" : "Female";
+        s._genderInferred = true;
+      }
+    });
+  }
+
   return { validStudents: valid, errors };
 };
 

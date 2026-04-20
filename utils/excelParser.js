@@ -17,6 +17,7 @@ const normalizeGender = (raw) => {
   const s = String(raw || "")
     .trim()
     .toLowerCase();
+  if (!s) return "";
   return ["m", "male"].includes(s) ? "Male" : "Female";
 };
 
@@ -384,6 +385,21 @@ export const parseExcelFile = async (file) => {
   // Drop classes that received no enrollments
   const activeClassIds = new Set(results.enrollments.map((e) => e.classId));
   results.classes = results.classes.filter((c) => activeClassIds.has(c.id));
+
+  // ── Resolve Missing Genders via AI ──────────────────────────────────────
+  const missingGenderStudents = results.students.filter(s => !s.sex);
+  if (missingGenderStudents.length > 0) {
+    const { inferGenders } = await import('./aiGenderHelper');
+    const namesToInfer = Array.from(new Set(missingGenderStudents.map(s => s.name)));
+    const inferred = await inferGenders(namesToInfer);
+    
+    results.students.forEach(s => {
+      if (!s.sex) {
+        s.sex = String(inferred[s.name] || "").trim().toLowerCase() === "male" ? "Male" : "Female";
+        s._genderInferred = true;
+      }
+    });
+  }
 
   console.info("Parse complete:", {
     classes: results.classes.length,

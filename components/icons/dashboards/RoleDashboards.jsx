@@ -615,11 +615,26 @@ export const AdminDashboard = ({ navigate }) => {
 };
 
 // --- Teacher Dashboard ---
-export const TeacherDashboard = () => {
-  const { currentUser, classes, enrollments, students } = useData();
+export const TeacherDashboard = ({ navigate }) => {
+  const { currentUser, classes, enrollments, students, draftGrades, publishClassGrades } = useData();
   const myClasses = classes.filter((c) => c.teacherId === currentUser?.id);
 
   const [actionState, setActionState] = useState(null);
+  const [sentStatus, setSentStatus] = useState({});
+
+  const handleSendToAdmin = async (e, classId) => {
+    e.stopPropagation();
+    try {
+      await publishClassGrades(classId);
+      setSentStatus((prev) => ({ ...prev, [classId]: true }));
+      setTimeout(() => {
+        setSentStatus((prev) => ({ ...prev, [classId]: false }));
+      }, 5000);
+    } catch (err) {
+      console.error("Failed to publish grades", err);
+      alert("Failed to send to admin");
+    }
+  };
 
   const getStudentsForClass = (classId) => {
     const classEnrolls = enrollments.filter((e) => e.classId === classId);
@@ -636,6 +651,7 @@ export const TeacherDashboard = () => {
           const classEnrollments = enrollments.filter(
             (e) => e.classId === c.id,
           );
+          const draftsForClass = draftGrades ? draftGrades.filter(g => g.classId === c.id) : [];
           return (
             <Card
               key={c.id}
@@ -643,48 +659,71 @@ export const TeacherDashboard = () => {
               className="hover:border-primary-300 dark:hover:border-primary-500/50 transition-colors cursor-pointer"
             >
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-1 transition-colors">{c.schedule}</p>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors">
-                    {classEnrollments.length} Students Enrolled
-                  </p>
-                </div>
-                {classEnrollments.length > 0 && (
-                  <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-100 dark:border-slate-800 max-h-40 overflow-y-auto transition-colors">
-                    <ul className="space-y-1">
-                      {classEnrollments.map((e) => {
-                        const s = students.find((st) => st.id === e.studentId);
-                        return s ? (
-                          <li
-                            key={e.id}
-                            className="text-sm text-slate-600 dark:text-slate-400 flex items-center transition-colors"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-primary-500 mr-2 transition-colors"></span>
-                            {s.name}
-                          </li>
-                        ) : null;
-                      })}
-                    </ul>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-1 transition-colors">{c.schedule}</p>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors">
+                      {classEnrollments.length} Students Enrolled
+                    </p>
                   </div>
-                )}
-                <div className="pt-2 flex space-x-2">
+                  {classEnrollments.length > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Instead of a global page jump, typically a teacher would just go to the Students tab
+                        navigate(Page.Students);
+                      }}
+                      className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1 transition-colors hover:underline"
+                    >
+                      View Students <span aria-hidden="true">&rarr;</span>
+                    </button>
+                  )}
+                </div>
+                <div className="pt-2 flex flex-col space-y-2">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActionState({ type: "attendance", classId: c.id });
+                      }}
+                      className="flex-1 bg-primary-600 text-white py-2 rounded-lg text-sm font-bold shadow shadow-primary-200 dark:shadow-none hover:bg-primary-700 transition"
+                    >
+                      Attendance
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActionState({ type: "grades", classId: c.id });
+                      }}
+                      className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-sm font-bold shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                    >
+                      Grades
+                    </button>
+                  </div>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActionState({ type: "attendance", classId: c.id });
-                    }}
-                    className="flex-1 bg-primary-600 text-white py-2 rounded-lg text-sm font-bold shadow shadow-primary-200 dark:shadow-none hover:bg-primary-700 transition"
+                    onClick={(e) => handleSendToAdmin(e, c.id)}
+                    disabled={sentStatus[c.id] || draftsForClass.length === 0}
+                    className={`w-full py-2 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 ${
+                      sentStatus[c.id]
+                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"
+                        : "bg-white text-emerald-600 border border-emerald-200 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-500 dark:border-emerald-800/50 dark:hover:bg-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    }`}
                   >
-                    Attendance
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActionState({ type: "grades", classId: c.id });
-                    }}
-                    className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-sm font-bold shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
-                  >
-                    Grades
+                    {sentStatus[c.id] ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Sent successfully!</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        <span>{draftsForClass.length > 0 ? `Send to Admin (${draftsForClass.length})` : "Send to Admin"}</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -698,6 +737,48 @@ export const TeacherDashboard = () => {
             </p>
           </div>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+        <Card title="Today's Schedule" className="transition-colors">
+          <div className="space-y-4">
+            {myClasses.length > 0 ? myClasses.map(c => (
+              <div key={`sched-${c.id}`} className="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{c.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{c.schedule}</p>
+                  </div>
+                </div>
+                <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-md">Upcoming</span>
+              </div>
+            )) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400 italic">No classes scheduled for today.</p>
+            )}
+          </div>
+        </Card>
+
+        <Card title="Recent Activity" className="transition-colors">
+           <div className="space-y-4">
+              {[
+                { title: "Attendance Submitted", time: "10:30 AM", desc: "Room 4 - Morning Session", icon: "✓", color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+                { title: "Grades Updated", time: "Yesterday", desc: "Midterm scores for K1", icon: "A", color: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
+                { title: "Message to Admin", time: "Mon, 9:00 AM", desc: "Requested student transfer", icon: "💬", color: "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" }
+              ].map((act, i) => (
+                <div key={i} className="flex space-x-4">
+                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${act.color}`}>
+                     {act.icon}
+                   </div>
+                   <div>
+                     <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{act.title}</p>
+                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{act.desc}</p>
+                     <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-1.5">{act.time}</p>
+                   </div>
+                </div>
+              ))}
+           </div>
+        </Card>
       </div>
 
       {actionState?.type === "attendance" && (

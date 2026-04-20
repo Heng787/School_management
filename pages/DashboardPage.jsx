@@ -245,7 +245,13 @@ const DashboardPage = ({ navigate }) => {
     [students],
   );
 
-  const uniqueSubjects = useMemo(() => ["All", ...subjects], [subjects]);
+  const uniqueSubjects = useMemo(() => {
+    const all = [
+      ...(subjects.Kid || []),
+      ...(subjects.JuniorSenior || []),
+    ];
+    return ["All", ...all];
+  }, [subjects]);
 
   // --- 3.3. RENDER LOGIC ---
   const renderDashboard = () => {
@@ -253,7 +259,7 @@ const DashboardPage = ({ navigate }) => {
       case UserRole.Admin:
         return <AdminDashboard navigate={navigate} />;
       case UserRole.Teacher:
-        return <TeacherDashboard />;
+        return <TeacherDashboard navigate={navigate} />;
       case UserRole.OfficeWorker:
         return <OfficeWorkerDashboard />;
       default:

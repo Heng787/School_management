@@ -1,8 +1,6 @@
 import React, { useRef } from "react";
 import StudentTableRow from "./StudentTableRow";
 
-const ITEMS_PER_PAGE = 20;
-
 /**
  * COMPONENT: StudentTable
  * DESCRIPTION: Main table wrapper displaying students with pagination controls.
@@ -11,6 +9,8 @@ const StudentTable = ({
   filteredStudents,
   currentPage,
   setCurrentPage,
+  pageSize,
+  setPageSize,
   highlightedStudentId,
   displayClassesMap,
   staff,
@@ -25,12 +25,12 @@ const StudentTable = ({
   onReportCard,
   loading,
 }) => {
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const startIndex = (currentPage - 1) * pageSize;
   const paginatedStudents = filteredStudents.slice(
     startIndex,
-    startIndex + ITEMS_PER_PAGE,
+    startIndex + pageSize,
   );
-  const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredStudents.length / pageSize) || 1;
   const highlightedRowRef = useRef(null);
 
   return (
@@ -49,9 +49,6 @@ const StudentTable = ({
                   }
                   onChange={onSelectAllOnPage}
                 />
-              </th>
-              <th className="px-4 py-4 w-16 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                ID
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 Name
@@ -102,7 +99,7 @@ const StudentTable = ({
             {filteredStudents.length === 0 && !loading && (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={7}
                   className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 italic"
                 >
                   No records found.
@@ -117,21 +114,35 @@ const StudentTable = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             Page {currentPage} of {totalPages}
           </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 dark:text-slate-300 disabled:opacity-50"
+          <div className="flex items-center gap-4">
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1.5 text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
             >
-              Prev
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 dark:text-slate-300 disabled:opacity-50"
-            >
-              Next
-            </button>
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Prev
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="p-2 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

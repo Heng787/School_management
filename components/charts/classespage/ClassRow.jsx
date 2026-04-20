@@ -28,7 +28,7 @@ const ClassRow = ({
     <div
       key={cls.id}
       ref={isHighlighted ? highlightedRowRef : null}
-      className={`group transition-all duration-200 border-b border-slate-100 dark:border-slate-800 last:border-0 ${
+      className={`group transition-all duration-200 border-b border-slate-300 dark:border-slate-800 last:border-0 ${
         isSelected
           ? "bg-emerald-50/50 dark:bg-emerald-900/10"
           : isHighlighted
@@ -80,13 +80,13 @@ const ClassRow = ({
                 <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                   {cls.name}
                 </p>
-                <span className="sm:hidden inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                <span className="sm:hidden inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
                   {cls.level}
                 </span>
               </div>
-              <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center text-xs text-slate-600 font-medium dark:text-slate-400">
                 <svg
-                  className="w-3.5 h-3.5 mr-1.5 text-slate-400 shrink-0"
+                  className="w-3.5 h-3.5 mr-1.5 text-slate-500 dark:text-slate-400 shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -103,14 +103,14 @@ const ClassRow = ({
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-6 pl-4 border-l border-slate-200 dark:border-slate-800">
-            <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 uppercase">
+          <div className="hidden sm:flex items-center gap-6 pl-4 border-l border-slate-300 dark:border-slate-800">
+            <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-black tracking-widest bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700 shadow-sm shrink-0 uppercase">
               {cls.level}
             </span>
 
             <div className="w-48 shrink-0">
               <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-slate-500 font-medium tracking-wide">
+                <span className="text-slate-600 font-semibold tracking-wide flex items-center pr-2">
                   Enrollment
                 </span>
                 <span
@@ -118,13 +118,13 @@ const ClassRow = ({
                 >
                   {studentCount}{" "}
                   <span
-                    className={`${percentage >= 100 ? "text-red-400" : "text-slate-400"} font-medium`}
+                    className={`${percentage >= 100 ? "text-red-500" : "text-slate-500 dark:text-slate-400"} font-bold ml-0.5`}
                   >
                     / {capacity}
                   </span>
                 </span>
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
+              <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
                 <div
                   className={`h-2 rounded-full transition-all duration-1000 ease-out ${
                     percentage >= 100
@@ -157,7 +157,7 @@ const ClassRow = ({
         {(isAdmin || isOffice) && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="sm:hidden flex items-center justify-end gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800"
+            className="sm:hidden flex items-center justify-end gap-3 mt-3 pt-3 border-t border-slate-300 dark:border-slate-800"
           >
             <EditClassButtonMobile onEdit={(e) => onEdit(e, cls)} />
             {isAdmin && (
@@ -169,8 +169,8 @@ const ClassRow = ({
 
       {/* Expansion Panel */}
       {isExpanded && (
-        <div className="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-5 animate-in fade-in slide-in-from-top-2 duration-300">
-          <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">
+        <div className="bg-white dark:bg-slate-900 border-t border-slate-300 dark:border-slate-800 p-5 animate-in fade-in slide-in-from-top-2 duration-300">
+          <h4 className="text-[11px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider mb-4">
             Enrolled Students ({studentCount})
           </h4>
           {enrolledStudentsInClass.length > 0 ? (
@@ -178,13 +178,13 @@ const ClassRow = ({
               {enrolledStudentsInClass.map((student) => (
                 <div
                   key={student.id}
-                  className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700/50 rounded-lg p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex flex-col truncate pr-3">
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
                       {student.name}
                     </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                    <span className="text-[10px] text-slate-500 font-medium dark:text-slate-500 font-mono mt-0.5">
                       ID:{" "}
                       {student.id.startsWith("stu_")
                         ? student.id.split("_").pop().substring(0, 6)
@@ -198,7 +198,7 @@ const ClassRow = ({
                     ></span>
                   ) : (
                     <span
-                      className="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0"
+                      className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"
                       title="Inactive"
                     ></span>
                   )}

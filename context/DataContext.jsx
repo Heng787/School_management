@@ -16,10 +16,11 @@ export const DataProvider = ({ children }) => {
     const [classes, setClasses] = useState([]);
     const [events, setEvents] = useState([]);
     const [grades, setGrades] = useState([]);
+    const [draftGrades, setDraftGrades] = useState(() => localStore.get('draft_grades', []));
     const [attendance, setAttendance] = useState([]);
     const [enrollments, setEnrollments] = useState([]);
     const [staffPermissions, setStaffPermissions] = useState([]);
-    const [subjects, setSubjects] = useState([]);
+    const [subjects, setSubjects] = useState({ Kid: [], JuniorSenior: [] });
     const [levels, setLevels] = useState([]);
     const [timeSlots, setTimeSlots] = useState([]);
     const [adminPassword, setAdminPasswordState] = useState('admin123');
@@ -90,7 +91,13 @@ export const DataProvider = ({ children }) => {
                 if (att) setAttendance(att);
                 if (enr) setEnrollments(enr);
                 if (sp) setStaffPermissions(sp);
-                if (sub) setSubjects(sub);
+                if (sub) {
+                    if (Array.isArray(sub)) {
+                        setSubjects({ Kid: [], JuniorSenior: sub });
+                    } else {
+                        setSubjects({ Kid: [], JuniorSenior: [], ...sub });
+                    }
+                }
                 if (lvls) setLevels(lvls);
                 if (slots) setTimeSlots(slots);
                 if (pwd) setAdminPasswordState(pwd);
@@ -382,6 +389,26 @@ export const DataProvider = ({ children }) => {
         const updatedMap = new Map(records.map(r => [r.id, r]));
         return [...prev.filter(r => !updatedMap.has(r.id)), ...records];
     });
+    const saveDraftGradeBatch = (records) => {
+        const updatedMap = new Map(records.map(r => [r.id, r]));
+        setDraftGrades((prev) => {
+            const newDrafts = [...prev.filter(r => !updatedMap.has(r.id)), ...records];
+            localStore.set('draft_grades', newDrafts);
+            return newDrafts;
+        });
+    };
+    const publishClassGrades = async (classId) => {
+        const draftsToPublish = draftGrades.filter(g => g.classId === classId);
+        if (draftsToPublish.length === 0) return;
+        
+        await saveGradeBatch(draftsToPublish);
+        
+        setDraftGrades((prev) => {
+            const newDrafts = prev.filter(g => g.classId !== classId);
+            localStore.set('draft_grades', newDrafts);
+            return newDrafts;
+        });
+    };
     const deleteGrade = async (id) => {
         setGrades(prev => prev.filter(g => g.id !== id));
         try {
@@ -424,16 +451,27 @@ export const DataProvider = ({ children }) => {
         } catch (err) {}
     };
 
-    const addSubject = (subject) => performUpdate((d) => apiService.saveSubjects(d), setSubjects, (prev) => [...new Set([...prev, subject])].sort());
+    const addSubject = (subject, category = 'JuniorSenior') => performUpdate((d) => apiService.saveSubjects(d), setSubjects, (prev) => {
+        const next = { ...prev };
+        if (!next[category]) next[category] = [];
+        next[category] = [...new Set([...next[category], subject])].sort();
+        return next;
+    });
     const updateSubject = async (old, next) => {
-        const nextSubs = subjects.map(s => s === old ? next : s);
+        const nextSubs = { ...subjects };
+        Object.keys(nextSubs).forEach(cat => {
+            nextSubs[cat] = nextSubs[cat].map(s => s === old ? next : s);
+        });
         const nextStaff = staff.map(s => s.subject === old ? { ...s, subject: next } : s);
         setSubjects(nextSubs);
         setStaff(nextStaff);
         try { await Promise.all([apiService.saveSubjects(nextSubs), apiService.saveStaff(nextStaff)]); } catch (e) { }
     };
     const deleteSubject = async (target) => {
-        const nextSubs = subjects.filter(s => s !== target);
+        const nextSubs = { ...subjects };
+        Object.keys(nextSubs).forEach(cat => {
+            nextSubs[cat] = nextSubs[cat].filter(s => s !== target);
+        });
         const nextStaff = staff.map(s => s.subject === target ? { ...s, subject: '' } : s);
         setSubjects(nextSubs);
         setStaff(nextStaff);
@@ -465,7 +503,42 @@ export const DataProvider = ({ children }) => {
         await apiService.saveAdminPassword(pwd);
     };
 
-    // --- 13. DATA IMPORT & AUTH ---
+    // --- 13. DATA IMPORT, AUTH & RESET ---
+    /**
+     * Deletes all core school data (students, staff, classes, grades,
+     * enrollments, attendance) from both local state and Supabase.
+     */
+    const deleteAllData = async () => {
+        const tables = [
+            { name: 'students',   setter: setStudents },
+            { name: 'staff',      setter: setStaff },
+            { name: 'classes',    setter: setClasses },
+            { name: 'grades',     setter: setGrades },
+            { name: 'enrollments',setter: setEnrollments },
+            { name: 'attendance', setter: setAttendance },
+        ];
+
+        // 1. Clear local state and localStorage immediately
+        tables.forEach(({ name, setter }) => {
+            setter([]);
+            localStorage.removeItem(`school_admin_${name}`);
+            localStorage.removeItem(`school_admin_${name}_dirty`);
+        });
+        // Clear the deleted_queue so stale IDs don't linger
+        localStorage.removeItem('school_admin_deleted_queue');
+
+        // 2. Wipe from Supabase
+        const client = (await import('../services/core')).getSupabase();
+        if (client && navigator.onLine) {
+            await Promise.allSettled(
+                tables.map(({ name }) =>
+                    client.from(name).delete().neq('id', '__nonexistent__')
+                )
+            );
+        }
+        setLastSyncedAt(new Date());
+    };
+
     const importAllData = async (data) => {
         setLoading(true);
         try {
@@ -495,13 +568,13 @@ export const DataProvider = ({ children }) => {
     }, []);
 
     const value = {
-        students, staff, classes, events, grades, attendance, enrollments, staffPermissions, subjects, levels, timeSlots, adminPassword,
+        students, staff, classes, events, grades, draftGrades, attendance, enrollments, staffPermissions, subjects, levels, timeSlots, adminPassword,
         loading, isSyncing, lastSyncedAt, error, currentUser, setCurrentUser: handleSetCurrentUser, highlightedStudentId, setHighlightedStudentId,
         highlightedStaffId, setHighlightedStaffId, highlightedClassId, setHighlightedClassId,
         addStudent, addStudents, updateStudent, updateStudentsBatch, deleteStudent,
         addStaff, addStaffBatch, updateStaff, deleteStaff,
         addClass, addClasses, updateClass, updateClassesBatch, deleteClass,
-        addGrade, updateGrade, saveGradeBatch, deleteGrade,
+        addGrade, updateGrade, saveGradeBatch, saveDraftGradeBatch, publishClassGrades, deleteGrade,
         addAttendance, updateAttendance, saveAttendanceBatch, deleteAttendance,
         addStaffPermission, updateStaffPermission, deleteStaffPermission,
         addEnrollment, addEnrollments, deleteEnrollment, updateClassEnrollments,
@@ -509,7 +582,7 @@ export const DataProvider = ({ children }) => {
         addSubject, updateSubject, deleteSubject,
         addLevel, updateLevel, deleteLevel,
         addTimeSlot, addTimeSlotsBatch, updateTimeSlot, deleteTimeSlot, setAdminPassword,
-        importAllData, triggerSync
+        importAllData, deleteAllData, triggerSync
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

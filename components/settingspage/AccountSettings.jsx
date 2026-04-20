@@ -34,9 +34,17 @@ const AccountSettings = ({
   const [signatureSuccess, setSignatureSuccess] = useState('');
   const signatureInputRef = useRef(null);
 
+  // --- Principal Name state ---
+  const [principalName, setPrincipalName] = useState('');
+  const [isSavingPrincipalName, setIsSavingPrincipalName] = useState(false);
+  const [principalNameSuccess, setPrincipalNameSuccess] = useState('');
+
   useEffect(() => {
     configService.getPrincipalSignatureUrl().then((url) => {
       if (url) setSignatureUrl(url);
+    });
+    configService.getPrincipalName().then((name) => {
+      if (name) setPrincipalName(name);
     });
   }, []);
 
@@ -70,6 +78,21 @@ const AccountSettings = ({
     } finally {
       setIsUploadingSignature(false);
       if (signatureInputRef.current) signatureInputRef.current.value = '';
+    }
+  };
+
+  const handleSavePrincipalName = async () => {
+    if (!principalName.trim()) return;
+    setIsSavingPrincipalName(true);
+    setPrincipalNameSuccess('');
+    try {
+      await configService.savePrincipalName(principalName.trim());
+      setPrincipalNameSuccess('Principal name saved! All report cards will now show this name.');
+      setTimeout(() => setPrincipalNameSuccess(''), 4000);
+    } catch (err) {
+      // silently fail
+    } finally {
+      setIsSavingPrincipalName(false);
     }
   };
 
@@ -409,6 +432,35 @@ const AccountSettings = ({
             </ul>
           </div>
         </div>
+      </div>
+
+      {/* --- Principal Name Setting --- */}
+      <div className="mt-8 bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
+        <h3 className="text-lg font-bold text-gray-700 dark:text-white mb-1 transition-colors">Principal's Name</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">Set the name that appears under the Principal's Signature on all report cards.</p>
+        <div className="flex gap-3 items-center">
+          <input
+            type="text"
+            value={principalName}
+            onChange={(e) => setPrincipalName(e.target.value)}
+            placeholder="e.g. Dr. Chan Sopheap"
+            className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 transition-colors text-sm"
+          />
+          <button
+            type="button"
+            onClick={handleSavePrincipalName}
+            disabled={isSavingPrincipalName || !principalName.trim()}
+            className="px-5 py-2.5 bg-primary-600 text-white font-bold text-sm rounded-xl hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary-200 dark:shadow-none whitespace-nowrap"
+          >
+            {isSavingPrincipalName ? 'Saving...' : 'Save Name'}
+          </button>
+        </div>
+        {principalNameSuccess && (
+          <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+            {principalNameSuccess}
+          </p>
+        )}
       </div>
 
       {/* --- Principal Signature Upload --- */}
