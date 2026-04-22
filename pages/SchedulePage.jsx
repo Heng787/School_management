@@ -112,36 +112,48 @@ const SchedulePage = () => {
   return (
     <div className="container mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-5 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white tracking-tight transition-colors">School Schedule</h1>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Manage events, holidays, and academic dates</p>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="hidden md:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-sm font-medium mr-4 shadow-inner transition-colors">
-            <button onClick={() => setView('month')} className={`px-3 py-1.5 rounded-md transition-colors ${view === 'month' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Month</button>
-            <button onClick={() => setView('week')} className={`px-3 py-1.5 rounded-md transition-colors ${view === 'week' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Week</button>
-            <button onClick={() => setView('day')} className={`px-3 py-1.5 rounded-md transition-colors ${view === 'day' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Day</button>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Pill Segmented Control */}
+          <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-full text-sm font-semibold shadow-inner transition-colors border border-slate-200 dark:border-slate-700">
+            {[['month', 'Month'], ['week', 'Week'], ['day', 'Day']].map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setView(val)}
+                className={`px-4 py-1.5 rounded-full transition-all duration-200 ${
+                  view === val
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-bold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={handlePrev} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors" aria-label="Previous">
-              <svg className="w-6 h-6 text-gray-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-3">
+            <button onClick={handlePrev} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400" aria-label="Previous">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200 w-64 text-center transition-colors">
+            <h2 className="text-base font-bold text-slate-700 dark:text-slate-200 w-52 text-center transition-colors">
               {headerDateText}
             </h2>
-            <button onClick={handleNext} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors" aria-label="Next">
-              <svg className="w-6 h-6 text-gray-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onClick={handleNext} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400" aria-label="Next">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
               </svg>
             </button>
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors shadow-lg shadow-primary-200 dark:shadow-none font-bold"
+            className="bg-primary-600 text-white px-4 py-2 rounded-full hover:bg-primary-700 transition-colors shadow-lg shadow-primary-200 dark:shadow-none font-bold text-sm"
           >
-            Add New Event
+            + Add Event
           </button>
         </div>
       </div>

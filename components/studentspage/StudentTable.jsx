@@ -57,6 +57,9 @@ const StudentTable = ({
                 Gender
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                DOB
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 Contact
               </th>
               <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -99,7 +102,7 @@ const StudentTable = ({
             {filteredStudents.length === 0 && !loading && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 italic"
                 >
                   No records found.

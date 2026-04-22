@@ -64,7 +64,6 @@ const HEADER_MAPS = {
     role: ["role", "position", "job"],
     contact: ["contact", "phone", "email", "mobile"],
     hireDate: ["joined", "hiredate", "startdate"],
-    subject: ["subject", "teaching"],
   },
   class: {
     name: ["name", "classname", "room", "roomname"],
@@ -212,13 +211,11 @@ const validateStaff = (get) => {
   if (!name) throw new Error("'Name' is required.");
   const contact = get("contact");
   if (!contact) throw new Error("'Contact' is required.");
-  const subject = get("subject");
   return {
     name,
     contact,
     role: normalizeRole(get("role")),
     hireDate: normalizeDate(get("hireDate"), "Hire Date") || today(),
-    ...(subject ? { subject } : {}),
   };
 };
 

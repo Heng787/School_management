@@ -14,6 +14,7 @@ const TeacherModal = ({ staffData, onClose }) => {
     subject: "",
     email: "",
     phone: "",
+    dob: "",
     hireDate: new Date().toISOString().split("T")[0],
   });
   const [error, setError] = useState("");
@@ -39,6 +40,7 @@ const TeacherModal = ({ staffData, onClose }) => {
         subject: staffData.subject || "",
         email: initialEmail,
         phone: initialPhone,
+        dob: staffData.dob || "",
         hireDate: staffData.hireDate,
       });
     }
@@ -76,6 +78,7 @@ const TeacherModal = ({ staffData, onClose }) => {
       name: formData.name,
       role: formData.role,
       contact: contactString,
+      dob: formData.dob,
       hireDate: formData.hireDate,
       subject: isTeacherRole ? formData.subject || undefined : undefined,
     };
@@ -111,6 +114,19 @@ const TeacherModal = ({ staffData, onClose }) => {
               onChange={handleChange}
               className={inputClasses}
               required
+            />
+          </div>
+          <div>
+            <label htmlFor="dob" className={labelClasses}>
+              Date of Birth
+            </label>
+            <input
+              type="date"
+              name="dob"
+              id="dob"
+              value={formData.dob}
+              onChange={handleChange}
+              className={inputClasses}
             />
           </div>
           <div>

@@ -17,6 +17,8 @@ const TeacherFiltersSection = ({
     { id: StaffRole.Teacher, label: "Teachers" },
     { id: StaffRole.AssistantTeacher, label: "Assistants" },
     { id: StaffRole.OfficeWorker, label: "Office" },
+    { id: StaffRole.Guard, label: "Guard" },
+    { id: StaffRole.Cleaner, label: "Cleaner" },
   ];
 
   return (

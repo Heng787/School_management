@@ -164,6 +164,10 @@ const ReportCardModal = ({ student, onClose }) => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Student ID</label>
                                 <p className="text-lg font-mono font-bold text-slate-600">{student.id}</p>
                             </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Date of Birth</label>
+                                <p className="text-lg font-bold text-slate-600">{student.dob ? new Date(student.dob).toLocaleDateString() : 'N/A'}</p>
+                            </div>
                         </div>
                         <div className="space-y-4 text-right">
                             <div>

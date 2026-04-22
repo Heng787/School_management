@@ -53,7 +53,7 @@ const ReportsPage = () => {
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       {/* Tab Navigation Bar */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-20 shadow-sm transition-colors">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-10 shadow-sm transition-colors">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
             <svg

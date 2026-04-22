@@ -8,25 +8,25 @@ import { fetchUnreadCount, ADMIN_KEY } from '../services/messageService';
 const NavItem = ({ icon, label, isActive, onClick, badge }) => (
     <li
         onClick={onClick}
-        className={`group flex items-center px-3 py-2.5 mb-1 rounded-md cursor-pointer transition-all duration-200 ${isActive
-            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-l-2 border-emerald-500'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border-l-2 border-transparent'
+        className={`group flex items-center px-3 py-2.5 mb-1 rounded-lg cursor-pointer transition-all duration-200 ${isActive
+            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-l-4 border-emerald-500 pl-2.5 shadow-sm'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border-l-4 border-transparent pl-2.5'
             }`}
     >
-        <span className={`relative ${isActive ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-100'}`}>
+        <span className={`relative ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-100'}`}>
             {icon}
             {/* Tiny dot on icon when there's an unread badge */}
             {badge != null && badge > 0 && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping" />
             )}
         </span>
-        <span className="mx-3 text-sm font-medium flex-1">{label}</span>
+        <span className={`mx-3 text-sm flex-1 ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
         {badge != null && badge > 0 ? (
             <span className="ml-auto min-w-[20px] h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg shadow-rose-500/30 animate-pulse">
                 {badge > 9 ? '9+' : badge}
             </span>
         ) : isActive ? (
-            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <div className="ml-auto w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
         ) : null}
     </li>
 );

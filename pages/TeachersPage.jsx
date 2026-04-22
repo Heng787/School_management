@@ -103,7 +103,7 @@ const TeachersPage = () => {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ["Name", "Role", "Contact", "Hire Date", "Subject"];
+    const headers = ["Name", "Role", "Contact", "Hire Date"];
     const csvContent = headers.join(",");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");

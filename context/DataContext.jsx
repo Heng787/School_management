@@ -86,7 +86,39 @@ export const DataProvider = ({ children }) => {
                 if (s) setStudents(s);
                 if (st) setStaff(st);
                 if (c) setClasses(c);
-                if (e) setEvents(e);
+                const fetchedEvents = e || [];
+                const seedHolidays = [
+                    { id: 'hol_1', title: 'International New Year’s Day', date: '2026-01-01', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_2', title: 'Victory over Genocide Day', date: '2026-01-07', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_3', title: 'International Women’s Day', date: '2026-03-08', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_4_1', title: 'Khmer New Year (Chol Chnam Thmey)', date: '2026-04-14', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_4_2', title: 'Khmer New Year (Chol Chnam Thmey)', date: '2026-04-15', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_4_3', title: 'Khmer New Year (Chol Chnam Thmey)', date: '2026-04-16', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_5', title: 'International Labor Day', date: '2026-05-01', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_6', title: 'Royal Ploughing Ceremony', date: '2026-05-05', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_7', title: 'King Norodom Sihamoni’s Birthday', date: '2026-05-14', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_8', title: 'Visak Bochea Day', date: '2026-05-22', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_9', title: 'Queen Mother Norodom Monineath Sihanouk’s Birthday', date: '2026-06-18', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_10', title: 'Constitution Day', date: '2026-09-24', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_11_1', title: 'Pchum Ben Festival', date: '2026-10-10', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_11_2', title: 'Pchum Ben Festival', date: '2026-10-11', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_11_3', title: 'Pchum Ben Festival', date: '2026-10-12', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_12', title: 'Commemoration Day of the late King Father', date: '2026-10-15', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_13', title: 'King Norodom Sihamoni’s Coronation Day', date: '2026-10-29', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_14', title: 'Independence Day', date: '2026-11-09', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_15_1', title: 'Water Festival', date: '2026-11-23', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_15_2', title: 'Water Festival', date: '2026-11-24', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_15_3', title: 'Water Festival', date: '2026-11-25', type: 'Holiday', description: 'Public Holiday' },
+                    { id: 'hol_16', title: 'Peace Day', date: '2026-12-29', type: 'Holiday', description: 'Public Holiday' }
+                ];
+                const missingHolidays = seedHolidays.filter(sh => !fetchedEvents.some(ce => ce.title === sh.title && ce.date === sh.date));
+                if (missingHolidays.length > 0) {
+                    const newEventsList = [...fetchedEvents, ...missingHolidays];
+                    setEvents(newEventsList);
+                    apiService.saveEvents(newEventsList).catch(console.error);
+                } else {
+                    setEvents(fetchedEvents);
+                }
                 if (g) setGrades(g);
                 if (att) setAttendance(att);
                 if (enr) setEnrollments(enr);

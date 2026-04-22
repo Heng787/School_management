@@ -44,6 +44,9 @@ const TeacherTable = ({
                 Role
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                Date of Birth
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                 Contact
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
@@ -82,7 +85,7 @@ const TeacherTable = ({
             {filteredStaff.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-6 py-12 text-center text-gray-500 dark:text-slate-500 italic"
                 >
                   No staff members found matching your criteria.

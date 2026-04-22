@@ -182,7 +182,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
 
                         {/* Dropdown Menu */}
                         {isProfileOpen && (
-                            <div className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                            <div className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                                 <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1 xl:hidden">
                                     <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{currentUser?.name || userRole}</p>
                                     <p className="text-xs text-slate-500 dark:text-slate-500 capitalize">{userRole.toLowerCase()}</p>

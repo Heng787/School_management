@@ -56,6 +56,9 @@ const StudentTableRow = ({
         {student.sex}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+        {student.dob ? new Date(student.dob).toLocaleDateString() : <span className="text-slate-300 dark:text-slate-600 italic">N/A</span>}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
         {student.phone ? (
           <a
             href={`tel:${student.phone}`}

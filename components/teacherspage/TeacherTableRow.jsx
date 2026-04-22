@@ -137,6 +137,9 @@ const TeacherTableRow = ({
           {staff.role}
         </span>
       </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+        {staff.dob ? new Date(staff.dob).toLocaleDateString() : <span className="text-slate-300 dark:text-slate-600 italic">N/A</span>}
+      </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-slate-300">
         <div className="flex flex-col gap-1">{renderContact()}</div>
       </td>
