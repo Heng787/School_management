@@ -453,7 +453,7 @@ const AttendanceReport = () => {
   const [flaggedIds, setFlaggedIds] = useState(new Set());
   const [exportMonth, setExportMonth] = useState(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
@@ -561,7 +561,7 @@ const AttendanceReport = () => {
 
   const handleMonthExport = () => {
     if (!selectedClass || !exportMonth) return;
-    const [yearStr, monthStr] = exportMonth.split('-');
+    const [yearStr, monthStr] = exportMonth.split("-");
     const year = parseInt(yearStr);
     const monthIdx = parseInt(monthStr) - 1; // 0-based
 
@@ -569,10 +569,12 @@ const AttendanceReport = () => {
     const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
 
     // Day-of-week abbreviations
-    const DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
     const enrolledIds = new Set(
-      enrollments.filter((e) => e.classId === selectedClass.id).map((e) => e.studentId)
+      enrollments
+        .filter((e) => e.classId === selectedClass.id)
+        .map((e) => e.studentId),
     );
     const enrolledStudents = students.filter((s) => enrolledIds.has(s.id));
 
@@ -583,52 +585,62 @@ const AttendanceReport = () => {
         (a) =>
           (a.classId === selectedClass.id || !a.classId) &&
           enrolledIds.has(a.studentId) &&
-          a.date.startsWith(`${yearStr}-${monthStr}`)
+          a.date.startsWith(`${yearStr}-${monthStr}`),
       )
       .forEach((a) => {
         if (!recMap[a.studentId]) recMap[a.studentId] = {};
         // abbreviate status: Present->P, Absent->A, Late->L, Permission->Perm
-        const abbr = { Present: 'P', Absent: 'A', Late: 'L', Permission: 'Perm' }[a.status] ?? a.status;
+        const abbr =
+          { Present: "P", Absent: "A", Late: "L", Permission: "Perm" }[
+            a.status
+          ] ?? a.status;
         recMap[a.studentId][a.date] = abbr;
       });
 
     const teacher = staff?.find((s) => s.id === selectedClass.teacherId);
-    const monthLabel = new Date(year, monthIdx, 1).toLocaleString('default', { month: 'long' });
+    const monthLabel = new Date(year, monthIdx, 1).toLocaleString("default", {
+      month: "long",
+    });
 
     // CSV helper — wraps a cell in quotes if it contains commas
-    const cell = (v) => (String(v).includes(',') ? `"${v}"` : String(v));
+    const cell = (v) => (String(v).includes(",") ? `"${v}"` : String(v));
 
     // Column headers: day numbers 1..daysInMonth
     const dayNums = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     // Day-of-week row for each day
-    const dayDows = dayNums.map((d) => DOW[new Date(year, monthIdx, d).getDay()]);
+    const dayDows = dayNums.map(
+      (d) => DOW[new Date(year, monthIdx, d).getDay()],
+    );
 
     const prefix = `${yearStr}-${monthStr}`;
 
     const rows = [
       // ── Title block ──────────────────────────────────────────────
       `Monthly Class Attendance,,SchoolAdmin`,
-      `Teacher: ${cell(teacher?.name ?? '')},,Month: ${monthLabel},,Year: ${year}`,
+      `Teacher: ${cell(teacher?.name ?? "")},,Month: ${monthLabel},,Year: ${year}`,
       `Class: ${cell(selectedClass.name)} (${cell(selectedClass.level)}),,Room: ${cell(selectedClass.name)}`,
       `,,Enter: P=Present | A=Absent | L=Late | Perm=Permission`,
       ``,
       // ── Day-number header row ────────────────────────────────────
-      ['ID', 'Name', ...dayNums].map(cell).join(','),
+      ["ID", "Name", ...dayNums].map(cell).join(","),
       // ── Day-of-week sub-row ──────────────────────────────────────
-      ['', '', ...dayDows].map(cell).join(','),
+      ["", "", ...dayDows].map(cell).join(","),
       // ── One row per student ──────────────────────────────────────
       ...enrolledStudents.map((stu, idx) => {
         const statusByDate = recMap[stu.id] || {};
         const dayCells = dayNums.map((d) => {
-          const dateKey = `${yearStr}-${monthStr}-${String(d).padStart(2, '0')}`;
-          return statusByDate[dateKey] ?? '';
+          const dateKey = `${yearStr}-${monthStr}-${String(d).padStart(2, "0")}`;
+          return statusByDate[dateKey] ?? "";
         });
-        return [cell(idx + 1), cell(stu.name), ...dayCells].join(',');
+        return [cell(idx + 1), cell(stu.name), ...dayCells].join(",");
       }),
     ];
 
-    downloadCSV(`attendance_${selectedClass.name.replace(/\s+/g, '_')}_${prefix}.csv`, rows);
+    downloadCSV(
+      `attendance_${selectedClass.name.replace(/\s+/g, "_")}_${prefix}.csv`,
+      rows,
+    );
   };
 
   return (
@@ -670,7 +682,9 @@ const AttendanceReport = () => {
         {selectedClassId && (
           <div className="flex items-center gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Export by Month</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Export by Month
+              </label>
               <input
                 type="month"
                 value={exportMonth}
@@ -682,8 +696,18 @@ const AttendanceReport = () => {
               onClick={handleMonthExport}
               className="mt-4 flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200 text-sm font-bold rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
               </svg>
               Export CSV
             </button>
@@ -691,8 +715,18 @@ const AttendanceReport = () => {
               onClick={() => setIsPrintModalOpen(true)}
               className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold rounded-lg shadow-sm shadow-primary-200 dark:shadow-none transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                />
               </svg>
               Print A4
             </button>
@@ -706,7 +740,7 @@ const AttendanceReport = () => {
         onClose={() => setIsPrintModalOpen(false)}
         selectedClass={selectedClass}
         exportMonth={exportMonth}
-        students={classStudentsStats.map(s => s.student)}
+        students={classStudentsStats.map((s) => s.student)}
         attendance={attendance}
         staff={staff}
       />

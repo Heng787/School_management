@@ -224,7 +224,7 @@ const ClassesPage = () => {
           },
         );
       }
-      
+
       if (results?.requiresPreview) {
         setImportPreviewData(results.previewData);
       } else if (results) {
@@ -253,22 +253,23 @@ const ClassesPage = () => {
 
       const COPY_IF_MISSING = ["phone", "dob", "level"];
 
-      modifiedStudents.forEach(impStu => {
+      modifiedStudents.forEach((impStu) => {
         let finalId;
-        if (impStu._selectedMatchId === 'NEW') {
+        if (impStu._selectedMatchId === "NEW") {
           finalId = `s${++lastStuId}`;
           finalAdd.push({ ...impStu, id: finalId, sex: impStu.sex });
         } else {
           finalId = impStu._selectedMatchId;
-          const existing = students.find(s => s.id === finalId) || impStu;
-          
+          const existing = students.find((s) => s.id === finalId) || impStu;
+
           const updates = Object.fromEntries(
             COPY_IF_MISSING.filter((k) => !existing[k] && impStu[k]).map(
               (k) => [k, impStu[k]],
             ),
           );
-          if (impStu.status && existing.status !== impStu.status) updates.status = impStu.status;
-          
+          if (impStu.status && existing.status !== impStu.status)
+            updates.status = impStu.status;
+
           if (Object.keys(updates).length > 0) {
             finalUpdate.push({ ...existing, ...updates });
           }
@@ -279,20 +280,24 @@ const ClassesPage = () => {
       if (finalAdd.length > 0) await addStudents(finalAdd);
       if (finalUpdate.length > 0) await updateStudentsBatch(finalUpdate);
 
-      const finalEnrollments = (importPreviewData.mappedEnrollments || []).map(e => ({
-        ...e,
-        studentId: tempIdToFinalIdMap[e.studentId] || e.studentId
-      }));
+      const finalEnrollments = (importPreviewData.mappedEnrollments || []).map(
+        (e) => ({
+          ...e,
+          studentId: tempIdToFinalIdMap[e.studentId] || e.studentId,
+        }),
+      );
 
       // No grade handling for Classes import
       if (finalEnrollments.length > 0) await addEnrollments(finalEnrollments);
 
       state.setImportResults({
-        successCount: finalAdd.length + (importPreviewData.addedStaffCount || 0) + (importPreviewData.addedClassesCount || 0),
+        successCount:
+          finalAdd.length +
+          (importPreviewData.addedStaffCount || 0) +
+          (importPreviewData.addedClassesCount || 0),
         errorCount: importPreviewData.errors.length,
         errors: importPreviewData.errors,
       });
-
     } catch (e) {
       console.error(e);
       alert("Failed to save imported data.");

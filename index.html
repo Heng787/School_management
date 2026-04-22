@@ -67,8 +67,35 @@
     }
     
     /* Fine-tune global transition focus */
-    *:focus {
+    *:focus:not(:focus-visible) {
       outline: none;
+    }
+
+    /* Global dynamic and responsive button styles */
+    button {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+    }
+    
+    @media (hover: hover) and (pointer: fine) {
+      button:not(:disabled):hover {
+        transform: translateY(-1px);
+      }
+    }
+    
+    button:not(:disabled):active {
+      transform: scale(0.97) translateY(0);
+    }
+    
+    button:focus-visible {
+      outline: 2px solid #0ea5e9;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
   </style>
 </head>

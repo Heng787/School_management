@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { useData } from "../context/DataContext";
-import { StudentStatus, UserRole } from "../types";
+import { UserRole } from "../types";
 import { parseStudentCSV } from "../utils/csvParser";
 import { parseExcelFile } from "../utils/excelParser";
 import ImportResultsModal from "../components/ImportResultsModal";
@@ -14,14 +14,33 @@ import StudentHeaderActions from "../components/studentspage/StudentHeaderAction
 import StudentSearchBar from "../components/studentspage/StudentSearchBar";
 import StudentTable from "../components/studentspage/StudentTable";
 
+// Import custom hooks and utilities
+import {
+  useFilters,
+  useStudentSelection,
+  useModalState,
+  useImportState,
+  usePaginationState,
+} from "../hooks/useStudentsPageState";
+import {
+  applyAllFilters,
+  buildDisplayClassesMap,
+} from "../utils/studentFilterUtils";
+import {
+  prepareStudentsForPreview,
+  processFinalStudentList,
+  remapRelatedData,
+} from "../utils/importProcessingUtils";
+
 const ITEMS_PER_PAGE = 20;
 
 /**
  * PAGE: StudentsPage
  * DESCRIPTION: Main view for student management with component-based architecture.
+ * REFACTORED: Uses custom hooks for cleaner state management
  */
 const StudentsPage = () => {
-  // --- 1. STATE & REFS ---
+  // --- 1. CONTEXT & DATA ---
   const {
     students,
     staff,
@@ -42,118 +61,60 @@ const StudentsPage = () => {
     saveGradeBatch,
   } = useData();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
-  const [selectedReportStudent, setSelectedReportStudent] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isDeletingId, setIsDeletingId] = useState(null);
-  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState(null);
-  const [importPreviewData, setImportPreviewData] = useState(null);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importResults, setImportResults] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [classFilter, setClassFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [pageSize, setPageSize] = useState(10);
+  // --- 2. CUSTOM HOOKS FOR STATE MANAGEMENT ---
+  const filters = useFilters();
+  const selection = useStudentSelection();
+  const modals = useModalState();
+  const importState = useImportState();
+  const pagination = usePaginationState();
+
+  // --- 3. REFS ---
   const fileInputRef = useRef(null);
   const highlightedRowRef = useRef(null);
-  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
-  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
+  // --- 4. DERIVED VALUES ---
   const isAdmin = currentUser?.role === UserRole.Admin;
   const isOffice = currentUser?.role === UserRole.OfficeWorker;
 
-  // --- 2. MEMOIZED DATA ---
-  const filteredStudents = useMemo(() => {
-    let result = students;
+  // --- 5. MEMOIZED DATA ---
+  const filteredStudents = useMemo(
+    () =>
+      applyAllFilters(students, currentUser, classes, enrollments, {
+        searchTerm: filters.searchTerm,
+        classFilter: filters.classFilter,
+        statusFilter: filters.statusFilter,
+      }),
+    [
+      students,
+      currentUser,
+      classes,
+      enrollments,
+      filters.searchTerm,
+      filters.classFilter,
+      filters.statusFilter,
+    ],
+  );
 
-    if (currentUser?.role === UserRole.Teacher) {
-      const teacherClasses = classes.filter(
-        (c) => c.teacherId === currentUser.id,
-      );
-      const teacherClassIds = new Set(teacherClasses.map((c) => c.id));
-      const teacherStudentIds = new Set(
-        enrollments
-          .filter((e) => teacherClassIds.has(e.classId))
-          .map((e) => e.studentId),
-      );
-      result = result.filter((s) => teacherStudentIds.has(s.id));
-    } else if (!currentUser || isAdmin || isOffice) {
-      // Keep all students
-    } else {
-      result = [];
-    }
+  const displayClassesMap = useMemo(
+    () =>
+      buildDisplayClassesMap(
+        filteredStudents,
+        currentUser,
+        classes,
+        enrollments,
+      ),
+    [filteredStudents, currentUser, classes, enrollments],
+  );
 
-    if (searchTerm.trim()) {
-      const lowerterm = searchTerm.toLowerCase();
-      result = result.filter(
-        (s) =>
-          s.name.toLowerCase().includes(lowerterm) ||
-          s.id.toString().toLowerCase().includes(lowerterm) ||
-          (s.phone && s.phone.includes(lowerterm)),
-      );
-    }
-
-    if (statusFilter !== "All") {
-      result = result.filter((s) => s.status === statusFilter);
-    }
-
-    if (classFilter !== "All") {
-      const enrolledStudentIds = new Set(
-        enrollments.filter((e) => e.classId === classFilter).map((e) => e.studentId)
-      );
-      result = result.filter((s) => enrolledStudentIds.has(s.id));
-    }
-
-    return result;
-  }, [
-    students,
-    currentUser,
-    classes,
-    enrollments,
-    isAdmin,
-    isOffice,
-    searchTerm,
-    statusFilter,
-    classFilter,
-  ]);
-
-  // Build display classes map for each student
-  const displayClassesMap = useMemo(() => {
-    const map = {};
-    filteredStudents.forEach((student) => {
-      const studentEnrollments = enrollments.filter(
-        (e) => e.studentId === student.id,
-      );
-      let displayClasses = [];
-
-      if (currentUser?.role === UserRole.Teacher) {
-        const teacherClassEnrollment = studentEnrollments.find((e) => {
-          const cls = classes.find((c) => c.id === e.classId);
-          return cls && cls.teacherId === currentUser.id;
-        });
-        if (teacherClassEnrollment) {
-          const cls = classes.find(
-            (c) => c.id === teacherClassEnrollment.classId,
-          );
-          if (cls) displayClasses.push(cls);
-        }
-      } else {
-        displayClasses = studentEnrollments
-          .map((e) => classes.find((c) => c.id === e.classId))
-          .filter(Boolean);
-      }
-      map[student.id] = displayClasses;
-    });
-    return map;
-  }, [filteredStudents, enrollments, classes, currentUser]);
-
-  // --- 3. SIDE EFFECTS ---
+  // --- 6. SIDE EFFECTS ---
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, classFilter, statusFilter, pageSize]);
+    pagination.resetPagination();
+  }, [
+    filters.searchTerm,
+    filters.classFilter,
+    filters.statusFilter,
+    pagination.pageSize,
+  ]);
 
   useEffect(() => {
     if (highlightedStudentId) {
@@ -162,7 +123,9 @@ const StudentsPage = () => {
       );
       if (index !== -1) {
         const targetPage = Math.floor(index / ITEMS_PER_PAGE) + 1;
-        if (currentPage !== targetPage) setCurrentPage(targetPage);
+        if (pagination.currentPage !== targetPage) {
+          pagination.setCurrentPage(targetPage);
+        }
         setTimeout(
           () =>
             highlightedRowRef.current?.scrollIntoView({
@@ -179,66 +142,35 @@ const StudentsPage = () => {
     highlightedStudentId,
     setHighlightedStudentId,
     filteredStudents,
-    currentPage,
+    pagination.currentPage,
+    pagination.setCurrentPage,
   ]);
 
-  // --- 4. ACTION HANDLERS ---
-  const handleOpenModal = (student = null) => {
-    setEditingStudent(student);
-    setIsModalOpen(true);
-  };
-
+  // --- 7. DELETION HANDLERS ---
   const handleBulkDelete = async () => {
-    const ids = Array.from(selectedStudentIds);
+    const ids = Array.from(selection.selectedStudentIds);
     for (const id of ids) {
       await deleteStudent(id);
     }
-    setSelectedStudentIds(new Set());
-    setIsBulkDeleteModalOpen(false);
-  };
-
-  const toggleSelect = (id) => {
-    const next = new Set(selectedStudentIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedStudentIds(next);
-  };
-
-  const toggleSelectAllOnPage = () => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const pageIds = filteredStudents
-      .slice(startIndex, startIndex + ITEMS_PER_PAGE)
-      .map((s) => s.id);
-    const allSelected = pageIds.every((id) => selectedStudentIds.has(id));
-    const next = new Set(selectedStudentIds);
-    if (allSelected) {
-      pageIds.forEach((id) => next.delete(id));
-    } else {
-      pageIds.forEach((id) => next.add(id));
-    }
-    setSelectedStudentIds(next);
-  };
-
-  const handleDeleteRequest = (student) => {
-    setStudentToDelete(student);
-    setIsConfirmDeleteOpen(true);
+    selection.clearSelection();
+    modals.closeBulkDeleteModal();
   };
 
   const handleDelete = async (id) => {
     if (!id) return;
     try {
-      setIsDeletingId(id);
+      pagination.setIsDeletingId(id);
       await deleteStudent(id);
     } catch (e) {
       console.error(e);
       alert("Deletion failed. Please try again.");
     } finally {
-      setIsDeletingId(null);
-      setStudentToDelete(null);
+      pagination.setIsDeletingId(null);
+      modals.closeDeleteConfirm();
     }
   };
 
-  // --- 5. DATA IMPORT / EXPORT HANDLERS ---
+  // --- 8. CSV/EXCEL EXPORT HANDLERS ---
   const handleDownloadTemplate = () => {
     const headers = [
       "Full Name",
@@ -268,56 +200,39 @@ const StudentsPage = () => {
     link.click();
   };
 
+  // --- 9. FILE IMPORT HANDLERS ---
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.name.endsWith(".csv")) {
-      const { validStudents, errors } = await parseStudentCSV(await file.text());
-      const previewStudents = [];
-      validStudents.forEach((impStu) => {
-        const existingMatches = students.filter((s) => s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase());
-        impStu._tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        
-        if (existingMatches.length > 0) {
-          impStu._possibleMatches = existingMatches;
-          let defaultMatch;
-          if (impStu._genderInferred) {
-             defaultMatch = existingMatches[0];
-          } else {
-             defaultMatch = existingMatches.find((s) => s.sex.toLowerCase() === impStu.sex.toLowerCase());
-          }
-          impStu._selectedMatchId = defaultMatch ? defaultMatch.id : 'NEW';
-        } else {
-          impStu._selectedMatchId = 'NEW';
-        }
-        previewStudents.push(impStu);
-      });
+      const { validStudents, errors } = await parseStudentCSV(
+        await file.text(),
+      );
+      const previewStudents = prepareStudentsForPreview(
+        validStudents,
+        students,
+      );
 
       if (previewStudents.length > 0) {
-        setImportPreviewData({
+        importState.setImportPreviewData({
           type: "csv",
           studentsToPreview: previewStudents,
-          errors
+          errors,
         });
       } else {
-        setImportResults({
+        importState.setImportResults({
           successCount: 0,
           errorCount: errors.length,
           errors: errors,
         });
-        setIsImportModalOpen(true);
+        importState.setIsImportModalOpen(true);
       }
     } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
       try {
         const result = await parseExcelFile(file);
         const classIDMap = {};
-        const studentsToAdd = [];
-        const studentsToUpdate = [];
-        let lastStuId = students
-          .map((s) => parseInt(s.id.substring(1), 10))
-          .filter((id) => !isNaN(id))
-          .reduce((max, curr) => Math.max(max, curr), 0);
+        let lastStuId = 0;
 
         // Smart class matching
         if (result.classes && result.classes.length > 0) {
@@ -340,28 +255,29 @@ const StudentsPage = () => {
         const previewStudents = [];
         if (result.students?.length > 0) {
           for (const impStu of result.students) {
-            const existingMatches = students.filter(
-              (s) => s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase()
-            );
-
-            impStu._tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+            impStu._tempId = `temp_${Date.now()}_${Math.random()
+              .toString(36)
+              .substr(2, 5)}`;
             studentIDMap[impStu.id] = impStu._tempId;
+
+            const existingMatches = students.filter(
+              (s) =>
+                s.name.trim().toLowerCase() ===
+                impStu.name.trim().toLowerCase(),
+            );
 
             if (existingMatches.length > 0) {
               impStu._possibleMatches = existingMatches;
-              let defaultMatch;
-              if (impStu._genderInferred) {
-                defaultMatch = existingMatches[0];
-              } else {
-                defaultMatch = existingMatches.find(s => s.sex.toLowerCase() === impStu.sex.toLowerCase());
-              }
-              impStu._selectedMatchId = defaultMatch ? defaultMatch.id : 'NEW';
+              const defaultMatch = existingMatches.find(
+                (s) => s.sex.toLowerCase() === impStu.sex.toLowerCase(),
+              );
+              impStu._selectedMatchId = defaultMatch ? defaultMatch.id : "NEW";
             } else {
-              impStu._selectedMatchId = 'NEW';
+              impStu._selectedMatchId = "NEW";
             }
             previewStudents.push(impStu);
           }
-        } // end of students loop
+        }
 
         // Smart enrollment matching
         let mappedEnrollments = [];
@@ -398,7 +314,9 @@ const StudentsPage = () => {
               ...grd,
               studentId: studentIDMap[grd.studentId] || grd.studentId,
               classId: classIDMap[grd.classId],
-              id: `grd_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              id: `grd_imp_${Date.now()}_${Math.random()
+                .toString(36)
+                .substr(2, 5)}`,
             }));
 
           const newSubjects = new Set();
@@ -422,7 +340,7 @@ const StudentsPage = () => {
         }
 
         if (previewStudents.length > 0) {
-          setImportPreviewData({
+          importState.setImportPreviewData({
             type: "excel",
             studentsToPreview: previewStudents,
             mappedEnrollments,
@@ -430,13 +348,13 @@ const StudentsPage = () => {
             errors: result.errors?.map((err) => ({ message: err })) || [],
           });
         } else {
-          setImportResults({
-            successCount: (result.grades?.length || 0),
+          importState.setImportResults({
+            successCount: result.grades?.length || 0,
             errorCount: result.errors?.length || 0,
             errors: result.errors?.map((err) => ({ message: err })) || [],
             message: `Import complete! Added ${result.grades?.length || 0} marks.`,
           });
-          setIsImportModalOpen(true);
+          importState.setIsImportModalOpen(true);
         }
       } catch (err) {
         alert("Failed to parse Excel file: " + err.message);
@@ -446,79 +364,65 @@ const StudentsPage = () => {
     e.target.value = "";
   };
 
+  // --- 10. IMPORT CONFIRMATION ---
   const handleConfirmImport = async (modifiedStudents) => {
-    if (!importPreviewData) return;
+    if (!importState.importPreviewData) return;
 
     try {
-      const finalAdd = [];
-      const finalUpdate = [];
-      const tempIdToFinalIdMap = {};
-
-      let lastStuId = students
-        .map((s) => parseInt(s.id.substring(1), 10))
-        .filter((id) => !isNaN(id))
-        .reduce((max, curr) => Math.max(max, curr), 0);
-
-      const COPY_IF_MISSING = ["phone", "dob", "level"];
-
-      modifiedStudents.forEach(impStu => {
-        let finalId;
-        if (impStu._selectedMatchId === 'NEW') {
-          finalId = `s${++lastStuId}`;
-          finalAdd.push({ ...impStu, id: finalId, sex: impStu.sex });
-        } else {
-          finalId = impStu._selectedMatchId;
-          const existing = students.find(s => s.id === finalId) || impStu;
-          
-          if (importPreviewData.type === "excel") {
-             const updates = Object.fromEntries(
-                COPY_IF_MISSING.filter((k) => !existing[k] && impStu[k]).map(
-                  (k) => [k, impStu[k]],
-                ),
-             );
-             if (impStu.status && existing.status !== impStu.status) updates.status = impStu.status;
-             
-             if (Object.keys(updates).length > 0) {
-                finalUpdate.push({ ...existing, ...updates });
-             }
-          }
-        }
-        tempIdToFinalIdMap[impStu._tempId] = finalId;
-      });
+      const { finalAdd, finalUpdate, tempIdToFinalIdMap } =
+        processFinalStudentList(
+          modifiedStudents,
+          students,
+          importState.importPreviewData.type,
+        );
 
       if (finalAdd.length > 0) await addStudents(finalAdd);
-      if (finalUpdate.length > 0 && importPreviewData.type === "excel") await updateStudentsBatch(finalUpdate);
-
-      if (importPreviewData.type === "excel") {
-        const finalEnrollments = (importPreviewData.mappedEnrollments || []).map(e => ({
-          ...e,
-          studentId: tempIdToFinalIdMap[e.studentId] || e.studentId
-        }));
-        const finalGrades = (importPreviewData.mappedGrades || []).map(g => ({
-          ...g,
-          studentId: tempIdToFinalIdMap[g.studentId] || g.studentId
-        }));
-
-        if (finalEnrollments.length > 0) await addEnrollments(finalEnrollments);
-        if (finalGrades.length > 0) await saveGradeBatch(finalGrades);
+      if (
+        finalUpdate.length > 0 &&
+        importState.importPreviewData.type === "excel"
+      ) {
+        await updateStudentsBatch(finalUpdate);
       }
 
-      setImportResults({
-        successCount: finalAdd.length + (importPreviewData.type === "excel" ? (importPreviewData.mappedGrades?.length || 0) : 0),
-        errorCount: importPreviewData.errors.length,
-        errors: importPreviewData.errors,
-      });
+      if (importState.importPreviewData.type === "excel") {
+        const { remappedEnrollments, remappedGrades } = remapRelatedData(
+          importState.importPreviewData.mappedEnrollments,
+          importState.importPreviewData.mappedGrades,
+          tempIdToFinalIdMap,
+        );
 
+        if (remappedEnrollments.length > 0)
+          await addEnrollments(remappedEnrollments);
+        if (remappedGrades.length > 0) await saveGradeBatch(remappedGrades);
+      }
+
+      importState.setImportResults({
+        successCount:
+          finalAdd.length +
+          (importState.importPreviewData.type === "excel"
+            ? importState.importPreviewData.mappedGrades?.length || 0
+            : 0),
+        errorCount: importState.importPreviewData.errors.length,
+        errors: importState.importPreviewData.errors,
+      });
     } catch (e) {
       console.error(e);
       alert("Failed to save imported data.");
     } finally {
-      setImportPreviewData(null);
-      setIsImportModalOpen(true);
+      importState.setImportPreviewData(null);
+      importState.setIsImportModalOpen(true);
     }
   };
 
-  // --- 6. RENDER ---
+  // --- 11. PAGINATION HELPERS ---
+  const pageIds = useMemo(() => {
+    const startIndex = (pagination.currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredStudents
+      .slice(startIndex, startIndex + ITEMS_PER_PAGE)
+      .map((s) => s.id);
+  }, [filteredStudents, pagination.currentPage]);
+
+  // --- 12. RENDER ---
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
@@ -526,12 +430,12 @@ const StudentsPage = () => {
           onExport={handleExportCSV}
           onDownloadTemplate={handleDownloadTemplate}
           onImport={() => fileInputRef.current?.click()}
-          onAddStudent={() => handleOpenModal()}
+          onAddStudent={() => modals.openStudentModal()}
           fileInputRef={fileInputRef}
           isAdmin={isAdmin}
           isOffice={isOffice}
-          selectedCount={selectedStudentIds.size}
-          onBulkDelete={() => setIsBulkDeleteModalOpen(true)}
+          selectedCount={selection.selectedStudentIds.size}
+          onBulkDelete={() => modals.openBulkDeleteModal()}
         />
         <input
           type="file"
@@ -542,98 +446,118 @@ const StudentsPage = () => {
         />
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-4">
-        <StudentSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      <div className="flex flex-col sm:flex-row gap-3 mb-6 p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl w-fit items-center shadow-sm">
+        <div className="w-full sm:w-72">
+          <StudentSearchBar
+            searchTerm={filters.searchTerm}
+            setSearchTerm={filters.setSearchTerm}
+          />
+        </div>
+        
+        <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-700/60 mx-1" />
+
         <div className="flex gap-2 w-full sm:w-auto">
-          <select
-            value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-            className="flex-1 sm:flex-none px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
-          >
-            <option value="All">All Classes</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.level ? `/ ${c.level}` : ""}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="flex-1 sm:flex-none px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm"
-          >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
+          <div className="relative flex-1 sm:flex-none">
+            <select
+              value={filters.classFilter}
+              onChange={(e) => filters.setClassFilter(e.target.value)}
+              className="w-full appearance-none pl-4 pr-10 py-2.5 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <option value="All">All Classes</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.level ? `/ ${c.level}` : ""}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="relative flex-1 sm:flex-none">
+            <select
+              value={filters.statusFilter}
+              onChange={(e) => filters.setStatusFilter(e.target.value)}
+              className="w-full appearance-none pl-4 pr-10 py-2.5 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <option value="All">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
       <StudentTable
         filteredStudents={filteredStudents}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        pageSize={pageSize}
-        setPageSize={setPageSize}
+        currentPage={pagination.currentPage}
+        setCurrentPage={pagination.setCurrentPage}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
         highlightedStudentId={highlightedStudentId}
         displayClassesMap={displayClassesMap}
         staff={staff}
         isAdmin={isAdmin}
         isOffice={isOffice}
-        selectedStudentIds={selectedStudentIds}
-        isDeletingId={isDeletingId}
-        onSelectStudent={toggleSelect}
-        onSelectAllOnPage={toggleSelectAllOnPage}
-        onEdit={handleOpenModal}
-        onDelete={handleDeleteRequest}
-        onReportCard={(student) => {
-          setSelectedReportStudent(student);
-          setIsReportModalOpen(true);
-        }}
+        selectedStudentIds={selection.selectedStudentIds}
+        isDeletingId={pagination.isDeletingId}
+        onSelectStudent={selection.toggleSelect}
+        onSelectAllOnPage={() => selection.toggleSelectAllOnPage(pageIds)}
+        onEdit={modals.openStudentModal}
+        onDelete={modals.openDeleteConfirm}
+        onReportCard={modals.openReportModal}
         loading={loading}
       />
 
       {/* Modals */}
-      {isModalOpen && (
+      {modals.isModalOpen && (
         <StudentModal
-          studentData={editingStudent}
-          onClose={() => setIsModalOpen(false)}
+          studentData={modals.editingStudent}
+          onClose={modals.closeStudentModal}
         />
       )}
-      {isReportModalOpen && selectedReportStudent && (
+      {modals.isReportModalOpen && modals.selectedReportStudent && (
         <ReportCardModal
-          student={selectedReportStudent}
-          onClose={() => setIsReportModalOpen(false)}
+          student={modals.selectedReportStudent}
+          onClose={modals.closeReportModal}
         />
       )}
-      {importPreviewData && (
+      {importState.importPreviewData && (
         <ImportPreviewModal
-          students={importPreviewData.studentsToPreview}
+          students={importState.importPreviewData.studentsToPreview}
           onConfirm={handleConfirmImport}
-          onCancel={() => setImportPreviewData(null)}
+          onCancel={() => importState.setImportPreviewData(null)}
         />
       )}
-      {isImportModalOpen && (
+      {importState.isImportModalOpen && (
         <ImportResultsModal
-          results={importResults}
-          onClose={() => setIsImportModalOpen(false)}
+          results={importState.importResults}
+          onClose={() => importState.setIsImportModalOpen(false)}
         />
       )}
       <ConfirmModal
-        isOpen={isConfirmDeleteOpen}
-        onClose={() => setIsConfirmDeleteOpen(false)}
-        onConfirm={() => handleDelete(studentToDelete?.id)}
+        isOpen={modals.isConfirmDeleteOpen}
+        onClose={modals.closeDeleteConfirm}
+        onConfirm={() => handleDelete(modals.studentToDelete?.id)}
         title="Delete Student"
-        message={`Are you sure you want to delete ${studentToDelete?.name}? This action cannot be undone.`}
+        message={`Are you sure you want to delete ${modals.studentToDelete?.name}? This action cannot be undone.`}
       />
-      {isBulkDeleteModalOpen && (
+      {modals.isBulkDeleteModalOpen && (
         <ConfirmModal
-          isOpen={isBulkDeleteModalOpen}
-          onClose={() => setIsBulkDeleteModalOpen(false)}
+          isOpen={modals.isBulkDeleteModalOpen}
+          onClose={modals.closeBulkDeleteModal}
           onConfirm={handleBulkDelete}
           title="Delete Selected Students"
-          message={`Are you sure you want to permanently delete ${selectedStudentIds.size} selected students? This will also remove their enrollments, attendance, and grades.`}
-          confirmText={`Delete ${selectedStudentIds.size} Students`}
+          message={`Are you sure you want to permanently delete ${selection.selectedStudentIds.size} selected students? This will also remove their enrollments, attendance, and grades.`}
+          confirmText={`Delete ${selection.selectedStudentIds.size} Students`}
           confirmColor="red"
         />
       )}

@@ -52,7 +52,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
     }, [currentUser]);
 
     return (
-        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20 px-4 lg:px-6 flex items-center justify-between transition-colors duration-300">
+        <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-[60] px-4 lg:px-6 flex items-center justify-between transition-colors duration-300">
             <div className="flex items-center space-x-4">
                 {/* Sidebar Toggle Button */}
                 <button

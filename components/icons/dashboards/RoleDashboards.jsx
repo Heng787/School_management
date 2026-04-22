@@ -262,14 +262,15 @@ export const AdminDashboard = ({ navigate }) => {
               <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 transition-colors">
                 Enrollment Trend
               </p>
-              <div className="h-16 w-[110%] -ml-2 -mb-2">
+              <div className="h-16 w-[110%] -ml-2 -mb-2 text-slate-900 dark:text-white">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={enrollmentTrends}>
                     <Area
                       type="monotone"
                       dataKey="count"
-                      stroke="#0ea5e9"
-                      fill="#e0f2fe"
+                      stroke="currentColor"
+                      fill="currentColor"
+                      fillOpacity={0.15}
                       strokeWidth={3}
                     />
                   </AreaChart>

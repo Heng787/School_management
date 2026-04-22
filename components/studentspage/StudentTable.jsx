@@ -26,23 +26,23 @@ const StudentTable = ({
   loading,
 }) => {
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedStudents = filteredStudents.slice(
-    startIndex,
-    startIndex + pageSize,
-  );
+  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + pageSize);
   const totalPages = Math.ceil(filteredStudents.length / pageSize) || 1;
   const highlightedRowRef = useRef(null);
 
+  const colHeader = "px-5 py-3.5 text-left text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap";
+
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
+    <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700/60 shadow-sm bg-white dark:bg-slate-900 transition-colors duration-300">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
-          <thead className="bg-slate-50 dark:bg-slate-800/50">
-            <tr>
-              <th className="px-4 py-4 w-10 text-center">
+        <table className="min-w-full">
+          {/* Header */}
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
+              <th className="px-4 py-3.5 w-10 text-center">
                 <input
                   type="checkbox"
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer w-4 h-4"
+                  className="rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500 cursor-pointer w-4 h-4"
                   checked={
                     paginatedStudents.length > 0 &&
                     paginatedStudents.every((s) => selectedStudentIds.has(s.id))
@@ -50,30 +50,18 @@ const StudentTable = ({
                   onChange={onSelectAllOnPage}
                 />
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Gender
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                DOB
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Contact
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Class
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className={colHeader}>Name</th>
+              <th className={colHeader}>Gender</th>
+              <th className={colHeader}>DOB</th>
+              <th className={colHeader}>Contact</th>
+              <th className={colHeader}>Class</th>
+              <th className={colHeader}>Status</th>
+              <th className={`${colHeader} text-right`}>Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+
+          {/* Body */}
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {paginatedStudents.map((student) => {
               const isHighlighted = student.id === highlightedStudentId;
               const isDeleting = isDeletingId === student.id;
@@ -99,51 +87,85 @@ const StudentTable = ({
                 />
               );
             })}
+
             {filteredStudents.length === 0 && !loading && (
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-6 py-12 text-center text-slate-400 dark:text-slate-500 italic"
-                >
-                  No records found.
+                <td colSpan={8} className="py-20 text-center">
+                  <div className="flex flex-col items-center gap-3 text-slate-400 dark:text-slate-600">
+                    <svg className="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.125-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.125-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p className="text-sm font-medium">No students found</p>
+                    <p className="text-xs">Try adjusting your search or filter criteria</p>
+                  </div>
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination footer */}
       {filteredStudents.length > 0 && (
-        <div className="bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Page {currentPage} of {totalPages}
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
+            Showing{" "}
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{startIndex + 1}</span>
+            {" "}–{" "}
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
+              {Math.min(startIndex + pageSize, filteredStudents.length)}
+            </span>
+            {" "}of{" "}
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{filteredStudents.length}</span>
           </p>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-2">
+            {/* Page size */}
             <select
               value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-2 py-1.5 text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="text-xs text-slate-600 dark:text-slate-300 rounded-lg px-2.5 py-1.5 cursor-pointer
+                bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600
+                focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
             >
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
+              <option value={10}>10 / page</option>
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
             </select>
-            <div className="flex gap-2">
+
+            {/* Prev / Next */}
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400
+                  border border-slate-200 dark:border-slate-700
+                  hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200
+                  disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                Prev
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
               </button>
+
+              <span className="px-3 py-1.5 text-xs font-semibold rounded-lg
+                bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600
+                text-slate-700 dark:text-slate-200 shadow-sm">
+                {currentPage} / {totalPages}
+              </span>
+
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                className="p-2 rounded-lg border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400
+                  border border-slate-200 dark:border-slate-700
+                  hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200
+                  disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                Next
+                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
               </button>
             </div>
           </div>
