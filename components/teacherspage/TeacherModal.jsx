@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useData } from "../../context/DataContext";
 import { StaffRole } from "../../types";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 /**
  * COMPONENT: TeacherModal
  * DESCRIPTION: Modal for adding and editing staff records.
  */
 const TeacherModal = ({ staffData, onClose }) => {
+  const modalRef = useFocusTrap(onClose);
   const { addStaff, updateStaff } = useData();
   const [formData, setFormData] = useState({
     name: "",
@@ -17,6 +19,7 @@ const TeacherModal = ({ staffData, onClose }) => {
     dob: "",
     hireDate: new Date().toISOString().split("T")[0],
   });
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -51,9 +54,11 @@ const TeacherModal = ({ staffData, onClose }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (isSaving) return;
 
     const isTeacherRole =
       formData.role === StaffRole.Teacher ||
@@ -64,6 +69,8 @@ const TeacherModal = ({ staffData, onClose }) => {
       );
       return;
     }
+
+    setIsSaving(true);
 
     let contactString = "";
     if (formData.phone && formData.email) {
@@ -83,12 +90,18 @@ const TeacherModal = ({ staffData, onClose }) => {
       subject: isTeacherRole ? formData.subject || undefined : undefined,
     };
 
-    if (staffData) {
-      updateStaff({ ...staffData, ...payload });
-    } else {
-      addStaff(payload);
+    try {
+      if (staffData) {
+        await updateStaff({ ...staffData, ...payload });
+      } else {
+        await addStaff(payload);
+      }
+      onClose();
+    } catch (err) {
+      setError("Failed to save. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    onClose();
   };
 
   const inputClasses =
@@ -96,9 +109,15 @@ const TeacherModal = ({ staffData, onClose }) => {
   const labelClasses = "block text-sm font-medium text-primary-900";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
+    <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-md z-50 flex justify-center items-center p-2 sm:p-4">
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="teacher-modal-title"
+        className="bg-white rounded-lg shadow-xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto"
+      >
+        <h2 id="teacher-modal-title" className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
           {staffData ? "Edit Staff Member" : "Add New Staff Member"}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -190,9 +209,13 @@ const TeacherModal = ({ staffData, onClose }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+              disabled={isSaving}
+              className={`px-4 py-2 bg-primary-600 text-white rounded-md transition-all flex items-center gap-2 ${isSaving ? "opacity-70 cursor-not-allowed" : "hover:bg-primary-700"}`}
             >
-              {staffData ? "Update Staff Member" : "Add Staff Member"}
+              {isSaving && (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              {isSaving ? "Saving..." : (staffData ? "Update Staff Member" : "Add Staff Member")}
             </button>
           </div>
         </form>

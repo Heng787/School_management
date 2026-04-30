@@ -1,11 +1,19 @@
 import React from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const ImportResultsModal = ({ results, onClose }) => {
+    const containerRef = useFocusTrap(!!results);
     if (!results) return null;
+
+    const hasErrors   = results.errorCount > 0;
+    const hasWarnings = results.warnings?.length > 0;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-results-title">
-            <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div 
+                ref={containerRef}
+                className="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[90vh] flex flex-col"
+            >
                 <h2 id="import-results-title" className="text-2xl font-bold text-gray-800 mb-4">Import Results</h2>
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -19,10 +27,15 @@ const ImportResultsModal = ({ results, onClose }) => {
                     </div>
                 </div>
 
-                {results.errorCount > 0 && (
-                     <div className="flex-grow overflow-hidden flex flex-col">
+                {hasErrors && (
+                     <div className="flex-grow overflow-hidden flex flex-col mb-4">
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">Error Details</h3>
-                        <div className="border rounded-lg overflow-y-auto" tabIndex={0}>
+                        <div 
+                            className="border rounded-lg overflow-y-auto focus:outline-none focus:ring-2 focus:ring-primary-500" 
+                            tabIndex={0}
+                            role="region"
+                            aria-label="Error details list"
+                        >
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50 sticky top-0 z-10">
                                     <tr>
@@ -42,6 +55,19 @@ const ImportResultsModal = ({ results, onClose }) => {
                         </div>
                     </div>
                 )}
+
+                {hasWarnings && (
+                    <div className="mb-4">
+                        <h3 className="text-base font-semibold text-amber-700 mb-2">⚠ Notices</h3>
+                        <ul className="space-y-1">
+                            {results.warnings.map((w, i) => (
+                                <li key={i} className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-4 py-2">
+                                    {w.message}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
                 
                 <div className="flex justify-end pt-6">
                     <button onClick={onClose} className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Close</button>
@@ -52,3 +78,4 @@ const ImportResultsModal = ({ results, onClose }) => {
 };
 
 export default ImportResultsModal;
+

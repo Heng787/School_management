@@ -18,15 +18,25 @@ const ClassList = ({
   onEdit,
   onDelete,
 }) => {
+  const hasAnyClasses = Object.values(classesByTimeSlot).some(arr => arr && arr.length > 0);
+
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
-      {allSessionLabels.length === 0 &&
-      classesByTimeSlot["Other Schedule"]?.length === 0 ? (
-        <div className="p-12 text-center">
-          <p className="text-slate-500 dark:text-slate-400 italic">
-            No sessions defined and no classes exist. Go to Class Settings to
-            add school sessions (time slots).
-          </p>
+    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 overflow-hidden transition-all duration-300">
+      {!hasAnyClasses ? (
+        <div className="p-16 text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-600">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">No Classes Found</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs mx-auto mt-1">
+              {allSessionLabels.length === 0 
+                ? "Go to Class Settings to add school sessions (time slots) first." 
+                : "No classes match your current filter criteria. Try adjusting your filters or add a new class."}
+            </p>
+          </div>
         </div>
       ) : (
         [...allSessionLabels, "Other Schedule"].map((label) => {
@@ -37,16 +47,19 @@ const ClassList = ({
           return (
             <div
               key={label}
-              className="border-b last:border-b-0 border-slate-100"
+              className="border-b last:border-b-0 border-slate-100 dark:border-slate-800"
             >
               {/* Time Slot Header */}
-              <div className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm px-6 py-2.5 flex justify-between items-center border-y border-slate-100 dark:border-slate-800 sticky top-0 z-10 transition-colors">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
-                  <h3 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+              <div className="bg-slate-50/50 dark:bg-slate-800/50 px-6 py-3 flex justify-between items-center border-y border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
+                  <h3 className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">
                     {label}
                   </h3>
                 </div>
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-full">
+                  {slotClasses.length} Classes
+                </span>
               </div>
 
               {/* Class Rows */}
@@ -58,7 +71,7 @@ const ClassList = ({
                   const studentCount = enrollments.filter(
                     (e) => e.classId === cls.id,
                   ).length;
-                  const capacity = 30;
+                  const capacity = cls.capacity || 30; // Use dynamic capacity if available
                   const percentage = Math.min(
                     (studentCount / capacity) * 100,
                     100,

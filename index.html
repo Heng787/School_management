@@ -14,28 +14,39 @@
   <title>School Admin</title>
   <!-- Tailwind CSS for utility-first styling -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts for typography -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script>
-    // Tailwind configuration with custom theme colors
+    // Tailwind configuration with custom theme colors and extensions for a premium feel
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: { 'sans': ['Inter', 'sans-serif'] },
+          fontFamily: { 
+            'sans': ['Inter', 'system-ui', 'sans-serif'],
+            'display': ['Outfit', 'Inter', 'sans-serif']
+          },
           colors: {
             primary: {
-              '50': '#f0f9ff', '100': '#e0f2fe', '200': '#bae6fd', '300': '#7dd3fc',
-              '400': '#38bdf8', '500': '#0ea5e9', '600': '#0284c7', '700': '#0369a1',
-              '800': '#075985', '900': '#0f172a', '950': '#020617',
+              '50': '#eff6ff', '100': '#dbeafe', '200': '#bfdbfe', '300': '#93c5fd',
+              '400': '#60a5fa', '500': '#3b82f6', '600': '#2563eb', '700': '#1d4ed8',
+              '800': '#1e40af', '900': '#1e3a8a', '950': '#172554',
             },
             slate: {
               50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1',
               400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
               800: '#1e293b', 900: '#0f172a', 950: '#020617',
             }
+          },
+          boxShadow: {
+            'premium': '0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 10px -1px rgba(0, 0, 0, 0.03)',
+            'premium-hover': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.5rem',
           }
         }
       }
@@ -52,18 +63,35 @@
       }
     })();
   </script>
-  <!-- Vite handles all module resolution during dev and build -->
-  <!-- Style handled via Tailwind CDN -->
-  <!-- Custom utilities for hiding scrollbars and overall UI polish -->
   <style>
-    /* Hide scrollbar for Chrome, Safari and Opera */
+    :root {
+      --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      --surface-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+      --bg-light: #f1f5f9;
+      --bg-light-alt: #e2e8f0;
+      --glass-bg: rgba(255, 255, 255, 0.95);
+      --glass-border: rgba(203, 213, 225, 0.4);
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Selection Color */
+    ::selection {
+      background-color: rgba(59, 130, 246, 0.2);
+      color: #1d4ed8;
+    }
+
+    .dark ::selection {
+      background-color: rgba(59, 130, 246, 0.3);
+      color: #bfdbfe;
+    }
+
+    /* Consistently Hide scrollbar classes */
     .scrollbar-hide::-webkit-scrollbar {
       display: none;
     }
-    /* Hide scrollbar for IE, Edge and Firefox */
     .scrollbar-hide {
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;  /* Firefox */
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
     
     /* Fine-tune global transition focus */
@@ -71,31 +99,231 @@
       outline: none;
     }
 
-    /* Global dynamic and responsive button styles */
-    button {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      will-change: transform;
+    /* Glassmorphism Classes */
+    .glass-light {
+      background: var(--glass-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--card-shadow);
+    }
+    
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .glass-card {
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .dark .glass-card:hover {
+      background: rgba(30, 41, 59, 0.6);
+      border-color: rgba(59, 130, 246, 0.15);
+      box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Custom Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.45);
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.4);
+    }
+    
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: rgba(51, 65, 85, 0.7);
+    }
+
+    /* Target all scrollable elements */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+    }
+
+    .dark * {
+      scrollbar-color: rgba(51, 65, 85, 0.4) transparent;
+    }
+
+    /* Global dynamic and responsive interactive styles */
+    button, 
+    [role="button"],
+    input[type="submit"],
+    input[type="button"] {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform, box-shadow, filter;
+      position: relative;
     }
     
     @media (hover: hover) and (pointer: fine) {
-      button:not(:disabled):hover {
-        transform: translateY(-1px);
+      button:not(:disabled):hover,
+      [role="button"]:not(:disabled):hover {
+        transform: translateY(-2px);
+        filter: brightness(1.05);
       }
     }
     
-    button:not(:disabled):active {
-      transform: scale(0.97) translateY(0);
+    button:not(:disabled):active,
+    [role="button"]:not(:disabled):active {
+      transform: scale(0.96) translateY(1px);
+      filter: brightness(0.95);
+      box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
     }
     
-    button:focus-visible {
-      outline: 2px solid #0ea5e9;
+    /* Input & Select responsiveness */
+    input:not([type="checkbox"]):not([type="radio"]), 
+    select, 
+    textarea {
+      transition: all 0.2s ease;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]):focus, 
+    select:focus, 
+    textarea:focus {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.15);
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2px solid #3b82f6;
       outline-offset: 2px;
-      border-radius: 4px;
     }
     
     button:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Layout Polishing */
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .card-shadow {
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 10px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Animation Utilities */
+    .page-transition {
+      animation: pageIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
+    
+    .row-entrance {
+      animation: rowIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes pageIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(8px) scale(0.99); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+      }
+    }
+
+    @keyframes rowIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(6px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+
+    .skeleton-shimmer {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    .dark .skeleton-shimmer {
+      background: linear-gradient(
+        90deg,
+        rgba(30, 41, 59, 0) 0%,
+        rgba(51, 65, 85, 0.4) 50%,
+        rgba(30, 41, 59, 0) 100%
+      );
+      background-size: 200% 100%;
+    }
+
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to { background-position: -200% 0; }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Calendar Animations */
+    .calendar-slide-left {
+      animation: calendarSlideLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .calendar-slide-right {
+      animation: calendarSlideRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes calendarSlideLeft {
+      from { opacity: 0; transform: translateX(30px) scale(0.98); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes calendarSlideRight {
+      from { opacity: 0; transform: translateX(-30px) scale(0.98); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    /* Accessibility: Respect user preference for reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
 </head>

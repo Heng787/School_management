@@ -1,195 +1,97 @@
 import React from "react";
 
-/**
- * COMPONENT: CloudSyncStatus
- * DESCRIPTION: Displays cloud synchronization status and provides sync controls.
- */
-const CloudSyncStatus = ({
-  triggerSync,
-  lastSyncedAt,
-  isSyncing,
-  isOnline,
-}) => {
-  /**
-   * Format the last synced time for display.
-   */
+const InfoCard = ({ title, value, subtitle, dotColor }) => (
+  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+    <div className="flex items-center justify-between mb-4">
+      <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{title}</h3>
+      {dotColor && <div className={`w-3 h-3 rounded-full shadow-sm ${dotColor}`} />}
+    </div>
+    <div>
+      <p className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{value}</p>
+      <p className="text-xs font-bold text-slate-500 dark:text-slate-500 mt-1">{subtitle}</p>
+    </div>
+  </div>
+);
+
+const CloudSyncStatus = ({ triggerSync, lastSyncedAt, isSyncing, isOnline }) => {
   const formatLastSynced = () => {
     if (!lastSyncedAt) return "Never";
-
-    const date = new Date(lastSyncedAt);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
+    const diffMins = Math.floor((new Date() - new Date(lastSyncedAt)) / 60000);
     if (diffMins < 1) return "Just now";
-    if (diffMins < 60)
-      return `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`;
-    if (diffHours < 24)
-      return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hrs ago`;
+    return new Date(lastSyncedAt).toLocaleDateString();
+  };
 
-    return date.toLocaleDateString();
+  const handleClearCache = () => {
+    if (window.confirm("Clear all cached data? This will reload the application.")) {
+      localStorage.clear();
+      location.reload();
+    }
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors duration-300">
-      <h2 className="text-xl font-semibold text-gray-700 dark:text-white mb-2 transition-colors">
-        Cloud Synchronization
-      </h2>
-      <p className="text-sm text-gray-500 dark:text-slate-400 mb-8 transition-colors">
-        Keep your data synchronized across all your devices and ensure no data
-        loss.
-      </p>
+    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 animate-in fade-in duration-500">
+      <div className="mb-8">
+        <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-2">Cloud Engine</h2>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">Manage your local data cache and synchronization protocols.</p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Connection Status */}
-        <div className="p-6 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 transition-colors">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-700 dark:text-slate-300 transition-colors">Connection Status</h3>
-            <div
-              className={`w-3 h-3 rounded-full transition-colors ${isOnline ? "bg-green-500 dark:bg-green-400" : "bg-red-500 dark:bg-red-400"}`}
-            ></div>
-          </div>
-          <p
-            className={`text-2xl font-bold transition-colors ${isOnline ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-          >
-            {isOnline ? "Online" : "Offline"}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-slate-500 mt-2 transition-colors">
-            {isOnline
-              ? "Your device is connected to the internet and can sync."
-              : "Your device is currently offline. Changes will sync when you reconnect."}
-          </p>
-        </div>
-
-        {/* Last Synced */}
-        <div className="p-6 rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 transition-colors">
-          <h3 className="font-bold text-gray-700 dark:text-slate-300 mb-4 transition-colors">Last Synchronized</h3>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 transition-colors">
-            {formatLastSynced()}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-slate-500 mt-2 transition-colors">
-            {lastSyncedAt
-              ? new Date(lastSyncedAt).toLocaleString()
-              : "No synchronization yet"}
-          </p>
-        </div>
+        <InfoCard
+          title="Network Link"
+          value={isOnline ? "Connected" : "Offline"}
+          subtitle={isOnline ? "Secure connection active" : "Local mode active"}
+          dotColor={isOnline ? "bg-emerald-500 shadow-emerald-500/20" : "bg-rose-500 shadow-rose-500/20"}
+        />
+        <InfoCard
+          title="Last Synchronized"
+          value={formatLastSynced()}
+          subtitle={lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : "No sync data"}
+          dotColor="bg-primary-500 shadow-primary-500/20"
+        />
       </div>
 
-      {/* Sync Status */}
-      <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 rounded-xl transition-colors">
-        <div className="flex items-center gap-3">
+      <div className={`mb-8 p-5 rounded-2xl border transition-all duration-300 flex items-center gap-4 ${isSyncing ? "bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800/30" : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"}`}>
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${isSyncing ? "bg-primary-100 dark:bg-primary-900/40 text-primary-600" : "bg-white dark:bg-slate-800 text-slate-500"}`}>
           {isSyncing ? (
-            <>
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce delay-100"></div>
-                <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-bounce delay-200"></div>
-              </div>
-              <p className="text-sm font-bold text-blue-900 dark:text-blue-300">Syncing data...</p>
-            </>
+            <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           ) : (
-            <>
-              <svg
-                className="w-5 h-5 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <p className="text-sm font-bold text-green-900 dark:text-green-300">
-                All data synchronized
-              </p>
-            </>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
           )}
         </div>
+        <div>
+          <p className={`text-sm font-black ${isSyncing ? "text-primary-900 dark:text-primary-300" : "text-slate-700 dark:text-slate-300"}`}>
+            {isSyncing ? "Data Exchange in Progress..." : "Data Synchronized"}
+          </p>
+          <p className={`text-xs font-bold mt-0.5 ${isSyncing ? "text-primary-600 dark:text-primary-400" : "text-slate-500"}`}>
+            {isSyncing ? "Please do not close the application" : "All local changes are backed up"}
+          </p>
+        </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <button
           onClick={triggerSync}
           disabled={isSyncing || !isOnline}
-          className="px-4 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
+          className="flex-1 py-4 bg-primary-600 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-primary-700 active:scale-95 disabled:opacity-50 transition-all shadow-xl shadow-primary-500/20 flex items-center justify-center gap-2"
         >
-          <svg
-            className={`w-5 h-5 ${isSyncing ? "animate-spin" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          {isSyncing ? "Synchronizing..." : "Sync Now"}
+          {isSyncing ? "Syncing..." : "Force Sync Now"}
         </button>
-
         <button
+          onClick={handleClearCache}
           disabled={isSyncing}
-          className="px-4 py-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          onClick={() => {
-            if (
-              window.confirm(
-                "Clear all cached data? This will reload the page.",
-              )
-            ) {
-              localStorage.clear();
-              location.reload();
-            }
-          }}
+          className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-          Clear Cache
+          Clear Local Cache
         </button>
       </div>
 
-      <div className="mt-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl transition-colors">
-        <div className="flex gap-3">
-          <svg
-            className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <div>
-            <p className="text-sm font-bold text-amber-900 dark:text-amber-300 font-bold">Sync Information</p>
-            <p className="text-xs text-amber-800 dark:text-amber-400 mt-1 transition-colors">
-              Your data syncs automatically when changes are made and you're
-              online. Clearing the cache will remove all local data. Use only if
-              you're experiencing sync issues.
-            </p>
-          </div>
+      <div className="p-5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-2xl flex items-start gap-4">
+        <span className="text-amber-500 text-lg mt-0.5">⚠️</span>
+        <div>
+          <p className="text-sm font-black text-amber-900 dark:text-amber-300">System Information</p>
+          <p className="text-xs font-bold text-amber-700 dark:text-amber-500 mt-1">Data syncs automatically when online. Clearing the cache removes all offline data. Use only for troubleshooting.</p>
         </div>
       </div>
     </div>

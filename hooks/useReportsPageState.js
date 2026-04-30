@@ -1,40 +1,50 @@
-import { useState, useRef } from "react";
+import { useState } from 'react';
 
 /**
- * Combines all state management for ReportsPage
+ * Combines all state management for ReportsPage.
  */
 export const useReportsPageState = () => {
-  // Marks Entry state
+  // --- Marks Entry State ---
+
   const [selectedMarksClassId, setSelectedMarksClassId] = useState(
-    () => sessionStorage.getItem("reports_marks_class") || "",
+    () => sessionStorage.getItem('reports_marks_class') || ''
   );
+
   const [selectedTerm, setSelectedTerm] = useState(
-    () => sessionStorage.getItem("reports_marks_term") || "Midterm",
+    () => sessionStorage.getItem('reports_marks_term') || 'Midterm'
   );
+
   const [localGrades, setLocalGrades] = useState({});
   const [modifiedStudents, setModifiedStudents] = useState(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Export Center state
-  const [exportMode, setExportMode] = useState("class");
-  const [selectedExportClassId, setSelectedExportClassId] = useState(
-    () => sessionStorage.getItem("reports_export_class") || "",
-  );
-  const [selectedLevel, setSelectedLevel] = useState("");
+  // --- Export Center State ---
 
-  // Attendance Report state
-  const [selectedAttendanceClassId, setSelectedAttendanceClassId] = useState(
-    () => sessionStorage.getItem("reports_attendance_class") || "",
+  const [exportMode, setExportMode] = useState('class');
+
+  const [selectedExportClassId, setSelectedExportClassId] = useState(
+    () => sessionStorage.getItem('reports_export_class') || ''
   );
+
+  const [selectedLevel, setSelectedLevel] = useState('');
+
+  // --- Attendance Report State ---
+
+  const [selectedAttendanceClassId, setSelectedAttendanceClassId] = useState(
+    () => sessionStorage.getItem('reports_attendance_class') || ''
+  );
+
   const [expandedStudentId, setExpandedStudentId] = useState(null);
   const [flaggedIds, setFlaggedIds] = useState(new Set());
+
   const [timeRange, setTimeRange] = useState(
-    () => sessionStorage.getItem("reports_attendance_time") || "today",
+    () => sessionStorage.getItem('reports_attendance_time') || 'today'
   );
 
-  // Main page state
-  const [activeTab, setActiveTab] = useState("marks");
+  // --- Main Page State ---
+
+  const [activeTab, setActiveTab] = useState('marks');
 
   return {
     // Marks
@@ -50,6 +60,7 @@ export const useReportsPageState = () => {
     setIsSaving,
     saveSuccess,
     setSaveSuccess,
+
     // Export
     exportMode,
     setExportMode,
@@ -57,6 +68,7 @@ export const useReportsPageState = () => {
     setSelectedExportClassId,
     selectedLevel,
     setSelectedLevel,
+
     // Attendance
     selectedAttendanceClassId,
     setSelectedAttendanceClassId,
@@ -66,6 +78,7 @@ export const useReportsPageState = () => {
     setFlaggedIds,
     timeRange,
     setTimeRange,
+
     // Main
     activeTab,
     setActiveTab,

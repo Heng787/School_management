@@ -32,14 +32,14 @@ const LeaveModal = ({ onSend, onClose }) => {
               <h3 className="text-base font-bold text-slate-800 dark:text-white transition-colors">
                 Request Leave
               </h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500 transition-colors">
+              <p className="text-xs text-slate-500 dark:text-slate-500 transition-colors">
                 Submit to school administrator
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-400 dark:text-slate-500"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-500"
           >
             <svg
               className="w-5 h-5"

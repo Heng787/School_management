@@ -4,56 +4,57 @@ import React, {
   useRef,
   useCallback,
   useMemo,
-} from "react";
-import { useData } from "../context/DataContext";
-import { UserRole } from "../types";
+} from 'react';
+
+import ChatHeader from '../components/messagespage/ChatHeader';
+import ChatMessages from '../components/messagespage/ChatMessages';
+import ConversationList from '../components/messagespage/ConversationList';
+import IncidentModal from '../components/messagespage/IncidentModal';
+import LeaveModal from '../components/messagespage/LeaveModal';
+import MessageInput from '../components/messagespage/MessageInput';
+import { useData } from '../context/DataContext';
 import {
   fetchMessages,
   sendMessage,
   markAsRead,
   updateLeaveStatus,
   subscribeToMessages,
-  deleteOldMessages,
   deleteMessage,
   updateMessage,
   uploadAttachment,
   ADMIN_KEY,
-} from "../services/messageService";
+} from '../services/messageService';
 
-// Import sub-components
-import ConversationList from "../components/messagespage/ConversationList";
-import ChatHeader from "../components/messagespage/ChatHeader";
-import ChatMessages from "../components/messagespage/ChatMessages";
-import MessageInput from "../components/messagespage/MessageInput";
-import LeaveModal from "../components/messagespage/LeaveModal";
-import IncidentModal from "../components/messagespage/IncidentModal";
+import { UserRole } from '../types';
 
 /**
  * PAGE: MessagesPage
  * DESCRIPTION: Main messaging interface with component-based architecture.
  */
 const MessagesPage = () => {
-  const { currentUser, staff, addStaffPermission } = useData();
+  // --- Context & Data ---
+  const { currentUser, staff, classes, staffPermissions, addStaffPermission } = useData();
   const isAdmin = currentUser?.role === UserRole.Admin;
-  const myDbId = isAdmin ? ADMIN_KEY : currentUser?.id || "";
-  const myName = currentUser?.name || "Administrator";
+  const myDbId = isAdmin ? ADMIN_KEY : currentUser?.id || '';
+  const myName = currentUser?.name || 'Administrator';
 
-  // --- 1. STATE & REFS ---
+  // --- State & Refs ---
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeConversation, setActiveConversation] = useState("");
+  const [activeConversation, setActiveConversation] = useState('');
   const [mobileShowChat, setMobileShowChat] = useState(false);
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [modal, setModal] = useState(null);
   const [attachment, setAttachment] = useState(null);
-  const fileInputRef = useRef(null);
   const [announcementMode, setAnnouncementMode] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
   const initRef = useRef(false);
 
-  // --- 2. DATA LOADING ---
+  // --- Data Loading ---
   const load = useCallback(async () => {
     const data = await fetchMessages(myDbId, isAdmin);
     setMessages(data);
@@ -69,10 +70,10 @@ const MessagesPage = () => {
                 .map((m) =>
                   staffIdSet.has(m.senderId) ? m.senderId : m.recipientId,
                 )
-                .filter((id) => id !== "all" && staffIdSet.has(id)),
+                .filter((id) => id !== 'all' && staffIdSet.has(id)),
             ),
           ];
-          const defaultId = ids[0] || staff[0]?.id || "";
+          const defaultId = ids[0] || staff[0]?.id || '';
           setActiveConversation(defaultId);
           initRef.current = true;
         }
@@ -90,10 +91,9 @@ const MessagesPage = () => {
 
   useEffect(() => {
     load();
-    deleteOldMessages();
     const interval = setInterval(load, 8000);
     const channel = subscribeToMessages(myDbId, isAdmin, (newMsg) => {
-      if (newMsg.content === "__DELETED__") {
+      if (newMsg.content === '__DELETED__') {
         setMessages((prev) => prev.filter((m) => m.id !== newMsg.id));
         return;
       }
@@ -103,6 +103,7 @@ const MessagesPage = () => {
         return [...prev, newMsg];
       });
     });
+
     return () => {
       clearInterval(interval);
       channel?.unsubscribe();
@@ -110,7 +111,7 @@ const MessagesPage = () => {
   }, [myDbId, isAdmin, load]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeConversation]);
 
   useEffect(() => {
@@ -121,9 +122,20 @@ const MessagesPage = () => {
     if (unread.length > 0) markAsRead(unread);
   }, [activeConversation, messages]);
 
-  // --- 3. MEMOIZED DATA ---
+  // --- Memoized Data ---
   const staffConversations = useMemo(() => {
     const filteredStaff = staff.filter((s) => {
+      // Exclude specific roles from the messaging system
+      const excludedRoles = [
+        'Cleaner',
+        'Guard',
+        'Teacher Assistant',
+        'Teacher Assistance',
+        'Assistant Teacher',
+        'Assistance Teacher'
+      ];
+      if (excludedRoles.includes(s.role)) return false;
+
       if (isAdmin) return true;
       // Every non-admin user can see and message all other staff members
       return s.id !== currentUser?.id;
@@ -131,13 +143,32 @@ const MessagesPage = () => {
 
     const contacts = filteredStaff.map((s) => {
       const msgs = messages.filter(
-        (m) => m.senderId === s.id || m.recipientId === s.id,
+        (m) => (m.senderId === s.id && m.recipientId === ADMIN_KEY) ||
+               (m.senderId === ADMIN_KEY && m.recipientId === s.id),
       );
       const lastMsg = msgs[msgs.length - 1];
       const unread = msgs.filter(
         (m) => !m.isRead && m.senderId === s.id,
       ).length;
-      return { id: s.id, name: s.name, role: s.role, lastMsg, unread };
+
+      // Enrich with role, room, and status
+      const staffClass = classes.find(c => c.teacherId === s.id);
+      const room = staffClass ? staffClass.name : 'Office';
+      
+      // Determine status (simulated/logic-based)
+      const today = new Date().toLocaleDateString('en-CA');
+      const isOnLeave = staffPermissions.some(p => p.staffId === s.id && p.startDate <= today && p.endDate >= today);
+      const status = isOnLeave ? 'away' : (Math.random() > 0.3 ? 'online' : 'offline');
+
+      return { 
+        id: s.id, 
+        name: s.name, 
+        role: s.role, 
+        room, 
+        status,
+        lastMsg, 
+        unread 
+      };
     });
 
     if (!isAdmin) {
@@ -150,8 +181,10 @@ const MessagesPage = () => {
       ).length;
       contacts.unshift({
         id: ADMIN_KEY,
-        name: "Administrator",
-        role: "Support",
+        name: 'Administrator',
+        role: 'Support',
+        room: 'HQ',
+        status: 'online',
         lastMsg,
         unread,
       });
@@ -186,20 +219,24 @@ const MessagesPage = () => {
   const staffIdSet = new Set(staff.map((s) => s.id));
 
   const conversationMessages = messages.filter((m) => {
+    // 1. If in "All Chat" mode, only show announcements/broadcasts
+    if (activeConversation === 'all') {
+      return m.recipientId === 'all' || m.type === 'announcement';
+    }
+
+    // 2. If in a private conversation, NEVER show broadcasts
+    if (m.recipientId === 'all' || m.type === 'announcement') return false;
+
+    // 3. Handle private message filtering
     if (isAdmin) {
-      if (activeConversation === "all") return m.type === "announcement";
+      // Admin sees chat with a specific staff member
       return (
-        m.senderId === activeConversation ||
-        m.recipientId === activeConversation
+        (m.senderId === activeConversation && m.recipientId === ADMIN_KEY) ||
+        (m.senderId === ADMIN_KEY && m.recipientId === activeConversation)
       );
     }
-    if (m.recipientId === "all") return true;
-    if (activeConversation === ADMIN_KEY) {
-      return (
-        (m.senderId === myDbId && m.recipientId === ADMIN_KEY) ||
-        (m.senderId === ADMIN_KEY && m.recipientId === myDbId)
-      );
-    }
+    
+    // For non-admins (Staff seeing chat with Admin or another Staff)
     return (
       (m.senderId === myDbId && m.recipientId === activeConversation) ||
       (m.senderId === activeConversation && m.recipientId === myDbId)
@@ -219,19 +256,19 @@ const MessagesPage = () => {
     ? staff.find((s) => s.id === activeConversation)
     : null;
 
-  // --- 4. ACTION HANDLERS ---
+  // --- Action Handlers ---
   const handleSend = async (e) => {
     e?.preventDefault();
     if ((!text.trim() && !attachment) || sending) return;
 
     setSending(true);
-    const recipient = announcementMode ? "all" : activeConversation;
+    const recipient = announcementMode ? 'all' : activeConversation;
 
     let metadata = undefined;
     if (attachment) {
       const fileUrl = await uploadAttachment(attachment);
       if (fileUrl) {
-        const isImage = attachment.type.startsWith("image/");
+        const isImage = attachment.type.startsWith('image/');
         metadata = isImage
           ? { imageUrl: fileUrl, fileName: attachment.name }
           : { fileUrl, fileName: attachment.name };
@@ -242,7 +279,7 @@ const MessagesPage = () => {
       senderId: myDbId,
       senderName: myName,
       recipientId: recipient,
-      type: announcementMode ? "announcement" : "text",
+      type: announcementMode ? 'announcement' : 'text',
       content: text.trim(),
       metadata,
       isAdmin,
@@ -250,7 +287,7 @@ const MessagesPage = () => {
 
     if (newMsg) {
       setMessages((prev) => [...prev, newMsg]);
-      setText("");
+      setText('');
       setAttachment(null);
     }
     setSending(false);
@@ -293,18 +330,18 @@ const MessagesPage = () => {
       ),
     );
 
-    if (status === "approved") {
+    if (status === 'approved') {
       const msg = messages.find((m) => m.id === id);
       if (msg && msg.metadata) {
         await addStaffPermission({
           staffId: msg.senderId,
-          type: msg.metadata.leaveType || "Personal Leave",
+          type: msg.metadata.leaveType || 'Personal Leave',
           startDate:
-            msg.metadata.startDate || new Date().toISOString().split("T")[0],
+            msg.metadata.startDate || new Date().toISOString().split('T')[0],
           endDate:
-            msg.metadata.endDate || new Date().toISOString().split("T")[0],
-          reason: msg.content.includes("Reason:")
-            ? msg.content.split("Reason:")[1]?.trim()
+            msg.metadata.endDate || new Date().toISOString().split('T')[0],
+          reason: msg.content.includes('Reason:')
+            ? msg.content.split('Reason:')[1]?.trim()
             : msg.content,
           createdAt: new Date().toISOString(),
         });
@@ -317,7 +354,7 @@ const MessagesPage = () => {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
-  // --- 5. RENDER ---
+  // --- Render ---
   return (
     <div className="flex h-[calc(100vh-8rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-300">
       {/* Conversation List */}
@@ -338,7 +375,7 @@ const MessagesPage = () => {
 
       {/* Chat Panel */}
       <div
-        className={`flex-1 flex flex-col min-w-0 w-full ${isMultiRecipient && !mobileShowChat ? "hidden md:flex" : "flex"}`}
+        className={`flex-1 flex flex-col min-w-0 w-full ${isMultiRecipient && !mobileShowChat ? 'hidden md:flex' : 'flex'}`}
       >
         {/* Chat Header */}
         <ChatHeader
@@ -401,19 +438,19 @@ const MessagesPage = () => {
       </div>
 
       {/* Modals */}
-      {modal === "leave" && (
+      {modal === 'leave' && (
         <LeaveModal
           onClose={() => setModal(null)}
           onSend={(content, metadata) =>
-            handleQuickSend(content, metadata, "leave_request")
+            handleQuickSend(content, metadata, 'leave_request')
           }
         />
       )}
-      {modal === "incident" && (
+      {modal === 'incident' && (
         <IncidentModal
           onClose={() => setModal(null)}
           onSend={(content, metadata) =>
-            handleQuickSend(content, metadata, "incident")
+            handleQuickSend(content, metadata, 'incident')
           }
         />
       )}

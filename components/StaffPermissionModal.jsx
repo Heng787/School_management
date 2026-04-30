@@ -67,7 +67,7 @@ const StaffPermissionModal = ({ staff, onClose }) => {
 
                             {permissions.length === 0 ? (
                                 <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 flex flex-col items-center justify-center space-y-3">
-                                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-500 mb-2">
                                         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                     </div>
                                     <h4 className="text-lg font-semibold text-slate-700">No History Yet</h4>
@@ -86,13 +86,13 @@ const StaffPermissionModal = ({ staff, onClose }) => {
                                                         {p.type}
                                                     </span>
                                                     <span className="text-sm font-semibold text-slate-700 flex items-center">
-                                                        <svg className="w-4 h-4 mr-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                        <svg className="w-4 h-4 mr-1 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                                         {new Date(p.startDate).toLocaleDateString()}
-                                                        {p.startDate !== p.endDate && <span className="ml-1 text-slate-400">to {new Date(p.endDate).toLocaleDateString()}</span>}
+                                                        {p.startDate !== p.endDate && <span className="ml-1 text-slate-500">to {new Date(p.endDate).toLocaleDateString()}</span>}
                                                     </span>
                                                 </div>
                                                 <p className="text-slate-600 bg-slate-50 p-3 rounded-xl text-sm leading-relaxed border border-slate-100">
-                                                    {p.reason || <span className="italic text-slate-400">No specific reason provided.</span>}
+                                                    {p.reason || <span className="italic text-slate-500">No specific reason provided.</span>}
                                                 </p>
                                             </div>
 
@@ -189,7 +189,7 @@ const StaffPermissionModal = ({ staff, onClose }) => {
                                 <div className="space-y-2">
                                     <label className="text-sm font-bold text-slate-700 flex justify-between">
                                         <span>Reason / Medical Note</span>
-                                        <span className="text-slate-400 font-normal text-xs uppercase tracking-wider">Required</span>
+                                        <span className="text-slate-500 font-normal text-xs uppercase tracking-wider">Required</span>
                                     </label>
                                     <textarea
                                         value={reason}

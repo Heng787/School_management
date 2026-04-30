@@ -32,14 +32,14 @@ const IncidentModal = ({ onSend, onClose }) => {
               <h3 className="text-base font-bold text-slate-800 dark:text-white transition-colors">
                 Incident Report
               </h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500 transition-colors">
+              <p className="text-xs text-slate-500 dark:text-slate-500 transition-colors">
                 Report to school administrator
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-400 dark:text-slate-500"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-500"
           >
             <svg
               className="w-5 h-5"
@@ -67,7 +67,7 @@ const IncidentModal = ({ onSend, onClose }) => {
                   key={s}
                   type="button"
                   onClick={() => setSeverity(s)}
-                  className={`py-2 rounded-xl border-2 text-xs font-bold transition-all ${severity === s ? severityStyles[s] + " scale-[1.02]" : "border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 hover:border-slate-300 dark:hover:border-slate-700"}`}
+                  className={`py-2 rounded-xl border-2 text-xs font-bold transition-all ${severity === s ? severityStyles[s] + " scale-[1.02]" : "border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-600 hover:border-slate-300 dark:hover:border-slate-700"}`}
                 >
                   {s === "Low" ? "🟡" : s === "Medium" ? "🟠" : "🔴"} {s}
                 </button>

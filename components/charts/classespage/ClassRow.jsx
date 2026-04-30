@@ -28,19 +28,29 @@ const ClassRow = ({
     <div
       key={cls.id}
       ref={isHighlighted ? highlightedRowRef : null}
-      className={`group transition-all duration-200 border-b border-slate-300 dark:border-slate-800 last:border-0 ${
+      className={`group transition-all duration-300 border-b border-slate-200/60 dark:border-slate-800/60 last:border-0 ${
         isSelected
-          ? "bg-emerald-50/50 dark:bg-emerald-900/10"
+          ? "bg-emerald-50/80 dark:bg-emerald-900/20"
           : isHighlighted
-            ? "bg-yellow-50 dark:bg-yellow-900/10"
+            ? "bg-yellow-50 dark:bg-yellow-900/20"
             : isExpanded
-              ? "bg-slate-50/80 dark:bg-slate-800/50 shadow-sm"
-              : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+              ? "bg-slate-50/90 dark:bg-slate-800/60 shadow-inner"
+              : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 hover:shadow-sm"
       }`}
     >
       <div
-        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 cursor-pointer"
+        role="button"
+        tabIndex="0"
+        aria-expanded={isExpanded}
+        aria-label={`${isExpanded ? "Collapse" : "Expand"} details for ${cls.name}`}
+        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 cursor-pointer outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500 dark:focus:ring-emerald-400 rounded-2xl"
         onClick={() => onToggleExpand(isExpanded ? null : cls.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggleExpand(isExpanded ? null : cls.id);
+          }
+        }}
       >
         {/* Left Section */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -54,6 +64,7 @@ const ClassRow = ({
                   onToggleSelect(cls.id);
                 }}
                 onClick={(e) => e.stopPropagation()}
+                aria-label={`Select ${cls.name}`}
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
               />
             </div>
@@ -66,6 +77,7 @@ const ClassRow = ({
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -90,6 +102,7 @@ const ClassRow = ({
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -118,20 +131,27 @@ const ClassRow = ({
                 >
                   {studentCount}{" "}
                   <span
-                    className={`${percentage >= 100 ? "text-red-500" : "text-slate-500 dark:text-slate-400"} font-bold ml-0.5`}
+                    className={`${percentage >= 100 ? "text-red-500" : "text-slate-600 dark:text-slate-400"} font-bold ml-0.5`}
                   >
                     / {capacity}
                   </span>
                 </span>
               </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
+              <div 
+                role="progressbar"
+                aria-valuenow={studentCount}
+                aria-valuemin="0"
+                aria-valuemax={capacity}
+                aria-label={`Enrollment for ${cls.name}: ${studentCount} out of ${capacity}`}
+                className="w-full bg-slate-200/80 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner flex"
+              >
                 <div
                   className={`h-2 rounded-full transition-all duration-1000 ease-out ${
                     percentage >= 100
-                      ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+                      ? "bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_12px_rgba(239,68,68,0.8)]"
                       : percentage > 80
-                        ? "bg-amber-400"
-                        : "bg-emerald-500"
+                        ? "bg-gradient-to-r from-amber-500 to-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+                        : "bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
                   }`}
                   style={{ width: `${percentage}%` }}
                 ></div>
@@ -169,8 +189,9 @@ const ClassRow = ({
 
       {/* Expansion Panel */}
       {isExpanded && (
-        <div className="bg-white dark:bg-slate-900 border-t border-slate-300 dark:border-slate-800 p-5 animate-in fade-in slide-in-from-top-2 duration-300">
-          <h4 className="text-[11px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider mb-4">
+        <div className="bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200/60 dark:border-slate-800/60 p-5 animate-in fade-in slide-in-from-top-2 duration-300 shadow-inner">
+          <h4 className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500"></div>
             Enrolled Students ({studentCount})
           </h4>
           {enrolledStudentsInClass.length > 0 ? (
@@ -178,13 +199,13 @@ const ClassRow = ({
               {enrolledStudentsInClass.map((student) => (
                 <div
                   key={student.id}
-                  className="bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700/50 rounded-lg p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow"
+                  className="bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 rounded-xl p-3 flex items-center justify-between shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
                 >
                   <div className="flex flex-col truncate pr-3">
                     <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
                       {student.name}
                     </span>
-                    <span className="text-[10px] text-slate-500 font-medium dark:text-slate-500 font-mono mt-0.5">
+                    <span className="text-[10px] text-slate-600 font-medium dark:text-slate-400 font-mono mt-0.5">
                       ID:{" "}
                       {student.id.startsWith("stu_")
                         ? student.id.split("_").pop().substring(0, 6)
@@ -192,15 +213,21 @@ const ClassRow = ({
                     </span>
                   </div>
                   {student.status === "Active" ? (
-                    <span
-                      className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
-                      title="Active"
-                    ></span>
+                    <>
+                      <span
+                        className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
+                        aria-hidden="true"
+                      ></span>
+                      <span className="sr-only">Active</span>
+                    </>
                   ) : (
-                    <span
-                      className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"
-                      title="Inactive"
-                    ></span>
+                    <>
+                      <span
+                        className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"
+                        aria-hidden="true"
+                      ></span>
+                      <span className="sr-only">Inactive</span>
+                    </>
                   )}
                 </div>
               ))}

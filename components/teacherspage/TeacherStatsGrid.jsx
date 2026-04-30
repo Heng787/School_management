@@ -86,13 +86,13 @@ const TeacherStatsGrid = ({ stats }) => {
 
           {/* Stats text */}
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-500 mb-1">
               {card.title}
             </p>
             <p className="text-3xl font-extrabold text-slate-800 dark:text-white leading-none">
               {card.value}
             </p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 dark:text-slate-500 mt-1">
               {card.label}
             </p>
           </div>

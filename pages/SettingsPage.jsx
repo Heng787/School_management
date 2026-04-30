@@ -1,84 +1,79 @@
-import React, { useState, useEffect } from "react";
-import { useData } from "../context/DataContext";
-import { UserRole } from "../types";
-import OfflineGuide from "../components/settingspage/OfflineGuide";
-import DataManager from "../components/settingspage/DataManager";
-import CloudSyncStatus from "../components/settingspage/CloudSyncStatus";
-import AccountSettings from "../components/settingspage/AccountSettings";
+import React, { useState, useEffect } from 'react';
+
+import AccountSettings from '../components/settingspage/AccountSettings';
+import CloudSyncStatus from '../components/settingspage/CloudSyncStatus';
+import DataManager from '../components/settingspage/DataManager';
+import OfflineGuide from '../components/settingspage/OfflineGuide';
+import { useData } from '../context/DataContext';
+
+import { UserRole } from '../types';
 
 /**
  * PAGE: SettingsPage
  * DESCRIPTION: Central hub for system configuration, security, and data recovery.
  * LOCATION: /settings
- *
- * This page orchestrates tab navigation and displays appropriate sub-components
- * based on the selected tab and user's role/permissions.
- *
- * Sub-Components:
- * - AccountSettings: Password management (admin only)
- * - DataManager: JSON backup/restore functionality (admin only)
- * - CloudSyncStatus: Sync status and controls (admin only)
- * - OfflineGuide: PWA offline usage instructions (all users)
  */
 const SettingsPage = ({ onLogout, userRole }) => {
-  // --- 1. STATE & DATA INITIALIZATION ---
-  const { triggerSync, lastSyncedAt, isSyncing } = useData();
+  // --- Context & Data ---
+  const {
+    triggerSync,
+    lastSyncedAt,
+    isSyncing,
+    adminPassword,
+    setAdminPassword
+  } = useData();
+
   const isAdmin = userRole === UserRole.Admin;
   const isOffice = userRole === UserRole.OfficeWorker;
 
   // Read sub-tab from URL on mount (e.g. /settings/account → 'account')
   const getInitialSettingsTab = () => {
-    const parts = window.location.pathname.split("/");
+    const parts = window.location.pathname.split('/');
     const sub = parts[2]?.toLowerCase();
-    const valid = ["account", "data", "sync", "offline"];
-    return valid.includes(sub) ? sub : "account";
+    const valid = ['account', 'data', 'sync', 'offline'];
+    return valid.includes(sub) ? sub : 'account';
   };
 
   const [activeTab, setActiveTab] = useState(getInitialSettingsTab);
-  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
-  const [newPasswordInput, setNewPasswordInput] = useState("");
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
-  // --- 2. PASSWORD SUBMISSION HANDLER ---
-  /**
-   * Handles the submission of the admin password change form.
-   */
+  // --- Password Submission Handler ---
   const handleSubmitPassword = (e) => {
     e.preventDefault();
-    setPasswordError("");
-    setPasswordSuccess("");
-
-    const { adminPassword, setAdminPassword } = useData();
+    setPasswordError('');
+    setPasswordSuccess('');
 
     if (currentPasswordInput !== adminPassword) {
-      setPasswordError("Current password is not correct.");
+      setPasswordError('Current password is not correct.');
       return;
     }
 
     if (newPasswordInput.length < 4) {
-      setPasswordError("New password must be at least 4 characters long.");
+      setPasswordError('New password must be at least 4 characters long.');
       return;
     }
 
     if (newPasswordInput !== confirmPasswordInput) {
-      setPasswordError("New passwords do not match.");
+      setPasswordError('New passwords do not match.');
       return;
     }
 
     setAdminPassword(newPasswordInput);
-    setPasswordSuccess("Password updated successfully!");
-    setCurrentPasswordInput("");
-    setNewPasswordInput("");
-    setConfirmPasswordInput("");
+    setPasswordSuccess('Password updated successfully!');
+    setCurrentPasswordInput('');
+    setNewPasswordInput('');
+    setConfirmPasswordInput('');
   };
 
-  // --- 3. TAB CONFIGURATION & FILTERING ---
+  // --- Tab Configuration & Filtering ---
   const allTabs = [
     {
-      id: "account",
-      label: "Account",
+      id: 'account',
+      label: 'Account',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -98,8 +93,8 @@ const SettingsPage = ({ onLogout, userRole }) => {
       adminOnly: true,
     },
     {
-      id: "data",
-      label: "Database",
+      id: 'data',
+      label: 'Database',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -119,8 +114,8 @@ const SettingsPage = ({ onLogout, userRole }) => {
       adminOnly: true,
     },
     {
-      id: "sync",
-      label: "Cloud Sync",
+      id: 'sync',
+      label: 'Cloud Sync',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -140,8 +135,8 @@ const SettingsPage = ({ onLogout, userRole }) => {
       adminOnly: true,
     },
     {
-      id: "offline",
-      label: "Offline Help",
+      id: 'offline',
+      label: 'Offline Help',
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -166,46 +161,46 @@ const SettingsPage = ({ onLogout, userRole }) => {
     if (!tab.adminOnly) return true;
     if (isAdmin) return true;
     // Office Workers can access Data and Sync tabs
-    if (isOffice && (tab.id === "data" || tab.id === "sync")) return true;
+    if (isOffice && (tab.id === 'data' || tab.id === 'sync')) return true;
     return false;
   });
 
-  // --- 4. ACCESS CONTROL ---
+  // --- Access Control ---
   useEffect(() => {
     const hasAccess =
       isAdmin ||
       (isOffice &&
-        (activeTab === "data" ||
-          activeTab === "sync" ||
-          activeTab === "offline"));
-    if (!hasAccess && !isAdmin && activeTab !== "offline") {
-      setActiveTab("offline");
+        (activeTab === 'data' ||
+          activeTab === 'sync' ||
+          activeTab === 'offline'));
+    if (!hasAccess && !isAdmin && activeTab !== 'offline') {
+      setActiveTab('offline');
     }
   }, [isAdmin, isOffice, activeTab]);
 
-  // --- 5. RENDER ---
+  // --- Render ---
   return (
     <div className="container mx-auto max-w-4xl px-4 py-4 sm:py-8">
-      {/* --- HEADER --- */}
+      {/* Header */}
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-8 tracking-tight transition-colors">
         Settings
       </h1>
 
       <div className="flex flex-col md:flex-row gap-4 sm:gap-8 items-start">
-        {/* --- SIDEBAR NAVIGATION --- */}
+        {/* Sidebar Navigation */}
         <div className="w-full md:w-64 shrink-0 flex flex-wrap md:flex-col gap-2 pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id);
-                window.history.replaceState({}, "", `/settings/${tab.id}`);
+                window.history.replaceState({}, '', `/settings/${tab.id}`);
                 document.title = `Settings / ${tab.label} | SchoolAdmin`;
               }}
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 shrink-0 md:w-full ${
                 activeTab === tab.id
-                  ? "bg-primary-600 text-white shadow-lg shadow-primary-200 dark:shadow-none translate-x-0 md:translate-x-1"
-                  : "bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 border border-transparent border-b-slate-100 dark:border-b-slate-800"
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 dark:shadow-none translate-x-0 md:translate-x-1'
+                  : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 border border-transparent border-b-slate-100 dark:border-b-slate-800'
               }`}
             >
               {tab.icon}
@@ -240,9 +235,9 @@ const SettingsPage = ({ onLogout, userRole }) => {
           </div>
         </div>
 
-        {/* --- CONTENT PANEL --- */}
+        {/* Content Panel */}
         <div className="flex-grow w-full">
-          {activeTab === "account" && (
+          {activeTab === 'account' && (
             <div className="animate-in fade-in slide-in-from-right-2 duration-300">
               <AccountSettings
                 isAdmin={isAdmin}
@@ -259,7 +254,7 @@ const SettingsPage = ({ onLogout, userRole }) => {
             </div>
           )}
 
-          {activeTab === "data" && (
+          {activeTab === 'data' && (
             <div className="animate-in fade-in slide-in-from-right-2 duration-300">
               <div className="space-y-8">
                 <DataManager />
@@ -267,7 +262,7 @@ const SettingsPage = ({ onLogout, userRole }) => {
             </div>
           )}
 
-          {activeTab === "sync" && (
+          {activeTab === 'sync' && (
             <div className="animate-in fade-in slide-in-from-right-2 duration-300">
               <CloudSyncStatus
                 triggerSync={triggerSync}
@@ -278,7 +273,7 @@ const SettingsPage = ({ onLogout, userRole }) => {
             </div>
           )}
 
-          {activeTab === "offline" && (
+          {activeTab === 'offline' && (
             <div className="animate-in fade-in slide-in-from-right-2 duration-300">
               <OfflineGuide />
             </div>

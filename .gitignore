@@ -23,5 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.*
+!.env.example
+!.env.staging.example
+!.env.production.example
 database/
 *.docx
+docs/

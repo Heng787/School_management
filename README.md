@@ -1,37 +1,91 @@
-<<<<<<< HEAD
+# School Admin Portal
 
-# School Admin Portal (Offline-Ready)
+A comprehensive, offline-ready management information system for an English learning school in Cambodia. Features student, teacher, and class management, attendance tracking, and AI-driven data processing.
 
-This is a **Progressive Web App (PWA)**. It is specifically designed to be downloaded into your browser and used without internet.
+## What This Project Does
 
-## 🚀 True Offline Setup
-To use this app offline, follow these steps exactly:
+This portal is designed to manage school operations efficiently, even in areas with unreliable internet connectivity. It allows administrators to track student enrollment, teacher schedules, academic grades, and internal messaging. The system uses a "Local-First" approach, saving all data locally on the device and synchronizing with a central database when online.
 
-### 1. The "Seeding" Step
-1. Visit the portal URL (e.g., your Netlify link) **while you have internet**.
-2. Wait 10 seconds for the background "Service Worker" to download the app data.
-3. **Crucial:** Click the **Install** button in your browser address bar (looks like a `+` or a computer icon).
-4. On phone, use **"Add to Home Screen"** in the browser menu.
+## Tech Stack
 
-### 2. Opening Offline
-- **Method A (App Icon):** Click the new "School Admin" icon on your Desktop or Phone Home Screen. It will open instantly even with WiFi turned off.
-- **Method B (Browser):** Even if you are offline, typing the original URL in your browser will still load the app because the files are saved in the browser's permanent cache.
+| Layer    | Technology  | Why               |
+| -------- | ----------- | ----------------- |
+| Frontend | React 19 | Latest version for optimal performance and hook support. |
+| Build Tool | Vite 8 | Ultra-fast development and build times. |
+| Styling | Tailwind CSS 4 | Utility-first CSS for rapid, consistent UI development. |
+| Database | Supabase (PostgreSQL) | Real-time database and authentication as a service. |
+| Local Cache | LocalStorage | Browser-based storage for offline functionality. |
+| AI Integration | Google Gemini | Automated data processing (e.g., gender prediction). |
+| AI Integration | Google Gemini | Automated data processing (e.g., gender prediction). |
 
-## 📂 Sharing with Others
-When you send the link to a coworker:
-1. They must visit the link **once** while online.
-2. They should **Install** it immediately.
-3. They can now go to remote locations with no signal and keep using the app.
+## Project Structure
 
-## 🔐 Login
-**Default Password:** `admin123` (Change this in Settings).
+```
+root/
+├── components/          # Shared UI components (Modals, Toasts, etc.)
+├── context/             # React Context for global state (Auth, Sync)
+├── data/                # Static data and local storage management
+├── database/            # Database schema and migration scripts
+├── docs/                # System documentation and guides
+├── hooks/               # Custom React hooks for business logic
+├── pages/               # Route-level page components
+├── services/            # API, Sync, and Domain services
+├── utils/               # Helper functions and utilities
+├── public/              # Static assets
+└── App.jsx              # Main application component
+```
 
-## 💾 Data Safety
-All data is stored **locally** on the specific device being used. If you want to move data from your laptop to your phone:
-1. Laptop: Go to **Settings > Database** and click **Backup Database**.
-2. Send the `.json` file to your phone.
-3. Phone: Go to **Settings > Database** and click **Restore Database**.
-=======
-# school-management-system
-not typescript 
->>>>>>> f4adaf6a2cf3339515f51d51c3ca093f21d61c04
+## Prerequisites
+
+- **Node.js** v20+
+- **Supabase Account** (for cloud syncing)
+- **Google AI API Key** (for Gemini features)
+
+## Getting Started
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/Heng787/School_management.git
+cd School-system-for-admin
+```
+
+### 2. Set up environment variables
+```bash
+cp .env.example .env
+# Fill in your Supabase URL and Anon Key
+```
+
+### 3. Start the application
+```bash
+npm install
+npm run dev
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+| -------- | -------- | ----------- |
+| VITE_SUPABASE_URL | Yes | Your Supabase project URL. |
+| VITE_SUPABASE_ANON_KEY | Yes | Your Supabase anonymous API key. |
+
+## Available Scripts
+
+| Script | What it does |
+| ------ | ------------ |
+| `npm run dev` | Starts the Vite development server. |
+| `npm run build` | Builds the application for production. |
+| `npm run preview` | Previews the production build locally. |
+
+## Running Tests
+Tests are implemented using Vite's built-in testing capabilities (if configured) or standalone scripts.
+- Unit tests: Look for `*.test.js` files co-located with source code.
+
+## API Reference
+See [docs/api.md](docs/api.md) for complete service layer documentation.
+
+## Deployment
+Configured for deployment on Vercel and Cloudflare Workers. Every merge to the main branch triggers the production pipeline via GitHub Actions.
+
+## Known Issues
+- Offline synchronization may require a manual refresh in some browser versions.
+- Large Excel imports (>5000 rows) may experience performance dips on mobile devices.

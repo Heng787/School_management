@@ -49,7 +49,7 @@ const MobileEventsList = ({ mobileSelectedDate, dayEvents, onOpenModal, onAddEve
           <h3 className="font-black text-slate-800 dark:text-white text-base tracking-tight transition-colors">
             {isToday ? "✨ Today" : displayDate.toLocaleString("default", { weekday: "long" })}
           </h3>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{dateLabel}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-500 mt-0.5">{dateLabel}</p>
         </div>
         <button
           onClick={() => onAddEvent(null, mobileSelectedDate)}
@@ -91,7 +91,7 @@ const MobileEventsList = ({ mobileSelectedDate, dayEvents, onOpenModal, onAddEve
       ) : (
         <div className="text-center py-10 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700/50 transition-colors bg-slate-50/60 dark:bg-slate-900/50">
           <div className="text-2xl mb-2">📅</div>
-          <p className="text-sm text-slate-400 dark:text-slate-500 font-semibold">No events for this day</p>
+          <p className="text-sm text-slate-500 dark:text-slate-500 font-semibold">No events for this day</p>
         </div>
       )}
     </div>

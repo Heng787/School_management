@@ -6,21 +6,16 @@ import { configService } from './configService';
 import { syncService } from './syncService';
 import { deleteRecord, clearLocalCache } from './core';
 
-// Re-export specific types if needed elsewhere, like TimeSlot
-// export type { TimeSlot } from './configService';
-
 /**
- * apiService facade.
- * Re-exports everything from the individual service files
- * so that existing imports across the application do not break.
+ * Unified API service combining all domain services.
  */
 export const apiService = {
-    ...studentService,
-    ...staffService,
-    ...classService,
-    ...logService,
-    ...configService,
-    ...syncService,
-    deleteRecord,
-    clearLocalCache,
+  ...studentService,
+  ...staffService,
+  ...classService,
+  ...logService,
+  ...configService,
+  ...syncService,
+  deleteRecord,
+  clearLocalCache,
 };

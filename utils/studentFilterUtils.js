@@ -1,26 +1,31 @@
-import { UserRole } from "../types";
+import { UserRole } from '../types';
+
+// --- Access Filtering ---
 
 /**
- * Filters students based on user role access
+ * Filters students based on user role access.
  */
 export const filterStudentsByRole = (
   students,
   currentUser,
   classes,
-  enrollments,
+  enrollments
 ) => {
   if (!currentUser) return students;
 
   if (currentUser.role === UserRole.Teacher) {
-    const teacherClasses = classes.filter(
-      (c) => c.teacherId === currentUser.id,
-    );
+    const teacherClasses = classes.filter((c) => {
+      return c.teacherId === currentUser.id;
+    });
+
     const teacherClassIds = new Set(teacherClasses.map((c) => c.id));
+
     const teacherStudentIds = new Set(
       enrollments
         .filter((e) => teacherClassIds.has(e.classId))
-        .map((e) => e.studentId),
+        .map((e) => e.studentId)
     );
+
     return students.filter((s) => teacherStudentIds.has(s.id));
   }
 
@@ -34,93 +39,156 @@ export const filterStudentsByRole = (
   return [];
 };
 
+// --- View Filtering ---
+
 /**
- * Filters students by search term (name, ID, phone)
+ * Filters students by search term (name, ID, phone).
  */
 export const filterStudentsBySearch = (students, searchTerm) => {
-  if (!searchTerm.trim()) return students;
+  const term = searchTerm.trim().toLowerCase();
+  if (!term) return students;
 
-  const lowerTerm = searchTerm.toLowerCase();
-  return students.filter(
-    (s) =>
-      s.name.toLowerCase().includes(lowerTerm) ||
-      s.id.toString().toLowerCase().includes(lowerTerm) ||
-      (s.phone && s.phone.includes(lowerTerm)),
-  );
+  return students.filter((s) => {
+    return (
+      s.name.toLowerCase().includes(term) ||
+      s.id.toString().toLowerCase().includes(term) ||
+      (s.phone && s.phone.includes(term))
+    );
+  });
 };
 
 /**
- * Filters students by status
+ * Filters students by status.
  */
 export const filterStudentsByStatus = (students, status) => {
-  if (status === "All") return students;
+  if (status === 'All') return students;
   return students.filter((s) => s.status === status);
 };
 
 /**
- * Filters students by class enrollment
+ * Filters students by class enrollment.
  */
 export const filterStudentsByClass = (students, classId, enrollments) => {
-  if (classId === "All") return students;
+  if (classId === 'All') return students;
+
   const enrolledStudentIds = new Set(
-    enrollments.filter((e) => e.classId === classId).map((e) => e.studentId),
+    enrollments
+      .filter((e) => e.classId === classId)
+      .map((e) => e.studentId)
   );
+
   return students.filter((s) => enrolledStudentIds.has(s.id));
 };
 
+// --- Aggregate Filtering ---
+
 /**
- * Main filter pipeline - applies all filters in order
+ * Applies search, status, and class filters in one pass.
  */
 export const applyAllFilters = (
   students,
   currentUser,
   classes,
   enrollments,
-  { searchTerm, classFilter, statusFilter },
+  { searchTerm, classFilter, statusFilter }
 ) => {
-  let result = filterStudentsByRole(
-    students,
-    currentUser,
-    classes,
-    enrollments,
-  );
-  result = filterStudentsBySearch(result, searchTerm);
-  result = filterStudentsByStatus(result, statusFilter);
-  result = filterStudentsByClass(result, classFilter, enrollments);
-  return result;
+  if (!currentUser) return [];
+
+  let accessSet = null;
+  if (currentUser.role === UserRole.Teacher) {
+    const teacherClassIds = new Set(
+      classes
+        .filter((c) => c.teacherId === currentUser.id)
+        .map((c) => c.id)
+    );
+
+    accessSet = new Set(
+      enrollments
+        .filter((e) => teacherClassIds.has(e.classId))
+        .map((e) => e.studentId)
+    );
+  }
+
+  let classSet = null;
+  if (classFilter !== 'All') {
+    classSet = new Set(
+      enrollments
+        .filter((e) => e.classId === classFilter)
+        .map((e) => e.studentId)
+    );
+  }
+
+  const lowerSearch = searchTerm.trim().toLowerCase();
+
+  return students.filter((s) => {
+    // Access constraints
+    if (accessSet && !accessSet.has(s.id)) return false;
+
+    // Attribute filters
+    if (statusFilter !== 'All' && s.status !== statusFilter) return false;
+    if (classSet && !classSet.has(s.id)) return false;
+
+    // Text search
+    if (lowerSearch) {
+      const matchesName = s.name.toLowerCase().includes(lowerSearch);
+      const matchesId = s.id.toString().toLowerCase().includes(lowerSearch);
+      const matchesPhone = s.phone && s.phone.includes(lowerSearch);
+
+      if (!matchesName && !matchesId && !matchesPhone) return false;
+    }
+
+    return true;
+  });
 };
 
+// --- Mapping Utils ---
+
 /**
- * Builds a map of student ID -> their enrolled classes
+ * Builds a map of studentId → enrolled class objects for the given user's scope.
  */
 export const buildDisplayClassesMap = (
   students,
   currentUser,
   classes,
-  enrollments,
+  enrollments
 ) => {
   const map = {};
 
-  students.forEach((student) => {
-    const studentEnrollments = enrollments.filter(
-      (e) => e.studentId === student.id,
+  const enrollmentMap = {};
+  enrollments.forEach((e) => {
+    if (!enrollmentMap[e.studentId]) enrollmentMap[e.studentId] = [];
+    enrollmentMap[e.studentId].push(e.classId);
+  });
+
+  const classMap = {};
+  classes.forEach((c) => {
+    classMap[c.id] = c;
+  });
+
+  let teacherClassIds = null;
+  if (currentUser?.role === UserRole.Teacher) {
+    teacherClassIds = new Set(
+      classes
+        .filter((c) => c.teacherId === currentUser.id)
+        .map((c) => c.id)
     );
+  }
+
+  students.forEach((student) => {
+    const studentClassIds = enrollmentMap[student.id] || [];
     let displayClasses = [];
 
-    if (currentUser?.role === UserRole.Teacher) {
-      const teacherClassEnrollment = studentEnrollments.find((e) => {
-        const cls = classes.find((c) => c.id === e.classId);
-        return cls && cls.teacherId === currentUser.id;
+    if (teacherClassIds) {
+      const teacherClassId = studentClassIds.find((id) => {
+        return teacherClassIds.has(id);
       });
-      if (teacherClassEnrollment) {
-        const cls = classes.find(
-          (c) => c.id === teacherClassEnrollment.classId,
-        );
-        if (cls) displayClasses.push(cls);
+
+      if (teacherClassId && classMap[teacherClassId]) {
+        displayClasses.push(classMap[teacherClassId]);
       }
     } else {
-      displayClasses = studentEnrollments
-        .map((e) => classes.find((c) => c.id === e.classId))
+      displayClasses = studentClassIds
+        .map((id) => classMap[id])
         .filter(Boolean);
     }
 

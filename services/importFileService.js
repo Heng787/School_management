@@ -1,9 +1,12 @@
-import { StaffRole } from "../types";
+import { StaffRole } from '../types';
+import { gradeId } from './mappers';
 
 /**
- * Service for handling file imports (CSV and Excel)
+ * Service for handling file imports (CSV and Excel).
  */
 export const importFileService = {
+  // --- CSV Import ---
+
   async processCSVFile(file, staff, classes, addClasses, parseClassCSV) {
     const fileContent = await file.text();
     const { validClasses, errors } = parseClassCSV(fileContent, staff);
@@ -18,6 +21,8 @@ export const importFileService = {
       errors: errors,
     };
   },
+
+  // --- Excel Import ---
 
   async processExcelFile(
     file,
@@ -36,9 +41,10 @@ export const importFileService = {
       addTimeSlotsBatch,
       parseExcelFile,
       students,
-    },
+      onProgress,
+    }
   ) {
-    const result = await parseExcelFile(file);
+    const result = await parseExcelFile(file, onProgress);
 
     // --- 1. SMART CLASS MATCHING & ID PREPARATION ---
     const classIDMap = {};
@@ -53,13 +59,13 @@ export const importFileService = {
     if (result.classes && result.classes.length > 0) {
       for (const impClass of result.classes) {
         // --- A. Resolve teacher ---
-        const targetTeacherName = (impClass.teacherName || "").trim();
+        const targetTeacherName = (impClass.teacherName || '').trim();
         let teacher = null;
 
         if (targetTeacherName) {
           // Check existing staff
           teacher = staff.find((s) => {
-            const sName = (s.name || "").toLowerCase();
+            const sName = (s.name || '').toLowerCase();
             const tName = targetTeacherName.toLowerCase();
             return (
               (sName.length >= 5 && tName.includes(sName)) ||
@@ -83,10 +89,9 @@ export const importFileService = {
               id: `tr_imp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
               name: targetTeacherName,
               role: StaffRole.Teacher,
-              // subject intentionally omitted — not determinable from a class roster
-              contact: "",
-              hireDate: new Date().toISOString().split("T")[0],
-              status: "Active",
+              contact: '',
+              hireDate: new Date().toISOString().split('T')[0],
+              status: 'Active',
             };
             newStaffToCreate.push(newStaffRecord);
             newStaffMap.set(targetTeacherName.toLowerCase(), newStaffRecord);
@@ -95,12 +100,25 @@ export const importFileService = {
         }
 
         // --- B. Match Class ---
-        const existing = classes.find(
-          (c) =>
-            c.name.toLowerCase() === impClass.name.toLowerCase() &&
-            c.level.toLowerCase() === impClass.level.toLowerCase() &&
-            c.schedule.toLowerCase() === impClass.schedule.toLowerCase(),
-        );
+        const existing = classes.find((c) => {
+          const cName = (c.name || '').toLowerCase();
+          const impName = (impClass.name || '').toLowerCase();
+          const cLevel = (c.level || '').toLowerCase();
+          const impLevel = (impClass.level || '').toLowerCase();
+
+          // Robust schedule match
+          const cleanSched = (s) => {
+            return (s || '')
+              .toLowerCase()
+              .replace(/^(weekday|weekend)\s+/i, '')
+              .trim();
+          };
+
+          const cSched = cleanSched(c.schedule);
+          const impSched = cleanSched(impClass.schedule);
+
+          return cName === impName && cLevel === impLevel && cSched === impSched;
+        });
 
         if (existing) {
           classIDMap[impClass.id] = existing.id;
@@ -121,24 +139,25 @@ export const importFileService = {
         // --- C. Auto-create Missing Time Slot ---
         if (impClass.schedule && impClass.schedule.trim()) {
           let rawTime = impClass.schedule.trim();
-          let scheduleType = "weekday";
+          let scheduleType = 'weekday';
 
           const lowerSched = rawTime.toLowerCase();
-          if (lowerSched.startsWith("weekday ")) {
+          if (lowerSched.startsWith('weekday ')) {
             rawTime = rawTime.substring(8).trim();
-          } else if (lowerSched.startsWith("weekend ")) {
-            scheduleType = "weekend";
+          } else if (lowerSched.startsWith('weekend ')) {
+            scheduleType = 'weekend';
             rawTime = rawTime.substring(8).trim();
-          } else if (lowerSched.includes("weekend")) {
-            scheduleType = "weekend";
+          } else if (lowerSched.includes('weekend')) {
+            scheduleType = 'weekend';
           }
 
-          const existingSlot = timeSlots.find(
-            (ts) =>
+          const existingSlot = timeSlots.find((ts) => {
+            return (
               ts.type === scheduleType &&
-              ts.time.toLowerCase().replace(/\s/g, "") ===
-                rawTime.toLowerCase().replace(/\s/g, ""),
-          );
+              ts.time.toLowerCase().replace(/\s/g, '') ===
+                rawTime.toLowerCase().replace(/\s/g, '')
+            );
+          });
 
           if (!existingSlot) {
             const lookupKey = `${scheduleType}_${rawTime}`.toLowerCase();
@@ -155,11 +174,18 @@ export const importFileService = {
         }
       }
 
-      if (newTimeSlotsToCreate.length > 0)
+      if (newTimeSlotsToCreate.length > 0) {
         await addTimeSlotsBatch(newTimeSlotsToCreate);
-      if (newStaffToCreate.length > 0) await addStaffBatch(newStaffToCreate);
-      if (classesToAdd.length > 0) await addClasses(classesToAdd);
-      if (classesToUpdate.length > 0) await updateClassesBatch(classesToUpdate);
+      }
+      if (newStaffToCreate.length > 0) {
+        await addStaffBatch(newStaffToCreate);
+      }
+      if (classesToAdd.length > 0) {
+        await addClasses(classesToAdd);
+      }
+      if (classesToUpdate.length > 0) {
+        await updateClassesBatch(classesToUpdate);
+      }
     }
 
     // --- 2. SMART STUDENT MATCHING ---
@@ -168,9 +194,9 @@ export const importFileService = {
 
     if (result.students && result.students.length > 0) {
       for (const impStu of result.students) {
-        const existingMatches = students.filter(
-          (s) => s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase()
-        );
+        const existingMatches = students.filter((s) => {
+          return s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase();
+        });
 
         impStu._tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         studentIDMap[impStu.id] = impStu._tempId;
@@ -181,7 +207,11 @@ export const importFileService = {
           if (impStu._genderInferred) {
             defaultMatch = existingMatches[0];
           } else {
-            defaultMatch = existingMatches.find((s) => s.sex.toLowerCase() === impStu.sex.toLowerCase());
+            defaultMatch = existingMatches.find((s) => {
+              return (
+                (s.sex || '').toLowerCase() === (impStu.sex || '').toLowerCase()
+              );
+            });
           }
           impStu._selectedMatchId = defaultMatch ? defaultMatch.id : 'NEW';
         } else {
@@ -198,13 +228,13 @@ export const importFileService = {
         .map((enr) => ({
           studentId: studentIDMap[enr.studentId] || enr.studentId,
           classId: classIDMap[enr.classId] || enr.classId,
-          enrollmentDate: new Date().toISOString().split("T")[0],
-          status: "Enrolled",
+          enrollmentDate: new Date().toISOString().split('T')[0],
+          status: 'Enrolled',
         }))
         .filter((enr) => {
-          return !enrollments.find(
-            (e) => e.studentId === enr.studentId && e.classId === enr.classId,
-          );
+          return !enrollments.find((e) => {
+            return e.studentId === enr.studentId && e.classId === enr.classId;
+          });
         });
     }
 
@@ -215,7 +245,12 @@ export const importFileService = {
         ...grd,
         studentId: studentIDMap[grd.studentId] || grd.studentId,
         classId: classIDMap[grd.classId] || grd.classId,
-        id: `grd_imp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: gradeId(
+          classIDMap[grd.classId] || grd.classId,
+          studentIDMap[grd.studentId] || grd.studentId,
+          grd.subject,
+          grd.term
+        ),
       }));
     }
 
@@ -223,20 +258,23 @@ export const importFileService = {
       return {
         requiresPreview: true,
         previewData: {
-          type: "excel",
+          type: 'excel',
           studentsToPreview: previewStudents,
           mappedEnrollments,
           mappedGrades,
-          errors: result.errors?.map((e) => ({ message: e })) || [],
+          errors: result.errors || [],
           addedStaffCount: newStaffToCreate.length,
           addedClassesCount: classesToAdd.length,
-        }
+        },
       };
     }
 
-    // If no students were parsed to preview, just commit the grades/enrollments if any and return success.
-    if (mappedEnrollments.length > 0) await addEnrollments(mappedEnrollments);
-    if (mappedGrades.length > 0 && saveGradeBatch) await saveGradeBatch(mappedGrades);
+    if (mappedEnrollments.length > 0) {
+      await addEnrollments(mappedEnrollments);
+    }
+    if (mappedGrades.length > 0 && saveGradeBatch) {
+      await saveGradeBatch(mappedGrades);
+    }
 
     return {
       successCount:
@@ -244,7 +282,7 @@ export const importFileService = {
         newStaffToCreate.length +
         (result.grades?.length || 0),
       errorCount: result.errors?.length || 0,
-      errors: result.errors?.map((e) => ({ message: e })) || [],
+      errors: result.errors || [],
       message: `Import complete! Added ${newStaffToCreate.length} new staff, ${classesToAdd.length} new classes, and ${result.grades?.length || 0} marks.`,
     };
   },

@@ -27,7 +27,11 @@ const TeacherTable = ({
   const paginatedStaff = filteredStaff.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   const todayDate = new Date().toISOString().split("T")[0];
 
-  const colHeader = "px-5 py-3.5 text-left text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap";
+  const colHeader = "px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap";
+  const getColHeaderProps = (extraClasses = "") => ({
+    scope: "col",
+    className: `${colHeader} ${extraClasses}`
+  });
 
   return (
     <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700/60 shadow-sm bg-white dark:bg-slate-900 transition-colors duration-300">
@@ -35,18 +39,18 @@ const TeacherTable = ({
         <table className="min-w-full">
           {/* Header */}
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700/60">
-              <th className={colHeader}>Name</th>
-              <th className={colHeader}>Role</th>
-              <th className={colHeader}>Date of Birth</th>
-              <th className={colHeader}>Contact</th>
-              <th className={colHeader}>Joined</th>
-              <th className={`${colHeader} text-right`}>Actions</th>
+            <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-300 dark:border-slate-700/60">
+              <th {...getColHeaderProps()}>Name</th>
+              <th {...getColHeaderProps()}>Role</th>
+              <th {...getColHeaderProps()}>Date of Birth</th>
+              <th {...getColHeaderProps()}>Contact</th>
+              <th {...getColHeaderProps()}>Joined</th>
+              <th {...getColHeaderProps("text-right")}>Actions</th>
             </tr>
           </thead>
 
           {/* Body */}
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
             {paginatedStaff.map((s) => {
               const isHighlighted = s.id === highlightedStaffId;
               const isOnLeave = staffPermissions?.some(
@@ -74,8 +78,8 @@ const TeacherTable = ({
             {filteredStaff.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-20 text-center">
-                  <div className="flex flex-col items-center gap-3 text-slate-400 dark:text-slate-600">
-                    <svg className="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-600">
+                    <svg className="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.125-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.125-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -91,7 +95,7 @@ const TeacherTable = ({
 
       {/* Pagination */}
       {filteredStaff.length > 0 && (
-        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
           <p className="text-xs text-slate-500 dark:text-slate-500">
             Showing{" "}
             <span className="font-semibold text-slate-700 dark:text-slate-300">{startIndex + 1}</span>
@@ -108,12 +112,13 @@ const TeacherTable = ({
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
+              aria-label="Previous page"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400
                 border border-slate-200 dark:border-slate-700
                 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200
                 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
-              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
               </svg>
             </button>
@@ -129,12 +134,13 @@ const TeacherTable = ({
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
+              aria-label="Next page"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400
                 border border-slate-200 dark:border-slate-700
                 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200
                 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
-              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
               </svg>
             </button>

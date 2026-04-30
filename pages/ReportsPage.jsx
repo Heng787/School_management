@@ -1,55 +1,56 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+
 import {
   MarksEntry,
   ExportCenter,
   AttendanceReport,
-} from "../components/reportspage";
+} from '../components/reportspage';
 
 /**
  * PAGE: ReportsPage
  * DESCRIPTION: Container page that routes between Marks Entry, Attendance, and Export sub-views.
  */
 const ReportsPage = () => {
-  // --- STATE & ROUTING ---
+  // --- State & Routing ---
   const getInitialReportsTab = () => {
-    const stored = sessionStorage.getItem("reports_initial_tab");
+    const stored = sessionStorage.getItem('reports_initial_tab');
     if (stored) {
-      sessionStorage.removeItem("reports_initial_tab");
+      sessionStorage.removeItem('reports_initial_tab');
       if (
-        stored === "export" ||
-        stored === "attendance" ||
-        stored === "marks"
+        stored === 'export' ||
+        stored === 'attendance' ||
+        stored === 'marks'
       ) {
         return stored;
       }
     }
 
-    const parts = window.location.pathname.split("/");
+    const parts = window.location.pathname.split('/');
     const sub = parts[2]?.toLowerCase();
-    if (sub === "attendance") return "attendance";
-    if (sub === "export") return "export";
-    return "marks";
+    if (sub === 'attendance') return 'attendance';
+    if (sub === 'export') return 'export';
+    return 'marks';
   };
 
   const [activeTab, setActiveTab] = useState(getInitialReportsTab);
 
-  // --- SIDE EFFECTS ---
+  // --- Side Effects ---
   useEffect(() => {
     const handleTabChange = (e) => {
       const tab = e.detail;
       if (
         tab &&
-        (tab === "marks" || tab === "attendance" || tab === "export")
+        (tab === 'marks' || tab === 'attendance' || tab === 'export')
       ) {
         setActiveTab(tab);
       }
     };
-    window.addEventListener("reportsTabChange", handleTabChange);
+    window.addEventListener('reportsTabChange', handleTabChange);
     return () =>
-      window.removeEventListener("reportsTabChange", handleTabChange);
+      window.removeEventListener('reportsTabChange', handleTabChange);
   }, []);
 
-  // --- RENDER ---
+  // --- Render ---
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       {/* Tab Navigation Bar */}
@@ -77,9 +78,9 @@ const ReportsPage = () => {
       {/* Content Area */}
       <div className="flex-1 overflow-auto">
         <div className="p-6 max-w-7xl mx-auto">
-          {activeTab === "marks" && <MarksEntry />}
-          {activeTab === "attendance" && <AttendanceReport />}
-          {activeTab === "export" && <ExportCenter />}
+          {activeTab === 'marks' && <MarksEntry />}
+          {activeTab === 'attendance' && <AttendanceReport />}
+          {activeTab === 'export' && <ExportCenter />}
         </div>
       </div>
     </div>

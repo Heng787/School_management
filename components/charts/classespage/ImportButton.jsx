@@ -4,7 +4,7 @@ const ImportButton = ({ onImport }) => {
   return (
     <button
       onClick={onImport}
-      className="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 text-xs sm:text-sm font-bold shadow-sm shrink-0"
+      className="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-500 active:scale-95 transition-all duration-300 flex items-center gap-2 text-xs sm:text-sm font-bold shadow-lg shadow-blue-900/20 shrink-0"
     >
       <svg
         className="w-4 h-4"

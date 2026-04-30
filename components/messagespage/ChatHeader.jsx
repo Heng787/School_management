@@ -76,7 +76,7 @@ const ChatHeader = ({
           {!isAllAnnouncement && (
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
           )}
-          <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight truncate">
+          <p className="text-xs text-slate-500 dark:text-slate-500 leading-tight truncate">
             {activeRole}
           </p>
         </div>

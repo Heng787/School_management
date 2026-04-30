@@ -1,55 +1,61 @@
-import { useState, useRef } from "react";
+import { useState, useRef } from 'react';
 
 /**
- * Combines all state management for ClassesPage
+ * Combines all state management for ClassesPage.
  */
 export const useClassesPageState = () => {
-  // Modal state
+  // --- Modal State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState(null);
 
-  // Config state
+  // --- UI Config State ---
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [expandedClassId, setExpandedClassId] = useState(null);
 
-  // Selection state
+  // --- Selection State ---
   const [selectedClassIds, setSelectedClassIds] = useState(new Set());
 
-  // Filter state
-  const [selectedLevel, setSelectedLevel] = useState("all");
+  // --- Filter State ---
+  const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedTeacherIds, setSelectedTeacherIds] = useState([]);
-  const [selectedTime, setSelectedTime] = useState("all");
+  const [selectedTime, setSelectedTime] = useState('all');
   const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false);
 
-  // Import state
+  // --- Import State ---
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importResults, setImportResults] = useState(null);
 
-  // Refs
+  // --- Refs ---
   const highlightedRowRef = useRef(null);
   const teacherDropdownRef = useRef(null);
   const fileInputRef = useRef(null);
 
   return {
-    // Modal
+    // Modals
     isModalOpen,
     setIsModalOpen,
     editingClass,
     setEditingClass,
     isConfirmDeleteOpen,
     setIsConfirmDeleteOpen,
+    isBulkDeleteConfirmOpen,
+    setIsBulkDeleteConfirmOpen,
     classToDelete,
     setClassToDelete,
+
     // Config
     isConfigOpen,
     setIsConfigOpen,
     expandedClassId,
     setExpandedClassId,
+
     // Selection
     selectedClassIds,
     setSelectedClassIds,
+
     // Filters
     selectedLevel,
     setSelectedLevel,
@@ -59,11 +65,13 @@ export const useClassesPageState = () => {
     setSelectedTime,
     isTeacherDropdownOpen,
     setIsTeacherDropdownOpen,
+
     // Import
     isImportModalOpen,
     setIsImportModalOpen,
     importResults,
     setImportResults,
+
     // Refs
     highlightedRowRef,
     teacherDropdownRef,

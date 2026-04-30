@@ -36,7 +36,7 @@ const LeaveCard = ({ msg, isMine }) => {
       <div className="bg-white dark:bg-slate-900 px-4 py-3 space-y-2 transition-colors">
         {m.leaveType && (
           <div className="flex items-center gap-1.5 transition-colors">
-            <span className="text-xs text-slate-400 dark:text-slate-500">Type:</span>
+            <span className="text-xs text-slate-500 dark:text-slate-500">Type:</span>
             <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
               {m.leaveType}
             </span>

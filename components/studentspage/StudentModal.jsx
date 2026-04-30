@@ -59,7 +59,7 @@ const defaultForm = (levels) => ({
   dob: "",
   sex: "Male",
   level: levels[0] || "K1",
-  status: StudentStatus.Active,
+  status: StudentStatus.Pending,
   phone: "",
   enrollmentDate: new Date().toISOString().split("T")[0],
 });
@@ -109,7 +109,7 @@ const StudentModal = ({ studentData, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-2 sm:p-4">
+    <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-md z-50 flex justify-center items-center p-2 sm:p-4">
       <div className="bg-white rounded-xl shadow-2xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto">
         <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">
           {studentData ? "Update Student Record" : "Register New Student"}

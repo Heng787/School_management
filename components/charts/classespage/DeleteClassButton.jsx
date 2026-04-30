@@ -4,7 +4,7 @@ const DeleteClassButton = ({ onDelete, title = "Delete Class" }) => {
   return (
     <button
       onClick={onDelete}
-      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+      className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
       title={title}
     >
       <svg

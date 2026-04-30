@@ -45,7 +45,7 @@ const ConversationList = ({
             <h2 className="text-base font-extrabold text-slate-800 dark:text-white tracking-tight leading-none">
               Messages
             </h2>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+            <p className="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5">
               {totalUnread > 0
                 ? <span className="text-primary-500 font-semibold">{totalUnread} unread</span>
                 : "✨ All caught up"}
@@ -61,7 +61,7 @@ const ConversationList = ({
 
         {/* Search */}
         <div className="relative">
-          <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+          <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-500 dark:text-slate-500">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -76,7 +76,7 @@ const ConversationList = ({
               bg-slate-100 dark:bg-slate-800
               border border-transparent
               text-slate-700 dark:text-slate-200
-              placeholder:text-slate-400 dark:placeholder:text-slate-500
+              placeholder:text-slate-500 dark:placeholder:text-slate-500
               focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white dark:focus:bg-slate-700
               transition-all"
           />
@@ -85,8 +85,8 @@ const ConversationList = ({
 
       {/* ── Conversation items ── */}
       <div className="flex-1 overflow-y-auto">
-        {/* Announce to All */}
-        {isAdmin && (
+        {/* Announce to All / Broadcast Channel */}
+        {(isAdmin || true) && (
           <ConvItem
             isActive={activeConversation === "all"}
             onClick={() => {
@@ -103,7 +103,9 @@ const ConversationList = ({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Announce to All</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">Broadcast to all staff</p>
+              <p className="text-xs text-slate-500 dark:text-slate-500 truncate mt-0.5">
+                {isAdmin ? "Broadcast to all staff" : "General announcements"}
+              </p>
             </div>
           </ConvItem>
         )}
@@ -126,37 +128,53 @@ const ConversationList = ({
                 setMobileShowChat(true);
               }}
             >
-              {/* Avatar */}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${avatarBg} ${avatarText}`}>
-                {conv.name.charAt(0).toUpperCase()}
+              {/* Avatar Container */}
+              <div className="relative shrink-0">
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm shadow-sm ${avatarBg} ${avatarText}`}>
+                  {conv.name.charAt(0).toUpperCase()}
+                </div>
+                {/* Status Dot */}
+                <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm
+                  ${conv.status === 'online' ? 'bg-emerald-500' : conv.status === 'away' ? 'bg-amber-500' : 'bg-slate-400'}`} />
               </div>
 
-              {/* Text */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+              {/* Text Info */}
+              <div className="flex-1 min-w-0 py-0.5">
+                <div className="flex items-center justify-between gap-1 mb-0.5">
+                  <p className={`text-sm font-bold truncate transition-colors ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-slate-800 dark:text-slate-100'}`}>
                     {conv.name}
                   </p>
                   {conv.lastMsg && (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-600 shrink-0">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-500 font-medium">
                       {new Date(conv.lastMsg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between gap-1 mt-0.5">
+
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-tight text-slate-500 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800">
+                    {conv.role}
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-600">•</span>
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-600">
+                    {conv.room}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-1">
                   {conv.lastMsg ? (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                    <p className={`text-xs truncate ${conv.unread > 0 ? 'text-slate-700 dark:text-slate-300 font-bold' : 'text-slate-500 dark:text-slate-500 font-medium'}`}>
                       {conv.lastMsg.type === "leave_request"
                         ? "📅 Leave request"
                         : conv.lastMsg.type === "incident"
                           ? "⚠️ Incident report"
-                          : conv.lastMsg.content.slice(0, 28) + (conv.lastMsg.content.length > 28 ? "…" : "")}
+                          : conv.lastMsg.content}
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-300 dark:text-slate-600 italic">No messages yet</p>
+                    <p className="text-xs text-slate-300 dark:text-slate-700 italic">No messages yet</p>
                   )}
                   {conv.unread > 0 && (
-                    <span className="min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shrink-0">
+                    <span className="min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 animate-pulse shadow-lg shadow-primary-500/20">
                       {conv.unread}
                     </span>
                   )}
@@ -172,7 +190,7 @@ const ConversationList = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-sm text-slate-400 dark:text-slate-600">No results found</p>
+            <p className="text-sm text-slate-500 dark:text-slate-600">No results found</p>
           </div>
         )}
       </div>

@@ -4,7 +4,7 @@ const EditClassButton = ({ onEdit, title = "Edit Class" }) => {
   return (
     <button
       onClick={onEdit}
-      className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+      className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
       title={title}
     >
       <svg

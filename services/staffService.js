@@ -1,11 +1,23 @@
-// Staff Service for managing staff and permissions.
 import { fetchCollection, pushCollection } from './core';
 import { mapStaff, mapStaffPermission } from './mappers';
 
+/**
+ * Service for managing staff profiles and access permissions.
+ */
 export const staffService = {
-    getStaff: async () => fetchCollection('staff', mapStaff.fromDb),
-    saveStaff: async (staff) => pushCollection('staff', staff, mapStaff.toDb),
+  getStaff: async () => {
+    return fetchCollection('staff', mapStaff.fromDb);
+  },
 
-    getStaffPermissions: async () => fetchCollection('staff_permissions', mapStaffPermission.fromDb),
-    saveStaffPermissions: async (perms) => pushCollection('staff_permissions', perms, mapStaffPermission.toDb),
+  saveStaff: async (staff) => {
+    return pushCollection('staff', staff, mapStaff.toDb);
+  },
+
+  getStaffPermissions: async () => {
+    return fetchCollection('staff_permissions', mapStaffPermission.fromDb);
+  },
+
+  saveStaffPermissions: async (perms) => {
+    return pushCollection('staff_permissions', perms, mapStaffPermission.toDb);
+  },
 };

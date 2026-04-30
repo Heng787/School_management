@@ -83,7 +83,7 @@ const DayView = ({ selectedDate, eventsByDate, onOpenModal }) => {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {isToday ? "✨ Today" : displayDate.toLocaleString("default", { weekday: "long" })}
             {" · "}
-            <span className={dayEvents.length === 0 ? "text-slate-400" : "text-primary-600 dark:text-primary-400 font-semibold"}>
+            <span className={dayEvents.length === 0 ? "text-slate-500" : "text-primary-600 dark:text-primary-400 font-semibold"}>
               {dayEvents.length === 0 ? "No events" : `${dayEvents.length} event${dayEvents.length > 1 ? "s" : ""}`}
             </span>
           </p>
@@ -97,7 +97,7 @@ const DayView = ({ selectedDate, eventsByDate, onOpenModal }) => {
             <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
               📅
             </div>
-            <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">No events scheduled for this day</p>
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-500">No events scheduled for this day</p>
             <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Click "+ Add Event" to schedule something</p>
           </div>
         ) : (

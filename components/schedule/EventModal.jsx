@@ -16,6 +16,7 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
     description: "",
   });
   const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -34,20 +35,29 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (isSaving) return;
+
     if (!formData.title || !formData.date || !formData.description) {
       setError("Please fill in all fields.");
       return;
     }
 
-    if (eventData) {
-      updateEvent({ ...eventData, ...formData });
-    } else {
-      addEvent(formData);
+    setIsSaving(true);
+    try {
+      if (eventData) {
+        await updateEvent({ ...eventData, ...formData });
+      } else {
+        await addEvent(formData);
+      }
+      onClose();
+    } catch (err) {
+      setError("Failed to save event. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    onClose();
   };
 
   const handleDelete = () => {
@@ -63,7 +73,7 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
 
   // --- RENDER ---
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-2 sm:p-4 backdrop-blur-sm transition-all">
+    <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-md z-50 flex justify-center items-center p-2 sm:p-4 transition-all">
       <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto transition-colors duration-300">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 transition-colors">
           {eventData ? "Edit Event" : "Add New Event"}
@@ -146,9 +156,13 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
               {!isDeleting && (
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 font-bold shadow-lg shadow-primary-100 dark:shadow-none transition-all order-1 sm:order-2"
+                  disabled={isSaving}
+                  className={`px-5 py-2.5 bg-primary-600 text-white rounded-xl font-bold shadow-lg transition-all order-1 sm:order-2 flex items-center gap-2 ${isSaving ? "opacity-70 cursor-not-allowed" : "hover:bg-primary-700 shadow-primary-100 dark:shadow-none"}`}
                 >
-                  {eventData ? "Save Changes" : "Add Event"}
+                  {isSaving && (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  )}
+                  {isSaving ? "Saving..." : (eventData ? "Save Changes" : "Add Event")}
                 </button>
               )}
             </div>

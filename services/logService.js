@@ -1,8 +1,14 @@
-// Log Service for managing events and audit logs.
-import { fetchCollection, pushCollection, getSupabase } from './core';
+import { fetchCollection, pushCollection } from './core';
 
+/**
+ * Service for managing audit logs and system events.
+ */
 export const logService = {
+  getEvents: async () => {
+    return fetchCollection('events', (d) => d);
+  },
 
-    getEvents: async () => fetchCollection('events', (d) => d),
-    saveEvents: async (events) => pushCollection('events', events, (d) => d),
+  saveEvents: async (events) => {
+    return pushCollection('events', events, (d) => d);
+  },
 };

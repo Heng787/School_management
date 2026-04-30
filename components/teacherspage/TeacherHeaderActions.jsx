@@ -18,7 +18,7 @@ const TeacherHeaderActions = ({
         <h1 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight leading-none">
           Staff Management
         </h1>
-        <p className="text-sm text-slate-400 dark:text-slate-500 mt-1 font-medium">
+        <p className="text-sm text-slate-500 dark:text-slate-500 mt-1 font-medium">
           Manage all school staff members and their access
         </p>
       </div>

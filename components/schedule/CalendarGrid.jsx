@@ -45,16 +45,16 @@ const CalendarGrid = ({
   today.setHours(0, 0, 0, 0);
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700/60 shadow-xl shadow-slate-200/60 dark:shadow-none bg-white dark:bg-slate-900 transition-colors duration-300">
+    <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800/60 shadow-sm bg-white dark:bg-slate-900 transition-colors duration-300">
       {/* Weekday Header */}
       <div className="grid grid-cols-7">
         {weekdays.map((day, i) => (
           <div
             key={day}
-            className={`text-center py-3 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest border-b border-slate-200 dark:border-slate-700/60 transition-colors
+            className={`text-center py-4 text-[10px] sm:text-xs font-bold uppercase tracking-widest border-b border-slate-200 dark:border-slate-800 transition-colors
               ${weekendIndices.has(i)
-                ? "text-rose-400 dark:text-rose-500/70 bg-rose-50/40 dark:bg-rose-950/20"
-                : "text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/40"
+                ? "text-rose-500/80 dark:text-rose-400/60 bg-slate-50/50 dark:bg-slate-950/40"
+                : "text-slate-500 dark:text-slate-400 bg-slate-50/30 dark:bg-slate-800/20"
               }`}
           >
             {day}
@@ -63,7 +63,7 @@ const CalendarGrid = ({
       </div>
 
       {/* Day Cells */}
-      <div className="grid grid-cols-7 divide-x divide-y divide-slate-200 dark:divide-slate-700/50">
+      <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800/60">
         {calendarGrid.map((day, index) => {
           const isToday = day && day.getTime() === today.getTime();
           const dateKey = day ? formatLocalDate(day) : "";
@@ -75,36 +75,33 @@ const CalendarGrid = ({
           return (
             <div
               key={index}
-              className={`relative min-h-[64px] sm:min-h-[128px] p-1 sm:p-2 transition-all duration-200 group
+              className={`relative min-h-[70px] sm:min-h-[140px] p-1 sm:p-2.5 transition-all duration-300 group
                 ${!day
-                  ? isWeekend
-                    ? "bg-slate-50/60 dark:bg-slate-950/40"
-                    : "bg-slate-50/20 dark:bg-slate-950/20"
+                  ? "bg-slate-50/10 dark:bg-slate-950/10"
                   : isWeekend
-                    ? "bg-rose-50/20 dark:bg-rose-950/10 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 cursor-pointer"
-                    : "bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer"
+                    ? "bg-slate-50/20 dark:bg-slate-950/10 hover:bg-slate-100 dark:hover:bg-slate-800/30 cursor-pointer"
+                    : "bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/30 cursor-pointer"
                 }
-                ${isSelected ? "ring-2 ring-inset ring-primary-500/70 bg-primary-50/60 dark:bg-primary-900/20" : ""}
-                ${isToday ? "bg-primary-50/40 dark:bg-primary-950/20" : ""}
+                ${isSelected ? "bg-primary-50/30 dark:bg-primary-900/10" : ""}
               `}
               onClick={() => day && onSelectDate(dateKey)}
             >
               {day && (
                 <>
                   {/* Day Number */}
-                  <div className="flex justify-end mb-1">
+                  <div className="flex justify-end mb-2">
                     {isToday ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary-600 text-white text-[10px] sm:text-sm font-black shadow-lg shadow-primary-300 dark:shadow-primary-900 ring-2 ring-primary-300 dark:ring-primary-700 ring-offset-1 ring-offset-white dark:ring-offset-slate-900 transition-all">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-600 text-white text-xs font-bold shadow-md shadow-primary-500/20 ring-4 ring-primary-500/10">
                         {day.getDate()}
                       </span>
                     ) : (
                       <span
-                        className={`inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[10px] sm:text-sm font-bold transition-all
+                        className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium transition-all
                           ${isSelected
                             ? "bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300"
                             : isWeekend
-                              ? "text-rose-400 dark:text-rose-500 group-hover:bg-rose-100 dark:group-hover:bg-rose-950/40"
-                              : "text-slate-600 dark:text-slate-400 group-hover:bg-slate-100 dark:group-hover:bg-slate-800"
+                              ? "text-rose-500/80 dark:text-rose-400 group-hover:bg-rose-50 dark:group-hover:bg-rose-900/20"
+                              : "text-slate-500 dark:text-slate-400 group-hover:bg-slate-100 dark:group-hover:bg-slate-800"
                           }`}
                       >
                         {day.getDate()}
@@ -113,7 +110,7 @@ const CalendarGrid = ({
                   </div>
 
                   {/* Desktop Event Pills */}
-                  <div className="hidden sm:block space-y-1">
+                  <div className="hidden sm:block space-y-1.5">
                     {dayEvents.slice(0, 3).map((event) => {
                       const style = EVENT_STYLES[event.type] || EVENT_STYLES[EventType.General];
                       return (
@@ -121,36 +118,36 @@ const CalendarGrid = ({
                           key={event.id}
                           onClick={(e) => { e.stopPropagation(); onOpenModal(event); }}
                           title={event.title}
-                          className={`w-full text-left text-white text-[10px] sm:text-[11px] font-bold py-0.5 sm:py-1 px-1.5 rounded-md truncate flex items-center gap-1 shadow-sm transition-all duration-150 active:scale-95 ${style.pill}`}
+                          className={`w-full text-left text-white text-[10px] font-bold py-1 px-2 rounded-lg truncate flex items-center gap-1.5 shadow-sm transition-all active:scale-95 border border-white/10 ${style.pill}`}
                         >
-                          <span className="text-[9px] leading-none shrink-0">{style.icon}</span>
-                          <span className="truncate">{event.title}</span>
+                          <span className="text-[10px] leading-none shrink-0 opacity-90">{style.icon}</span>
+                          <span className="truncate tracking-tight">{event.title}</span>
                         </button>
                       );
                     })}
                     {dayEvents.length > 3 && (
-                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-1.5">
-                        +{dayEvents.length - 3} more
+                      <p className="text-[9px] font-bold text-slate-500 dark:text-slate-500 px-2 uppercase tracking-wider">
+                        + {dayEvents.length - 3} more
                       </p>
                     )}
                   </div>
 
                   {/* Mobile Event Dots */}
-                  <div className="flex sm:hidden justify-center gap-0.5 mt-0.5">
+                  <div className="flex sm:hidden justify-center gap-1 mt-1">
                     {dayEvents.slice(0, 3).map((event) => {
                       const style = EVENT_STYLES[event.type] || EVENT_STYLES[EventType.General];
                       return (
                         <span
                           key={event.id}
-                          className={`w-1.5 h-1.5 rounded-full ${style.dot} ring-1 ring-white dark:ring-slate-900`}
+                          className={`w-1.5 h-1.5 rounded-full ${style.dot} border border-white dark:border-slate-900`}
                         />
                       );
                     })}
-                    {dayEvents.length > 3 && (
-                      <span className="text-[8px] font-bold text-slate-400">+{dayEvents.length - 3}</span>
-                    )}
                   </div>
                 </>
+              )}
+              {isSelected && (
+                <div className="absolute inset-0 border-2 border-primary-500/50 rounded-lg pointer-events-none z-10" />
               )}
             </div>
           );

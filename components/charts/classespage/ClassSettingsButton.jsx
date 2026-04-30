@@ -4,10 +4,10 @@ const ClassSettingsButton = ({ isOpen, onToggle }) => {
   return (
     <button
       onClick={onToggle}
-      className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs sm:text-sm font-bold shadow-sm shrink-0 ${
+      className={`px-4 py-2.5 rounded-xl transition-all duration-300 active:scale-95 flex items-center gap-2 text-xs sm:text-sm font-bold shadow-sm shrink-0 ${
         isOpen
-          ? "bg-slate-800 text-white ring-2 ring-slate-100"
-          : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          ? "bg-slate-800 dark:bg-slate-700 text-white ring-2 ring-slate-200 dark:ring-slate-600 shadow-lg shadow-slate-900/20"
+          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
       }`}
     >
       <svg

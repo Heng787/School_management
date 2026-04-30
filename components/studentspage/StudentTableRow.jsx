@@ -7,6 +7,7 @@ import { StudentStatus, UserRole } from "../../types";
  */
 const StudentTableRow = ({
   student,
+  index = 0,
   isHighlighted,
   isSelected,
   isDeleting,
@@ -84,13 +85,17 @@ const StudentTableRow = ({
   return (
     <tr
       ref={ref}
-      className={`transition-colors duration-150 ${rowBg}`}
-      style={isHighlighted ? { boxShadow: "inset 3px 0 0 #0ea5e9" } : {}}
+      className={`transition-colors duration-150 row-entrance ${rowBg}`}
+      style={{
+        ...(isHighlighted ? { boxShadow: "inset 3px 0 0 #0ea5e9" } : {}),
+        animationDelay: `${index * 0.03}s`
+      }}
     >
       {/* Checkbox */}
       <td className="px-4 py-3.5 text-center">
         <input
           type="checkbox"
+          aria-label={`Select student ${student.name}`}
           className="rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500 cursor-pointer w-4 h-4"
           checked={isSelected}
           onChange={() => onSelect(student.id)}
@@ -100,12 +105,16 @@ const StudentTableRow = ({
       {/* Name + Avatar */}
       <td className="px-5 py-3.5 whitespace-nowrap">
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 select-none ${avatarBg} ${avatarText}`}>
+          <div 
+            role="img"
+            aria-label={`Avatar for ${student.name}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 select-none ${avatarBg} ${avatarText}`}
+          >
             {(student.name || "?").charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{student.name}</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-600 font-mono">
+            <p className="text-[10px] text-slate-500 dark:text-slate-600 font-mono">
               {student.id?.length > 8 ? `ST-${student.id.slice(-6)}` : student.id}
             </p>
           </div>
@@ -116,11 +125,11 @@ const StudentTableRow = ({
       <td className="px-5 py-3.5 whitespace-nowrap">
         <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${genderColor}`}>
           {isFemale ? (
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <circle cx="12" cy="8" r="4"/><line x1="12" y1="12" x2="12" y2="20"/><line x1="9" y1="17" x2="15" y2="17"/>
             </svg>
           ) : (
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <circle cx="10" cy="14" r="4"/><line x1="21" y1="3" x2="15" y2="9"/><polyline points="15 3 21 3 21 9"/>
             </svg>
           )}
@@ -142,7 +151,7 @@ const StudentTableRow = ({
             href={`tel:${student.phone}`}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline transition-colors"
           >
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
@@ -172,13 +181,13 @@ const StudentTableRow = ({
             ))}
             {displayClasses.length > 2 && (
               <details className="group cursor-pointer relative z-40">
-                <summary className="text-[10px] font-bold text-slate-500 dark:text-slate-400 outline-none select-none
+                <summary className="text-[10px] font-bold text-slate-500 dark:text-slate-400 select-none
                   flex items-center gap-1 px-2 py-1 rounded-lg
                   bg-slate-100 dark:bg-slate-800
                   border border-slate-200 dark:border-slate-700
-                  hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/50">
                   +{displayClasses.length - 2}
-                  <svg className="w-3 h-3 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-3 h-3 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </summary>
@@ -186,7 +195,7 @@ const StudentTableRow = ({
                   {displayClasses.slice(2).map((sc) => (
                     <div key={sc.id} className="flex flex-col pl-2 border-l-2 border-primary-300 dark:border-primary-700">
                       <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">{sc.name}</span>
-                      <span className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">{sc.level}</span>
+                      <span className="text-[9px] text-slate-500 uppercase tracking-wider mt-0.5">{sc.level}</span>
                     </div>
                   ))}
                 </div>
@@ -194,8 +203,8 @@ const StudentTableRow = ({
             )}
           </div>
         ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-600 italic">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-600 italic">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -207,7 +216,7 @@ const StudentTableRow = ({
       {/* Status */}
       <td className="px-5 py-3.5 whitespace-nowrap">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold ${statusBadge.cls}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} aria-hidden="true" />
           {student.status}
         </span>
       </td>
@@ -220,9 +229,10 @@ const StudentTableRow = ({
               <ActionBtn
                 onClick={() => onEdit(student)}
                 title="Edit Student"
+                ariaLabel={`Edit student ${student.name}`}
                 color="blue"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
@@ -231,13 +241,14 @@ const StudentTableRow = ({
                 <ActionBtn
                   onClick={() => onDelete(student)}
                   title="Delete Student"
+                  ariaLabel={`Delete student ${student.name}`}
                   color="red"
                   disabled={isDeleting}
                 >
                   {isDeleting ? (
-                    <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" aria-hidden="true" />
                   ) : (
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
@@ -251,13 +262,14 @@ const StudentTableRow = ({
           <button
             type="button"
             onClick={() => onReportCard(student)}
+            aria-label={`View report card for ${student.name}`}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all
               text-emerald-700 dark:text-emerald-400
               bg-emerald-50 dark:bg-emerald-900/20
               border border-emerald-200 dark:border-emerald-800/50
-              hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+              hover:bg-emerald-100 dark:hover:bg-emerald-900/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
           >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -271,17 +283,18 @@ const StudentTableRow = ({
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const actionColors = {
-  blue: "text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-  red:  "text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20",
+  blue: "text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20",
+  red:  "text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20",
 };
 
-const ActionBtn = ({ onClick, title, color, disabled, children }) => (
+const ActionBtn = ({ onClick, title, ariaLabel, color, disabled, children }) => (
   <button
     type="button"
     onClick={onClick}
     title={title}
+    aria-label={ariaLabel || title}
     disabled={disabled}
-    className={`p-1.5 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${actionColors[color] || actionColors.blue}`}
+    className={`p-1.5 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500/50 ${actionColors[color] || actionColors.blue}`}
   >
     {children}
   </button>

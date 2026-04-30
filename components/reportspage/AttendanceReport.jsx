@@ -3,12 +3,10 @@ import { useData } from "../../context/DataContext";
 import { AttendanceStatus } from "../../types";
 import AttendancePrintModal from "./AttendancePrintModal";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── HELPERS & UTILS ──────────────────────────────────────────────────────────
 
 const useSession = (key, fallback = "") => {
-  const [value, setValue] = useState(
-    () => sessionStorage.getItem(key) || fallback,
-  );
+  const [value, setValue] = useState(() => sessionStorage.getItem(key) || fallback);
   const set = (v) => {
     setValue(v);
     v ? sessionStorage.setItem(key, v) : sessionStorage.removeItem(key);
@@ -18,753 +16,342 @@ const useSession = (key, fallback = "") => {
 
 const getCutoffDate = (timeRange) => {
   const d = new Date();
-  const ops = {
+  const options = {
     "7days": () => d.setDate(d.getDate() - 7),
     "30days": () => d.setDate(d.getDate() - 30),
     thisMonth: () => d.setDate(1),
     "90days": () => d.setDate(d.getDate() - 90),
     ytd: () => d.setMonth(0, 1),
   };
-  ops[timeRange]?.();
+  options[timeRange]?.();
   return d.toLocaleDateString("en-CA");
 };
 
 const downloadCSV = (filename, rows) => {
   const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  Object.assign(document.createElement("a"), {
-    href: url,
-    download: filename,
-  }).click();
+  Object.assign(document.createElement("a"), { href: url, download: filename }).click();
   URL.revokeObjectURL(url);
 };
 
 const formatDate = (dateStr) =>
   new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
-    weekday: "short",
-    month: "short",
-    day: "2-digit",
+    weekday: "short", month: "short", day: "2-digit"
   });
 
-// ─── Shared UI ────────────────────────────────────────────────────────────────
+// ─── REUSABLE UI COMPONENTS ───────────────────────────────────────────────────
 
-const Card = ({ className = "", children }) => (
-  <div
-    className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors ${className}`}
-  >
+const Card = ({ children, className = "" }) => (
+  <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all duration-300 ${className}`}>
     {children}
   </div>
 );
 
-const EmptyState = ({ message }) => (
-  <div className="p-6 text-center bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
-    {message}
+const StatBadge = ({ label, value, colorClass }) => (
+  <div className="text-center group">
+    <p className={`text-[10px] font-black uppercase tracking-widest mb-0.5 opacity-60`}>{label}</p>
+    <p className={`text-xl font-black ${colorClass} group-hover:scale-110 transition-transform`}>{value}</p>
   </div>
 );
 
-const StatBadge = ({ label, value, color }) => {
-  const colors = {
-    green: "text-emerald-500 dark:text-emerald-400",
-    red: "text-red-500 dark:text-red-400",
-    amber: "text-amber-500 dark:text-amber-400",
-    purple: "text-purple-500 dark:text-purple-400",
-  };
-  const valueColors = {
-    green: "text-emerald-700 dark:text-emerald-500",
-    red: "text-red-700 dark:text-red-500",
-    amber: "text-amber-700 dark:text-amber-500",
-    purple: "text-purple-700 dark:text-purple-500",
-  };
-  return (
-    <div className="text-center">
-      <p className={`text-[10px] font-bold uppercase ${colors[color]}`}>
-        {label}
-      </p>
-      <p className={`text-xl font-black ${valueColors[color]}`}>{value}</p>
+// ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
+
+const TopAbsenceItem = ({ student, count }) => (
+  <div className="group flex bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 gap-4 items-center hover:bg-white dark:hover:bg-slate-800 hover:shadow-md transition-all duration-300">
+    <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center font-black text-sm shrink-0">
+      {student.name.charAt(0).toUpperCase()}
     </div>
-  );
-};
-
-// ─── Top Absences Section ─────────────────────────────────────────────────────
-
-const TIME_OPTIONS = [
-  { value: "today", label: "Today" },
-  { value: "7days", label: "Last 7 Days" },
-  { value: "30days", label: "Last 30 Days" },
-  { value: "thisMonth", label: "This Month" },
-  { value: "90days", label: "Last 3 Months" },
-  { value: "ytd", label: "Year to Date (YTD)" },
-];
-
-const TopAbsences = ({ topAbsences, timeRange, onTimeRangeChange }) => (
-  <Card className="p-6">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-      <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-        <svg
-          className="w-5 h-5 text-red-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        Most Absent Students
-      </h3>
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Timeframe:
-        </span>
-        <select
-          value={timeRange}
-          onChange={(e) => onTimeRangeChange(e.target.value)}
-          className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm rounded-lg px-3 py-1.5 font-semibold outline-none"
-        >
-          {TIME_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{student.name}</p>
+      <p className="text-[10px] font-medium text-slate-500">ID: {student.id}</p>
     </div>
-    {topAbsences.length > 0 ? (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {topAbsences.map(({ student, count }) => (
-          <div
-            key={student.id}
-            className="group flex bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300"
-          >
-            <div className="w-2.5 bg-red-500 shrink-0 group-hover:bg-red-600 transition-colors" />
-            <div className="flex flex-1 items-center p-4 gap-4">
-              <p className="flex-1 text-base font-bold text-slate-800 dark:text-white truncate">
-                {student.name}
-              </p>
-              <div className="flex items-center gap-3 pl-4 border-l border-slate-100 dark:border-slate-700 shrink-0">
-                <span className="text-3xl font-black text-red-600">
-                  {count}
-                </span>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">
-                    Total
-                  </span>
-                  <span className="text-[10px] font-black text-red-500 uppercase">
-                    Absences
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div className="py-2 flex justify-center text-sm font-medium text-slate-500 dark:text-slate-400">
-        No absence records found for this timeframe.
-      </div>
-    )}
-  </Card>
+    <div className="text-right border-l border-slate-200 dark:border-slate-700 pl-4">
+      <p className="text-2xl font-black text-rose-600 leading-none">{count}</p>
+      <p className="text-[9px] font-black text-rose-400 uppercase tracking-tighter">Absences</p>
+    </div>
+  </div>
 );
 
-// ─── Flagged Students Banner ──────────────────────────────────────────────────
+const HistoryRecord = ({ record, onExcuse, isAdminOrOffice }) => {
+  const isAbsent = record.status === AttendanceStatus.Absent;
+  const isLate = record.status === AttendanceStatus.Late;
+  const color = isAbsent ? "rose" : isLate ? "amber" : "purple";
 
-const FlaggedBanner = ({ flaggedStudents, onUnflag }) => {
-  if (!flaggedStudents.length) return null;
   return (
-    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/30 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">🚩</span>
-        <p className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase">
-          Students Flagged for Follow-Up ({flaggedStudents.length})
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {flaggedStudents.map((s) => (
-          <span
-            key={s.student.id}
-            className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-900/40 border border-orange-300 dark:border-orange-800 text-orange-800 dark:text-orange-300 text-xs font-bold px-3 py-1.5 rounded-full"
-          >
-            🚩 {s.student.name} — {s.absent} absence{s.absent !== 1 ? "s" : ""}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onUnflag(s.student.id);
-              }}
-              className="ml-1 font-black hover:text-orange-900 dark:hover:text-orange-100"
-            >
-              ✕
-            </button>
+    <div className="relative pl-6">
+      <div className={`absolute -left-[7px] top-2.5 w-3.5 h-3.5 rounded-full border-4 bg-${color}-500 border-${color}-50 dark:border-slate-900`} />
+      <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group hover:shadow-md transition-all">
+        <div>
+          <span className={`text-[11px] font-black uppercase tracking-widest text-${color}-600 dark:text-${color}-400`}>
+            {record.status}
           </span>
-        ))}
+          <span className="ml-3 text-xs font-bold text-slate-500 dark:text-slate-400">
+            {formatDate(record.date)}
+          </span>
+        </div>
+        {isAdminOrOffice && (
+          <button
+            onClick={() => onExcuse(record)}
+            className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors"
+          >
+            Excuse
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-// ─── Attendance History (expanded row) ───────────────────────────────────────
-
-const HistoryRow = ({ stat, isAdminOrOffice, onExport, onExcuse }) => (
-  <tr className="bg-primary-50/10 dark:bg-primary-950/10">
-    <td colSpan={5} className="px-8 py-6">
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <p className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase">
-          History Overview
-        </p>
-      </div>
-      {stat.history.length > 0 ? (
-        <div className="flex flex-col border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-4">
-          {stat.history.map((record, i) => {
-            const isAbsent = record.status === AttendanceStatus.Absent;
-            const isLate = record.status === AttendanceStatus.Late;
-            return (
-              <div key={i} className="relative pl-6">
-                <div
-                  className={`absolute -left-[9px] top-2.5 w-4 h-4 rounded-full border-4 ${isAbsent ? "bg-red-500 border-red-50 dark:border-slate-900" : isLate ? "bg-amber-500 border-amber-50 dark:border-slate-900" : "bg-purple-500 border-purple-50 dark:border-slate-900"}`}
-                />
-                <div className="flex items-center justify-between bg-white dark:bg-slate-800 px-5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <div>
-                    <span
-                      className={`text-sm font-black uppercase ${isAbsent ? "text-red-600 dark:text-red-400" : isLate ? "text-amber-600 dark:text-amber-400" : "text-purple-600 dark:text-purple-400"}`}
-                    >
-                      {record.status}
-                    </span>
-                    <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                      {formatDate(record.date)}
-                    </span>
-                  </div>
-                  {isAdminOrOffice && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onExcuse(record);
-                      }}
-                      className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors"
-                    >
-                      ✓ Excuse
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 p-4 rounded-xl flex items-center gap-3">
-          <svg
-            className="w-5 h-5 text-emerald-600 dark:text-emerald-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2.5"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p className="text-sm text-emerald-800 dark:text-emerald-300 font-bold">
-            Perfect attendance!
-          </p>
-        </div>
-      )}
-    </td>
-  </tr>
-);
-
-// ─── Class Table ──────────────────────────────────────────────────────────────
-
-const ClassTable = ({
-  stats,
-  flaggedIds,
-  expandedId,
-  onRowClick,
-  onToggleFlag,
-  onExport,
-  onExcuse,
-  isAdminOrOffice,
-}) => (
-  <Card>
-    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700 flex justify-end space-x-8">
-      <StatBadge
-        label="Total Present"
-        value={stats.reduce((a, s) => a + s.present, 0)}
-        color="green"
-      />
-      <StatBadge
-        label="Total Absent"
-        value={stats.reduce((a, s) => a + s.absent, 0)}
-        color="red"
-      />
-      <StatBadge
-        label="Total Late"
-        value={stats.reduce((a, s) => a + s.late, 0)}
-        color="amber"
-      />
-      <StatBadge
-        label="Total Permission"
-        value={stats.reduce((a, s) => a + s.permission, 0)}
-        color="purple"
-      />
-    </div>
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
-        <thead className="bg-slate-50 dark:bg-slate-800">
-          <tr>
-            {[
-              {
-                label: "Student Info",
-                cls: "text-slate-500 dark:text-slate-400 text-left",
-              },
-              {
-                label: "Present",
-                cls: "text-emerald-600 dark:text-emerald-400 text-center",
-              },
-              {
-                label: "Absent",
-                cls: "text-red-600 dark:text-red-400 text-center",
-              },
-              {
-                label: "Late",
-                cls: "text-amber-600 dark:text-amber-400 text-center",
-              },
-              {
-                label: "Perm",
-                cls: "text-purple-600 dark:text-purple-400 text-center",
-              },
-              /* {
-                label: "Flag",
-                cls: "text-slate-400 dark:text-slate-500 text-center",
-              }, */
-            ].map(({ label, cls }) => (
-              <th
-                key={label}
-                className={`px-6 py-4 text-xs font-bold uppercase ${cls}`}
-              >
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
-          {stats.map((stat) => {
-            const { student, present, absent, late, permission } = stat;
-            const isFlagged = flaggedIds.has(student.id);
-            const isExpanded = expandedId === student.id;
-            const canFlag = absent >= 3;
-
-            const rowBg = isFlagged
-              ? "bg-orange-50 dark:bg-orange-950/30"
-              : isExpanded
-                ? "bg-primary-50 dark:bg-primary-900/20"
-                : "hover:bg-slate-50 dark:hover:bg-slate-800/50";
-
-            const avatarCls = isFlagged
-              ? "bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300"
-              : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200";
-
-            return (
-              <React.Fragment key={student.id}>
-                <tr
-                  onClick={() => onRowClick(student.id)}
-                  className={`cursor-pointer transition-colors ${rowBg}`}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs ${avatarCls}`}
-                      >
-                        {student.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-800 dark:text-white">
-                          {student.name}
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                          ID: {student.id}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-lg">
-                      {present}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={`font-bold px-3 py-1 rounded-lg ${canFlag ? "text-red-800 dark:text-red-400 bg-red-100 dark:bg-red-900/40" : "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20"}`}
-                    >
-                      {absent}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-lg">
-                      {late}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-purple-700 dark:text-purple-400 font-bold bg-purple-50 dark:bg-purple-900/20 px-3 py-1 rounded-lg">
-                      {permission}
-                    </span>
-                  </td>
-                </tr>
-                {isExpanded && (
-                  <HistoryRow
-                    stat={stat}
-                    isAdminOrOffice={isAdminOrOffice}
-                    onExport={(e) => onExport(e, stat)}
-                    onExcuse={(record) => onExcuse(record)}
-                  />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  </Card>
-);
-
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const AttendanceReport = () => {
-  const {
-    students,
-    classes,
-    attendance,
-    enrollments,
-    updateAttendance,
-    currentUser,
-    staff,
-  } = useData();
+  const { students, classes, attendance, enrollments, updateAttendance, currentUser, staff } = useData();
 
-  const [selectedClassId, setSelectedClassId] = useSession(
-    "reports_attendance_class",
-  );
-  const [timeRange, setTimeRange] = useSession(
-    "reports_attendance_time",
-    "today",
-  );
-  const [expandedStudentId, setExpandedStudentId] = useState(null);
-  const [flaggedIds, setFlaggedIds] = useState(new Set());
+  // --- PERSISTED FILTERS ---
+  const [selectedClassId, setSelectedClassId] = useSession("reports_attendance_class");
+  const [timeRange, setTimeRange] = useSession("reports_attendance_time", "30days");
   const [exportMonth, setExportMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+
+  // --- LOCAL UI STATE ---
+  const [expandedStudentId, setExpandedStudentId] = useState(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  const isAdminOrOffice = ["Admin", "Office Worker"].includes(
-    currentUser?.role,
-  );
+  const isAdminOrOffice = ["Admin", "Office Worker"].includes(currentUser?.role);
 
+  // --- DERIVED DATA ---
   const filteredAttendance = useMemo(() => {
     const cutoff = getCutoffDate(timeRange);
-    return attendance.filter((a) => a.date >= cutoff);
+    return attendance.filter(a => a.date >= cutoff);
   }, [attendance, timeRange]);
 
   const topAbsences = useMemo(() => {
     const counts = {};
-    filteredAttendance.forEach((a) => {
-      if (a.status === AttendanceStatus.Absent)
-        counts[a.studentId] = (counts[a.studentId] || 0) + 1;
+    filteredAttendance.forEach(a => {
+      if (a.status === AttendanceStatus.Absent) counts[a.studentId] = (counts[a.studentId] || 0) + 1;
     });
     return Object.entries(counts)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([id, count]) => ({
-        student: students.find((s) => s.id === id),
-        count,
-      }))
-      .filter((x) => x.student);
+      .slice(0, 6)
+      .map(([id, count]) => ({ student: students.find(s => s.id === id), count }))
+      .filter(x => x.student);
   }, [filteredAttendance, students]);
 
-  const selectedClass = useMemo(
-    () => classes.find((c) => c.id === selectedClassId),
-    [classes, selectedClassId],
-  );
+  const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
 
-  const classStudentsStats = useMemo(() => {
+  const classStats = useMemo(() => {
     if (!selectedClass) return [];
-    const ids = new Set(
-      enrollments
-        .filter((e) => e.classId === selectedClass.id)
-        .map((e) => e.studentId),
-    );
-    return students
-      .filter((s) => ids.has(s.id))
-      .map((student) => {
-        const recs = filteredAttendance.filter(
-          (a) =>
-            a.studentId === student.id &&
-            (a.classId === selectedClass.id || !a.classId),
-        );
-        const present = recs.filter(
-          (a) => a.status === AttendanceStatus.Present,
-        ).length;
-        const absent = recs.filter(
-          (a) => a.status === AttendanceStatus.Absent,
-        ).length;
-        const late = recs.filter(
-          (a) => a.status === AttendanceStatus.Late,
-        ).length;
-        const permission = recs.filter(
-          (a) => a.status === AttendanceStatus.Permission,
-        ).length;
-        const history = recs
-          .filter((a) => a.status !== AttendanceStatus.Present)
-          .sort((a, b) => b.date.localeCompare(a.date));
-        return {
-          student,
-          present,
-          absent,
-          late,
-          permission,
-          total: present + absent + late + permission,
-          history,
-        };
-      });
+    const enrolledIds = new Set(enrollments.filter(e => e.classId === selectedClass.id).map(e => e.studentId));
+    
+    return students.filter(s => enrolledIds.has(s.id)).map(student => {
+      const recs = filteredAttendance.filter(a => a.studentId === student.id && (a.classId === selectedClass.id || !a.classId));
+      const getCount = (s) => recs.filter(a => a.status === s).length;
+      
+      return {
+        student,
+        present: getCount(AttendanceStatus.Present),
+        absent: getCount(AttendanceStatus.Absent),
+        late: getCount(AttendanceStatus.Late),
+        permission: getCount(AttendanceStatus.Permission),
+        history: recs.filter(a => a.status !== AttendanceStatus.Present).sort((a, b) => b.date.localeCompare(a.date))
+      };
+    });
   }, [students, selectedClass, enrollments, filteredAttendance]);
 
-  const flaggedStudents = useMemo(
-    () => classStudentsStats.filter((s) => flaggedIds.has(s.student.id)),
-    [classStudentsStats, flaggedIds],
-  );
-
-  const toggleFlag = (id) =>
-    setFlaggedIds((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-
-  const handleExport = (e, stat) => {
-    e.stopPropagation();
-    const rows = [
-      "Student Name,Student ID,Class,Date,Status",
-      ...attendance
-        .filter((a) => a.studentId === stat.student.id)
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .map(
-          (r) =>
-            `${stat.student.name},${stat.student.id},${selectedClass?.name ?? ""},${r.date},${r.status}`,
-        ),
-    ];
-    downloadCSV(
-      `attendance_${stat.student.name.replace(/\s+/g, "_")}_${new Date().toLocaleDateString("en-CA")}.csv`,
-      rows,
-    );
-  };
-
-  const handleMonthExport = () => {
+  // --- HANDLERS ---
+  const handleExportMonthly = () => {
     if (!selectedClass || !exportMonth) return;
-    const [yearStr, monthStr] = exportMonth.split("-");
-    const year = parseInt(yearStr);
-    const monthIdx = parseInt(monthStr) - 1; // 0-based
-
-    // How many days in this month?
-    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-
-    // Day-of-week abbreviations
-    const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-    const enrolledIds = new Set(
-      enrollments
-        .filter((e) => e.classId === selectedClass.id)
-        .map((e) => e.studentId),
-    );
-    const enrolledStudents = students.filter((s) => enrolledIds.has(s.id));
-
-    // Build lookup: studentId -> { 'YYYY-MM-DD' -> status }
-    const recMap = {};
-    attendance
-      .filter(
-        (a) =>
-          (a.classId === selectedClass.id || !a.classId) &&
-          enrolledIds.has(a.studentId) &&
-          a.date.startsWith(`${yearStr}-${monthStr}`),
-      )
-      .forEach((a) => {
-        if (!recMap[a.studentId]) recMap[a.studentId] = {};
-        // abbreviate status: Present->P, Absent->A, Late->L, Permission->Perm
-        const abbr =
-          { Present: "P", Absent: "A", Late: "L", Permission: "Perm" }[
-            a.status
-          ] ?? a.status;
-        recMap[a.studentId][a.date] = abbr;
-      });
-
-    const teacher = staff?.find((s) => s.id === selectedClass.teacherId);
-    const monthLabel = new Date(year, monthIdx, 1).toLocaleString("default", {
-      month: "long",
-    });
-
-    // CSV helper — wraps a cell in quotes if it contains commas
-    const cell = (v) => (String(v).includes(",") ? `"${v}"` : String(v));
-
-    // Column headers: day numbers 1..daysInMonth
-    const dayNums = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-    // Day-of-week row for each day
-    const dayDows = dayNums.map(
-      (d) => DOW[new Date(year, monthIdx, d).getDay()],
-    );
-
-    const prefix = `${yearStr}-${monthStr}`;
-
+    const [year, month] = exportMonth.split("-");
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const enrolledIds = new Set(enrollments.filter(e => e.classId === selectedClass.id).map(e => e.studentId));
+    
     const rows = [
-      // ── Title block ──────────────────────────────────────────────
-      `Monthly Class Attendance,,SchoolAdmin`,
-      `Teacher: ${cell(teacher?.name ?? "")},,Month: ${monthLabel},,Year: ${year}`,
-      `Class: ${cell(selectedClass.name)} (${cell(selectedClass.level)}),,Room: ${cell(selectedClass.name)}`,
-      `,,Enter: P=Present | A=Absent | L=Late | Perm=Permission`,
-      ``,
-      // ── Day-number header row ────────────────────────────────────
-      ["ID", "Name", ...dayNums].map(cell).join(","),
-      // ── Day-of-week sub-row ──────────────────────────────────────
-      ["", "", ...dayDows].map(cell).join(","),
-      // ── One row per student ──────────────────────────────────────
-      ...enrolledStudents.map((stu, idx) => {
-        const statusByDate = recMap[stu.id] || {};
-        const dayCells = dayNums.map((d) => {
-          const dateKey = `${yearStr}-${monthStr}-${String(d).padStart(2, "0")}`;
-          return statusByDate[dateKey] ?? "";
-        });
-        return [cell(idx + 1), cell(stu.name), ...dayCells].join(",");
-      }),
+      `Monthly Attendance Report - ${selectedClass.name} (${selectedClass.level})`,
+      `Month: ${exportMonth},Generated: ${new Date().toLocaleDateString()}`,
+      "",
+      "Student ID,Student Name," + Array.from({ length: daysInMonth }, (_, i) => i + 1).join(",")
     ];
 
-    downloadCSV(
-      `attendance_${selectedClass.name.replace(/\s+/g, "_")}_${prefix}.csv`,
-      rows,
-    );
+    students.filter(s => enrolledIds.has(s.id)).forEach(s => {
+      const row = [s.id, s.name];
+      for (let i = 1; i <= daysInMonth; i++) {
+        const date = `${year}-${month}-${String(i).padStart(2, "0")}`;
+        const record = attendance.find(a => a.studentId === s.id && a.date === date && (a.classId === selectedClass.id || !a.classId));
+        row.push(record ? record.status.charAt(0) : "");
+      }
+      rows.push(row.join(","));
+    });
+
+    downloadCSV(`Attendance_${selectedClass.name}_${exportMonth}.csv`, rows);
   };
 
   return (
-    <div className="space-y-6">
-      <TopAbsences
-        topAbsences={topAbsences}
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
-      />
-
-      {/* <FlaggedBanner flaggedStudents={flaggedStudents} onUnflag={toggleFlag} /> */}
-
-      {/* Class Selector */}
-      <Card className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex-1">
-          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
-            Detailed Class Report
-          </label>
-          <select
-            value={selectedClassId}
-            onChange={(e) => {
-              setSelectedClassId(e.target.value);
-              setExpandedStudentId(null);
-            }}
-            className="w-full md:w-96 px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white outline-none"
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* ─── TOP ANALYTICS SECTION ─── */}
+      <Card className="p-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div>
+            <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+              <span className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-xl">⚠️</span>
+              High Absence Alert
+            </h3>
+            <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-widest">Identifying risk patterns in the last {timeRange.replace('days', ' days')}</p>
+          </div>
+          <select 
+            aria-label="Select Time Range"
+            value={timeRange} 
+            onChange={e => setTimeRange(e.target.value)}
+            className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-4 focus:ring-primary-500/10 transition-all shadow-sm"
           >
-            <option value="">Choose a class...</option>
-            {classes.map((c) => {
-              const teacher = staff?.find((s) => s.id === c.teacherId);
-              return (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.level})
-                  {teacher ? ` (Teacher: ${teacher.name})` : ""} | {c.schedule}
-                </option>
-              );
-            })}
+            <option value="today">Today</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days</option>
+            <option value="thisMonth">This Month</option>
+            <option value="90days">Last Quarter</option>
+            <option value="ytd">Year to Date</option>
           </select>
         </div>
-        {selectedClassId && (
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Export by Month
-              </label>
-              <input
-                type="month"
-                value={exportMonth}
-                onChange={(e) => setExportMonth(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-            <button
-              onClick={handleMonthExport}
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200 text-sm font-bold rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                />
-              </svg>
-              Export CSV
-            </button>
-            <button
-              onClick={() => setIsPrintModalOpen(true)}
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold rounded-lg shadow-sm shadow-primary-200 dark:shadow-none transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                />
-              </svg>
-              Print A4
-            </button>
+
+        {topAbsences.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {topAbsences.map(item => <TopAbsenceItem key={item.student.id} {...item} />)}
+          </div>
+        ) : (
+          <div className="py-12 text-center bg-slate-50 dark:bg-slate-950/20 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
+            <p className="text-sm font-bold text-slate-500">All students have excellent attendance for this timeframe! 🎉</p>
           </div>
         )}
       </Card>
 
-      {/* Print Modal */}
+      {/* ─── CLASS SELECTION & ACTIONS ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 p-6 flex flex-col sm:flex-row items-center gap-6">
+          <div className="flex-1 w-full">
+            <label htmlFor="class-select" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Class Selection</label>
+            <select
+              id="class-select"
+              value={selectedClassId}
+              onChange={e => { setSelectedClassId(e.target.value); setExpandedStudentId(null); }}
+              className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-primary-500/10 transition-all shadow-sm"
+            >
+              <option value="">Select a class to view report...</option>
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name} ({c.level}) — {c.schedule}</option>)}
+            </select>
+          </div>
+          {selectedClassId && (
+            <div className="flex items-center gap-3 shrink-0 pt-6 sm:pt-0">
+              <div className="h-10 w-px bg-slate-100 dark:bg-slate-800 mx-2 hidden sm:block" />
+              <button onClick={() => setIsPrintModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-500/20 transition-all active:scale-95">
+                Print Report
+              </button>
+            </div>
+          )}
+        </Card>
+
+        {selectedClassId && (
+          <Card className="p-6">
+            <label htmlFor="export-month" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Data Export</label>
+            <div className="flex gap-2">
+              <input id="export-month" type="month" value={exportMonth} onChange={e => setExportMonth(e.target.value)} className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold outline-none" />
+              <button aria-label="Download monthly attendance CSV" onClick={handleExportMonthly} className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              </button>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* ─── DETAILED CLASS TABLE ─── */}
+      {selectedClassId && (
+        <Card>
+          <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap gap-8 justify-center sm:justify-end">
+            <StatBadge label="Present" value={classStats.reduce((a, s) => a + s.present, 0)} colorClass="text-emerald-500" />
+            <StatBadge label="Absent" value={classStats.reduce((a, s) => a + s.absent, 0)} colorClass="text-rose-500" />
+            <StatBadge label="Late" value={classStats.reduce((a, s) => a + s.late, 0)} colorClass="text-amber-500" />
+            <StatBadge label="Permission" value={classStats.reduce((a, s) => a + s.permission, 0)} colorClass="text-purple-500" />
+          </div>
+          
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full border-separate border-spacing-0">
+              <thead className="bg-slate-50 dark:bg-slate-800/50">
+                <tr>
+                  <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest">Student</th>
+                  {["Present", "Absent", "Late", "Perm"].map(h => (
+                    <th key={h} className="px-4 py-4 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {classStats.length === 0 ? (
+                  <tr><td colSpan={5} className="py-12 text-center text-sm font-bold text-slate-300 uppercase tracking-widest">No students found in this class</td></tr>
+                ) : classStats.map(stat => (
+                  <React.Fragment key={stat.student.id}>
+                    <tr 
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={expandedStudentId === stat.student.id}
+                      onClick={() => setExpandedStudentId(expandedStudentId === stat.student.id ? null : stat.student.id)} 
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setExpandedStudentId(expandedStudentId === stat.student.id ? null : stat.student.id))}
+                      className={`cursor-pointer transition-colors ${expandedStudentId === stat.student.id ? 'bg-primary-50 dark:bg-primary-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}
+                    >
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${stat.absent >= 3 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                            {stat.student.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{stat.student.name}</p>
+                            <p className="text-[10px] font-medium text-slate-500">{stat.student.id}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-5 text-center font-black text-sm text-emerald-600">{stat.present}</td>
+                      <td className="px-4 py-5 text-center font-black text-sm text-rose-600">{stat.absent}</td>
+                      <td className="px-4 py-5 text-center font-black text-sm text-amber-600">{stat.late}</td>
+                      <td className="px-4 py-5 text-center font-black text-sm text-purple-600">{stat.permission}</td>
+                    </tr>
+                    {expandedStudentId === stat.student.id && (
+                      <tr className="bg-slate-50/50 dark:bg-slate-900/50">
+                        <td colSpan={5} className="px-12 py-8 border-t border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center justify-between mb-6">
+                            <h4 className="text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-[0.2em]">Detailed Attendance History</h4>
+                          </div>
+                          {stat.history.length > 0 ? (
+                            <div className="border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-4">
+                              {stat.history.map((rec, i) => (
+                                <HistoryRecord key={i} record={rec} isAdminOrOffice={isAdminOrOffice} onExcuse={r => updateAttendance({ ...r, status: AttendanceStatus.Present })} />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-6 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
+                              <span className="text-xl">🌟</span>
+                              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Perfect attendance record! No absence or late records found.</p>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* ─── PRINT MODAL ─── */}
       <AttendancePrintModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         selectedClass={selectedClass}
         exportMonth={exportMonth}
-        students={classStudentsStats.map((s) => s.student)}
+        students={classStats.map(s => s.student)}
         attendance={attendance}
         staff={staff}
       />
-
-      {/* Class Table */}
-      {selectedClassId &&
-        (classStudentsStats.length === 0 ? (
-          <EmptyState message="This class has no students enrolled yet." />
-        ) : (
-          <ClassTable
-            stats={classStudentsStats}
-            flaggedIds={flaggedIds}
-            expandedId={expandedStudentId}
-            onRowClick={(id) =>
-              setExpandedStudentId((p) => (p === id ? null : id))
-            }
-            onToggleFlag={toggleFlag}
-            onExport={handleExport}
-            onExcuse={(record) =>
-              updateAttendance({ ...record, status: AttendanceStatus.Present })
-            }
-            isAdminOrOffice={isAdminOrOffice}
-          />
-        ))}
     </div>
   );
 };

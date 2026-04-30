@@ -1,17 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
 /**
- * Custom hook for managing filter state (search, class, status)
+ * Custom hook for managing filter state (search, class, status).
  */
 export const useFilters = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [classFilter, setClassFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [classFilter, setClassFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
 
   const resetFilters = useCallback(() => {
-    setSearchTerm("");
-    setClassFilter("All");
-    setStatusFilter("All");
+    setSearchTerm('');
+    setClassFilter('All');
+    setStatusFilter('All');
   }, []);
 
   return {
@@ -26,7 +26,7 @@ export const useFilters = () => {
 };
 
 /**
- * Custom hook for managing student selection (checkboxes)
+ * Custom hook for managing student selection (checkboxes).
  */
 export const useStudentSelection = () => {
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
@@ -34,8 +34,11 @@ export const useStudentSelection = () => {
   const toggleSelect = useCallback((id) => {
     setSelectedStudentIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }, []);
@@ -66,7 +69,7 @@ export const useStudentSelection = () => {
 };
 
 /**
- * Custom hook for managing modal states
+ * Custom hook for managing modal states.
  */
 export const useModalState = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,16 +127,19 @@ export const useModalState = () => {
     editingStudent,
     openStudentModal,
     closeStudentModal,
+
     // Report modal
     isReportModalOpen,
     selectedReportStudent,
     openReportModal,
     closeReportModal,
+
     // Delete confirm modal
     isConfirmDeleteOpen,
     studentToDelete,
     openDeleteConfirm,
     closeDeleteConfirm,
+
     // Bulk delete modal
     isBulkDeleteModalOpen,
     openBulkDeleteModal,
@@ -142,7 +148,7 @@ export const useModalState = () => {
 };
 
 /**
- * Custom hook for managing import workflow state
+ * Custom hook for managing import workflow state.
  */
 export const useImportState = () => {
   const [importPreviewData, setImportPreviewData] = useState(null);
@@ -167,7 +173,7 @@ export const useImportState = () => {
 };
 
 /**
- * Custom hook for managing pagination and deletion state
+ * Custom hook for managing pagination and deletion state.
  */
 export const usePaginationState = () => {
   const [currentPage, setCurrentPage] = useState(1);

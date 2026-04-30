@@ -1,8 +1,8 @@
-import { useMemo } from "react";
-import { StaffRole, UserRole } from "../types";
+import { useMemo } from 'react';
+import { StaffRole, UserRole } from '../types';
 
 /**
- * Handles all filtering logic for classes
+ * Handles all filtering and grouping logic for classes.
  */
 export const useClassFiltering = (
   classes,
@@ -11,55 +11,66 @@ export const useClassFiltering = (
   selectedTime,
   currentUser,
   staff,
-  timeSlots,
+  timeSlots
 ) => {
-  const availableTeachers = useMemo(
-    () => staff.filter((s) => s.role === StaffRole.Teacher),
-    [staff],
-  );
+  // --- Derived State ---
 
-  const allSessionLabels = useMemo(
-    () => timeSlots.map((s) => s.time),
-    [timeSlots],
-  );
+  const availableTeachers = useMemo(() => {
+    return staff.filter((s) => s.role === StaffRole.Teacher);
+  }, [staff]);
+
+  const allSessionLabels = useMemo(() => {
+    return timeSlots.map((s) => s.time);
+  }, [timeSlots]);
+
+  // --- Filtering ---
 
   const filteredClasses = useMemo(() => {
     let baseClasses = classes;
+
     // Teachers only see their own classes; Admin and Office Workers see all
     if (currentUser?.role === UserRole.Teacher) {
       baseClasses = classes.filter((cls) => cls.teacherId === currentUser.id);
     }
+
     return baseClasses
-      .filter((cls) => selectedLevel === "all" || cls.level === selectedLevel)
-      .filter(
-        (cls) =>
+      .filter((cls) => selectedLevel === 'all' || cls.level === selectedLevel)
+      .filter((cls) => {
+        return (
           selectedTeacherIds.length === 0 ||
-          selectedTeacherIds.includes(cls.teacherId),
-      )
-      .filter(
-        (cls) =>
-          selectedTime === "all" ||
-          (cls.schedule && cls.schedule.includes(selectedTime)),
-      );
+          selectedTeacherIds.includes(cls.teacherId)
+        );
+      })
+      .filter((cls) => {
+        return (
+          selectedTime === 'all' ||
+          (cls.schedule && cls.schedule.includes(selectedTime))
+        );
+      });
   }, [classes, selectedLevel, selectedTeacherIds, selectedTime, currentUser]);
+
+  // --- Grouping ---
 
   const classesByTimeSlot = useMemo(() => {
     const grouped = {};
+
     allSessionLabels.forEach((label) => {
       grouped[label] = [];
     });
-    grouped["Other Schedule"] = [];
+    grouped['Other Schedule'] = [];
 
     filteredClasses.forEach((cls) => {
-      const matchedSlot = allSessionLabels.find(
-        (label) => cls.schedule && cls.schedule.includes(label),
-      );
+      const matchedSlot = allSessionLabels.find((label) => {
+        return cls.schedule && cls.schedule.includes(label);
+      });
+
       if (matchedSlot) {
         grouped[matchedSlot].push(cls);
       } else {
-        grouped["Other Schedule"].push(cls);
+        grouped['Other Schedule'].push(cls);
       }
     });
+
     return grouped;
   }, [filteredClasses, allSessionLabels]);
 

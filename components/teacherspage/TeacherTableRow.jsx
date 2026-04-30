@@ -86,7 +86,11 @@ const TeacherTableRow = ({
       <td className="px-5 py-3.5 whitespace-nowrap">
         <div className="flex items-center gap-3">
           {/* Avatar */}
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 select-none ${lb} ${lt} ${db} ${dt}`}>
+          <div 
+            role="img"
+            aria-label={`${staff.name}'s avatar`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 select-none ${lb} ${lt} ${db} ${dt}`}
+          >
             {staff.name.charAt(0).toUpperCase()}
           </div>
 
@@ -97,10 +101,13 @@ const TeacherTableRow = ({
               </span>
               <span
                 className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOnLeave ? "bg-amber-400" : "bg-emerald-500"}`}
-                title={isOnLeave ? "On Leave" : "Active"}
+                aria-hidden="true"
               />
+              <span className="sr-only">
+                {isOnLeave ? "On Leave" : "Active"}
+              </span>
             </div>
-            <div className="text-[11px] text-slate-400 dark:text-slate-600 font-mono mt-0.5">
+            <div className="text-[11px] text-slate-500 dark:text-slate-600 font-mono mt-0.5">
               {staff.id.length > 8 ? `CS-${staff.id.slice(-6)}` : staff.id}
             </div>
           </div>
@@ -136,31 +143,31 @@ const TeacherTableRow = ({
       {/* Actions */}
       <td className="px-5 py-3.5 whitespace-nowrap">
         <div className="flex items-center justify-end gap-1">
-          <ActionBtn onClick={() => onEdit(staff)} title="Edit" color="blue">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <ActionBtn onClick={() => onEdit(staff)} title={`Edit ${staff.name}`} ariaLabel={`Edit ${staff.name}`} color="blue">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </ActionBtn>
 
           {isAdmin && (
-            <ActionBtn onClick={() => onDelete(staff)} title="Delete" color="red">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <ActionBtn onClick={() => onDelete(staff)} title={`Remove ${staff.name}`} ariaLabel={`Remove ${staff.name}`} color="red">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </ActionBtn>
           )}
 
-          <ActionBtn onClick={() => onInvite(staff)} title="Invite User" color="indigo">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <ActionBtn onClick={() => onInvite(staff)} title={`Invite ${staff.name}`} ariaLabel={`Invite ${staff.name}`} color="indigo">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </ActionBtn>
 
-          <ActionBtn onClick={() => onPermission(staff)} title="Permissions" color="amber">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <ActionBtn onClick={() => onPermission(staff)} title={`Manage Permissions for ${staff.name}`} ariaLabel={`Manage Permissions for ${staff.name}`} color="amber">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
@@ -174,16 +181,17 @@ const TeacherTableRow = ({
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 const actionColors = {
-  blue:   "text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-  red:    "text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20",
-  indigo: "text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20",
-  amber:  "text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20",
+  blue:   "text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20",
+  red:    "text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20",
+  indigo: "text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20",
+  amber:  "text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20",
 };
 
-const ActionBtn = ({ onClick, title, color, children }) => (
+const ActionBtn = ({ onClick, title, ariaLabel, color, children }) => (
   <button
     onClick={onClick}
     title={title}
+    aria-label={ariaLabel || title}
     className={`p-1.5 rounded-lg transition-all duration-150 ${actionColors[color] || actionColors.blue}`}
   >
     {children}
@@ -192,22 +200,30 @@ const ActionBtn = ({ onClick, title, color, children }) => (
 
 const ContactLine = ({ icon, value, empty }) => {
   if (empty) {
-    return <span className="text-xs text-slate-300 dark:text-slate-700 italic">No contact</span>;
+    return (
+      <span className="text-xs text-slate-300 dark:text-slate-700 italic">
+        <span className="sr-only">No contact info available</span>
+        No contact
+      </span>
+    );
   }
   return (
     <div className="flex items-center gap-1.5">
       {icon === "email" ? (
-        <svg className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ) : (
-        <svg className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-3.5 h-3.5 text-slate-500 dark:text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
             d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
         </svg>
       )}
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{value}</span>
+      <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+        <span className="sr-only">{icon === "email" ? "Email:" : "Phone:"}</span>
+        {value}
+      </span>
     </div>
   );
 };

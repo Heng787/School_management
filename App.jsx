@@ -4,6 +4,9 @@
  * Handles routing, authentication state, and overall page layout.
  */
 import React, { useState, useCallback, useEffect } from 'react';
+
+import { useData } from './context/DataContext';
+
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import StudentsPage from './pages/StudentsPage';
@@ -15,8 +18,8 @@ import SettingsPage from './pages/SettingsPage';
 import MessagesPage from './pages/MessagesPage';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
+
 import { Page, UserRole } from './types';
-import { useData } from './context/DataContext';
 
 // Maps URL path → Page constant
 const pathToPage = {
@@ -49,6 +52,11 @@ function getInitialPage() {
   return pathToPage[segment] || Page.Dashboard;
 }
 
+/**
+ * The main root component of the application.
+ * Manages global authentication state, routing, and high-level layout.
+ * @component
+ */
 function App() {
   // --- 1. STATE & CONTEXT ---
   const { currentUser, setCurrentUser } = useData();
@@ -123,6 +131,12 @@ function App() {
   // --- 5. MAIN LAYOUT RENDER ---
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden transition-colors duration-300">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg font-bold shadow-2xl"
+      >
+        Skip to main content
+      </a>
       <Sidebar
         navigate={navigate}
         currentPage={currentPage}
@@ -140,8 +154,11 @@ function App() {
           isSidebarOpen={isSidebarOpen}
           currentPage={currentPage}
         />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-slate-900 p-3 sm:p-6 lg:p-10 relative transition-colors duration-300">
-          {renderPage()}
+        <main id="main-content" className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-100 dark:bg-slate-900 p-3 sm:p-6 lg:p-10 relative transition-colors duration-300">
+          <div key={currentPage} className="page-transition">
+
+            {renderPage()}
+          </div>
         </main>
       </div>
     </div>

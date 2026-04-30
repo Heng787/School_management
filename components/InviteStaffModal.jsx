@@ -41,7 +41,7 @@ const InviteStaffModal = ({ staff, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="px-8 py-6 border-b border-gray-100 bg-slate-50 flex justify-between items-center">
           <div>
@@ -55,7 +55,7 @@ const InviteStaffModal = ({ staff, onClose }) => {
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white rounded-full transition-colors text-slate-400"
+            className="p-2 hover:bg-white rounded-full transition-colors text-slate-500"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

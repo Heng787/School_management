@@ -1,78 +1,77 @@
-// --- 1. IMPORTS & DEPENDENCIES ---
-import React, { useState, useEffect } from "react";
-import { UserRole } from "../types";
-import { useData } from "../context/DataContext";
+import React, { useState, useEffect } from 'react';
 
-// --- 2. MAIN COMPONENT ---
+import { useData } from '../context/DataContext';
+
+import { UserRole } from '../types';
+
 /**
  * PAGE: LoginPage
  * DESCRIPTION: Handles user authentication for all roles.
  */
 const LoginPage = ({ onLogin }) => {
-  // --- 2.1. GLOBAL STATE & DATA ---
+  // --- Global State & Data ---
   const { adminPassword, staff, setCurrentUser } = useData();
 
-  // --- 2.2. LOCAL UI STATE ---
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
+  // --- Local UI State ---
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState(UserRole.Admin);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // --- 2.3. SIDE EFFECTS ---
+  // --- Side Effects ---
   // Handle PWA installation prompt
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
-    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener('beforeinstallprompt', handler);
 
-    window.addEventListener("appinstalled", () => {
+    window.addEventListener('appinstalled', () => {
       setDeferredPrompt(null);
       setIsInstalled(true);
     });
 
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
     }
 
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // --- 2.4. ACTION HANDLERS ---
+  // --- Action Handlers ---
   const handleInstall = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
+    if (outcome === 'accepted') {
       setDeferredPrompt(null);
     }
   };
-
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const processLogin = () => {
     if (selectedRole === UserRole.Admin) {
       if (password === adminPassword) {
         setCurrentUser({
-          id: "admin_1",
-          name: "Administrator",
+          id: 'admin_1',
+          name: 'Administrator',
           role: selectedRole,
         });
         onLogin(UserRole.Admin);
       } else {
-        setError("Incorrect admin password.");
+        setError('Incorrect admin password.');
         setIsLoggingIn(false);
       }
     } else {
       const searchId = identifier.trim().toLowerCase();
       const foundStaff = staff.find(
         (s) =>
-          ((s.name || "").toLowerCase() === searchId ||
-            (s.contact || "").toLowerCase() === searchId) &&
+          ((s.name || '').toLowerCase() === searchId ||
+            (s.contact || '').toLowerCase() === searchId) &&
           s.role === selectedRole,
       );
 
@@ -86,7 +85,7 @@ const LoginPage = ({ onLogin }) => {
             });
             onLogin(selectedRole);
           } else {
-            setError("Incorrect password for this staff account.");
+            setError('Incorrect password for this staff account.');
             setIsLoggingIn(false);
           }
         } else {
@@ -104,7 +103,7 @@ const LoginPage = ({ onLogin }) => {
           );
         } else {
           setCurrentUser({
-            id: "demo_1",
+            id: 'demo_1',
             name: `Demo ${selectedRole}`,
             role: selectedRole,
           });
@@ -117,19 +116,19 @@ const LoginPage = ({ onLogin }) => {
 
   const handleAdminLogin = (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setIsLoggingIn(true);
     setTimeout(() => {
       processLogin();
     }, 1200);
   };
 
-  // --- 2.5. RENDER LOGIC ---
+  // --- Render Logic ---
   return (
     <div
       className="flex flex-col items-center justify-center min-h-screen p-4 relative overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #0c1a2e 100%)",
+        background: 'linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #0c1a2e 100%)',
       }}
     >
       {/* Animated background orbs */}
@@ -208,49 +207,64 @@ const LoginPage = ({ onLogin }) => {
       {/* Orb 1 – top-left */}
       <div
         style={{
-          position: "absolute", top: "-120px", left: "-120px",
-          width: "480px", height: "480px",
-          background: "radial-gradient(circle, rgba(14,165,233,0.18) 0%, transparent 70%)",
-          borderRadius: "50%",
-          animation: "float-orb 12s ease-in-out infinite",
-          pointerEvents: "none",
+          position: 'absolute',
+          top: '-120px',
+          left: '-120px',
+          width: '480px',
+          height: '480px',
+          background: 'radial-gradient(circle, rgba(14,165,233,0.18) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'float-orb 12s ease-in-out infinite',
+          pointerEvents: 'none',
         }}
       />
       {/* Orb 2 – bottom-right */}
       <div
         style={{
-          position: "absolute", bottom: "-100px", right: "-100px",
-          width: "400px", height: "400px",
-          background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)",
-          borderRadius: "50%",
-          animation: "float-orb2 16s ease-in-out infinite",
-          pointerEvents: "none",
+          position: 'absolute',
+          bottom: '-100px',
+          right: '-100px',
+          width: '400px',
+          height: '400px',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'float-orb2 16s ease-in-out infinite',
+          pointerEvents: 'none',
         }}
       />
       {/* Orb 3 – center subtle */}
       <div
         style={{
-          position: "absolute", top: "40%", left: "55%",
-          width: "300px", height: "300px",
-          background: "radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)",
-          borderRadius: "50%",
-          animation: "float-orb 20s ease-in-out infinite reverse",
-          pointerEvents: "none",
+          position: 'absolute',
+          top: '40%',
+          left: '55%',
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)',
+          borderRadius: '50%',
+          animation: 'float-orb 20s ease-in-out infinite reverse',
+          pointerEvents: 'none',
         }}
       />
 
       {/* Main card */}
       <div
         className="login-card-enter glass-card w-full max-w-md rounded-3xl p-8 relative overflow-hidden"
-        style={{ boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)" }}
+        style={{
+          boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+        }}
       >
         {/* Top gradient accent strip */}
         <div
           style={{
-            position: "absolute", top: 0, left: 0, right: 0, height: "3px",
-            background: "linear-gradient(90deg, #0ea5e9, #6366f1, #0ea5e9)",
-            backgroundSize: "200% auto",
-            animation: "shimmer 3s linear infinite",
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            background: 'linear-gradient(90deg, #0ea5e9, #6366f1, #0ea5e9)',
+            backgroundSize: '200% auto',
+            animation: 'shimmer 3s linear infinite',
           }}
         />
 
@@ -259,8 +273,8 @@ const LoginPage = ({ onLogin }) => {
           <div
             className="logo-ring w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
             style={{
-              background: "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)",
-              boxShadow: "0 8px 32px rgba(14,165,233,0.4)",
+              background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+              boxShadow: '0 8px 32px rgba(14,165,233,0.4)',
             }}
           >
             <svg
@@ -286,11 +300,14 @@ const LoginPage = ({ onLogin }) => {
 
           <h1
             className="text-2xl font-bold tracking-tight"
-            style={{ color: "#f1f5f9", letterSpacing: "-0.02em" }}
+            style={{ color: '#f1f5f9', letterSpacing: '-0.02em' }}
           >
             School Admin
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "rgba(148,163,184,0.7)" }}>
+          <p
+            className="mt-1 text-sm"
+            style={{ color: 'rgba(148,163,184,0.7)' }}
+          >
             Management Information System
           </p>
         </div>
@@ -300,22 +317,28 @@ const LoginPage = ({ onLogin }) => {
           <div
             className="mb-6 p-3.5 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500"
             style={{
-              background: "rgba(16,185,129,0.1)",
-              border: "1px solid rgba(16,185,129,0.2)",
+              background: 'rgba(16,185,129,0.1)',
+              border: '1px solid rgba(16,185,129,0.2)',
             }}
           >
             <div className="flex items-center gap-3">
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                style={{ background: "rgba(16,185,129,0.15)" }}
+                style={{ background: 'rgba(16,185,129,0.15)' }}
               >
                 💻
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#34d399" }}>
+                <p
+                  className="text-[11px] font-bold uppercase tracking-wider"
+                  style={{ color: '#34d399' }}
+                >
                   Desktop App Available
                 </p>
-                <p className="text-[11px]" style={{ color: "rgba(52,211,153,0.7)" }}>
+                <p
+                  className="text-[11px]"
+                  style={{ color: 'rgba(52,211,153,0.7)' }}
+                >
                   Install for a standalone experience
                 </p>
               </div>
@@ -324,9 +347,9 @@ const LoginPage = ({ onLogin }) => {
               onClick={handleInstall}
               className="text-[11px] font-bold px-3 py-1.5 rounded-lg"
               style={{
-                background: "rgba(16,185,129,0.2)",
-                color: "#34d399",
-                border: "1px solid rgba(16,185,129,0.3)",
+                background: 'rgba(16,185,129,0.2)',
+                color: '#34d399',
+                border: '1px solid rgba(16,185,129,0.3)',
               }}
             >
               INSTALL
@@ -336,7 +359,6 @@ const LoginPage = ({ onLogin }) => {
 
         {/* Form */}
         <form onSubmit={handleAdminLogin} className="space-y-5">
-
           {/* Role selector */}
           <div className="space-y-1.5">
             <label htmlFor="role" className="label-text ml-1">
@@ -345,28 +367,55 @@ const LoginPage = ({ onLogin }) => {
             <div className="relative">
               <span
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "rgba(14,165,233,0.7)" }}
+                style={{ color: 'rgba(14,165,233,0.7)' }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
                 </svg>
               </span>
               <select
                 id="role"
                 value={selectedRole}
-                onChange={(e) => { setSelectedRole(e.target.value); setError(""); }}
+                onChange={(e) => {
+                  setSelectedRole(e.target.value);
+                  setError('');
+                }}
                 className="input-field role-select w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium appearance-none cursor-pointer"
               >
                 {Object.values(UserRole).map((role) => (
-                  <option key={role} value={role}>{role}</option>
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
                 ))}
               </select>
               <span
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "rgba(148,163,184,0.5)" }}
+                style={{ color: 'rgba(148,163,184,0.5)' }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </span>
             </div>
@@ -375,7 +424,10 @@ const LoginPage = ({ onLogin }) => {
           {/* Divider */}
           <div className="flex items-center gap-3 py-1">
             <div className="divider-line" />
-            <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: "rgba(100,116,139,0.6)", whiteSpace: "nowrap" }}>
+            <span
+              className="text-[10px] font-semibold tracking-widest uppercase"
+              style={{ color: 'rgba(100,116,139,0.6)', whiteSpace: 'nowrap' }}
+            >
               credentials
             </span>
             <div className="divider-line" />
@@ -390,10 +442,21 @@ const LoginPage = ({ onLogin }) => {
               <div className="relative">
                 <span
                   className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "rgba(14,165,233,0.7)" }}
+                  style={{ color: 'rgba(14,165,233,0.7)' }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2"
+                    />
                   </svg>
                 </span>
                 <input
@@ -401,9 +464,12 @@ const LoginPage = ({ onLogin }) => {
                   type="text"
                   required
                   value={identifier}
-                  onChange={(e) => { setIdentifier(e.target.value); setError(""); }}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    setError('');
+                  }}
                   className="input-field w-full pl-10 pr-4 py-3 rounded-xl text-sm"
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Teacher name"
                 />
               </div>
             </div>
@@ -412,69 +478,138 @@ const LoginPage = ({ onLogin }) => {
           {/* Password */}
           <div className="space-y-1.5">
             <label htmlFor="password" className="label-text ml-1">
-              {selectedRole === UserRole.Admin ? "Admin Password" : "Staff Password"}
+              {selectedRole === UserRole.Admin
+                ? 'Admin Password'
+                : 'Staff Password'}
             </label>
             <div className="relative">
               <span
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "rgba(14,165,233,0.7)" }}
+                style={{ color: 'rgba(14,165,233,0.7)' }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
                 </svg>
               </span>
               <input
                 id="password"
                 name="password"
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 required={
                   selectedRole === UserRole.Admin ||
                   staff.some(
                     (s) =>
-                      ((s.name || "").toLowerCase() === identifier.trim().toLowerCase() ||
-                        (s.contact || "").toLowerCase() === identifier.trim().toLowerCase()) &&
+                      ((s.name || '').toLowerCase() ===
+                        identifier.trim().toLowerCase() ||
+                        (s.contact || '').toLowerCase() ===
+                          identifier.trim().toLowerCase()) &&
                       s.password,
                   )
                 }
                 value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
+                aria-describedby={error ? 'login-error' : undefined}
                 className="input-field w-full pl-10 pr-12 py-3 rounded-xl text-sm"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded-md"
-                style={{ color: "rgba(100,116,139,0.7)", background: "transparent", boxShadow: "none" }}
+                style={{
+                  color: 'rgba(100,116,139,0.7)',
+                  background: 'transparent',
+                  boxShadow: 'none',
+                }}
               >
                 {showPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                    />
                   </svg>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
                   </svg>
                 )}
               </button>
             </div>
           </div>
 
-          {/* Error message */}
           {error && (
             <div
+              id="login-error"
+              role="alert"
+              aria-live="assertive"
               className="flex items-start gap-2.5 p-3.5 rounded-xl animate-in fade-in slide-in-from-top-1 duration-300"
               style={{
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.2)",
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)',
               }}
             >
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#f87171" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                style={{ color: '#f87171' }}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
-              <p className="text-xs font-medium leading-snug" style={{ color: "#f87171" }}>{error}</p>
+              <p
+                className="text-xs font-medium leading-snug"
+                style={{ color: '#f87171' }}
+              >
+                {error}
+              </p>
             </div>
           )}
 
@@ -490,8 +625,8 @@ const LoginPage = ({ onLogin }) => {
                   <div
                     className="w-4 h-4 rounded-full border-2 border-t-transparent border-white/30"
                     style={{
-                      borderTopColor: "white",
-                      animation: "spin 0.7s linear infinite",
+                      borderTopColor: 'white',
+                      animation: 'spin 0.7s linear infinite',
                     }}
                   />
                   <span>Authenticating…</span>
@@ -504,13 +639,16 @@ const LoginPage = ({ onLogin }) => {
         </form>
 
         {/* Footer */}
-        <p className="text-center mt-6 text-[10px] tracking-wide" style={{ color: "rgba(100,116,139,0.5)" }}>
+        <p
+          className="text-center mt-6 text-[10px] tracking-wide"
+          style={{ color: 'rgba(100,116,139,0.5)' }}
+        >
           SECURED · SCHOOL MANAGEMENT SYSTEM
         </p>
       </div>
 
       {/* Bottom version tag */}
-      <p className="mt-6 text-[11px]" style={{ color: "rgba(71,85,105,0.5)" }}>
+      <p className="mt-6 text-[11px]" style={{ color: 'rgba(71,85,105,0.5)' }}>
         v2.0 · &copy; {new Date().getFullYear()} School Admin
       </p>
 

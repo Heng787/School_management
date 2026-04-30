@@ -133,7 +133,7 @@ const PerformanceChart = ({ subjectFilter }) => {
                     </div>
                 </>
             ) : (
-                <div className="h-[300px] flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm font-medium border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/50">
+                <div className="h-[300px] flex items-center justify-center text-slate-500 dark:text-slate-500 text-sm font-medium border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/50">
                     No performance data available
                 </div>
             )}
