@@ -261,17 +261,29 @@ const MessagesPage = () => {
     e?.preventDefault();
     if ((!text.trim() && !attachment) || sending) return;
 
+    // Guard: must have a conversation selected
+    if (!activeConversation && !announcementMode) return;
+
     setSending(true);
     const recipient = announcementMode ? 'all' : activeConversation;
 
+    // Convert attachment to base64 locally — no backend/Supabase upload needed
     let metadata = undefined;
     if (attachment) {
-      const fileUrl = await uploadAttachment(attachment);
-      if (fileUrl) {
-        const isImage = attachment.type.startsWith('image/');
+      const isImage = attachment.type.startsWith('image/');
+      try {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(attachment);
+        });
         metadata = isImage
-          ? { imageUrl: fileUrl, fileName: attachment.name }
-          : { fileUrl, fileName: attachment.name };
+          ? { imageUrl: base64, fileName: attachment.name }
+          : { fileUrl: base64, fileName: attachment.name };
+      } catch {
+        // If FileReader fails, skip the attachment
+        console.warn('[handleSend] Could not read attachment as base64');
       }
     }
 
@@ -292,6 +304,7 @@ const MessagesPage = () => {
     }
     setSending(false);
   };
+
 
   const handleEdit = async (id, newContent) => {
     await updateMessage(id, newContent);

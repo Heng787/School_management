@@ -37,34 +37,7 @@ const SchedulePage = () => {
   const [direction, setDirection] = useState('left'); // 'left' or 'right' for slide animation
   const [animKey, setAnimKey] = useState(0);
 
-  // Auto-populate mock demo data if empty
-  useEffect(() => {
-    if (events.length === 0) {
-      const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-
-      addEvent({
-        title: 'K1 Midterm Exam',
-        date: `${year}-${month}-23`,
-        type: EventType.Exam,
-        description: 'Midterm examinations for K1.',
-      });
-      addEvent({
-        title: 'Staff Meeting',
-        date: `${year}-${month}-27`,
-        type: EventType.Meeting,
-        description: 'Monthly all-staff planning meeting.',
-      });
-      addEvent({
-        title: 'Public Holiday',
-        date: `${year}-${month}-30`,
-        type: EventType.Holiday,
-        description: 'School closed for public holiday.',
-      });
-    }
-  }, [events.length, addEvent, currentDate]);
-
-  // --- Memoized Data ---
+  // Memoized Data
   const { calendarGrid, eventsByDate } = useCalendarState(currentDate, events);
 
   // --- Action Handlers ---

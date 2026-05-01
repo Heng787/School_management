@@ -25,8 +25,12 @@ class MessageController {
 
   async sendMessage(req, res, next) {
     try {
-      const isAdmin = req.user.role === 'admin';
-      const payload = { ...req.body, senderId: req.user.id, isAdmin };
+      const isAdmin = req.user.role && req.user.role.toLowerCase() === 'admin';
+      const payload = { 
+        ...req.body, 
+        senderId: isAdmin ? 'admin' : req.user.id, 
+        isAdmin 
+      };
       const data = await messageService.sendMessage(payload);
       res.status(201).json({ success: true, data });
     } catch (err) {
@@ -47,7 +51,7 @@ class MessageController {
   async updateMessage(req, res, next) {
     try {
       const { id } = req.params;
-      const isAdmin = req.user.role === 'admin';
+      const isAdmin = req.user.role && req.user.role.toLowerCase() === 'admin';
       await messageService.updateMessage(id, req.body, req.user.id, isAdmin);
       res.status(200).json({ success: true, message: 'Message updated' });
     } catch (err) {

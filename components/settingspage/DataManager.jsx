@@ -1,34 +1,54 @@
+import React, { useRef, useState } from "react";
 import { useData } from "../../context/DataContext";
 import Modal from "../ui/Modal";
 
 // ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
 const ActionCard = ({ icon, title, description, buttonText, onClick, colorScheme, isInput, inputRef, onFileChange, disabled }) => {
-  const colorMap = {
-    blue: "bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/30 text-blue-900 dark:text-blue-300 icon-bg-blue-600 icon-text-white btn-bg-blue-600 hover-btn-bg-blue-700",
-    amber: "bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/30 text-amber-900 dark:text-amber-300 icon-bg-amber-600 icon-text-white btn-bg-amber-600 hover-btn-bg-amber-700"
+  const configs = {
+    blue: {
+      card: "bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/30 text-blue-900 dark:text-blue-300",
+      iconBg: "bg-blue-600",
+      iconText: "text-white",
+      button: "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+    },
+    amber: {
+      card: "bg-amber-50/50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/30 text-amber-900 dark:text-amber-300",
+      iconBg: "bg-amber-600",
+      iconText: "text-white",
+      button: "bg-amber-600 hover:bg-amber-700 shadow-amber-500/20"
+    }
   };
-  const colors = colorMap[colorScheme];
+
+  const config = configs[colorScheme] || configs.blue;
 
   return (
-    <div className={`p-8 rounded-3xl border ${colors.split(' text-')[0]} flex flex-col justify-between transition-all duration-300 hover:shadow-lg`}>
+    <div className={`p-8 rounded-3xl border ${config.card} flex flex-col justify-between transition-all duration-300 hover:shadow-lg`}>
       <div>
-        <div className={`w-14 h-14 rounded-2xl ${colors.match(/icon-bg-[^\s]+/)[0].replace('icon-', '')} ${colors.match(/icon-text-[^\s]+/)[0].replace('icon-', '')} flex items-center justify-center mb-6 shadow-xl`}>
+        <div className={`w-14 h-14 rounded-2xl ${config.iconBg} ${config.iconText} flex items-center justify-center mb-6 shadow-xl`}>
           {icon}
         </div>
-        <h3 className={`text-xl font-black ${colors.match(/text-[^\s]+ dark:text-[^\s]+/)[0]} mb-2`}>{title}</h3>
+        <h3 className="text-xl font-black mb-2">{title}</h3>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8">{description}</p>
       </div>
       
       {isInput ? (
         <>
-          <button onClick={() => inputRef.current?.click()} disabled={disabled} className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-all active:scale-95 disabled:opacity-50 shadow-xl ${colors.match(/btn-bg-[^\s]+/)[0].replace('btn-', '')} ${colors.match(/hover-btn-bg-[^\s]+/)[0].replace('hover-btn-', '')}`}>
+          <button 
+            onClick={() => inputRef.current?.click()} 
+            disabled={disabled} 
+            className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-all active:scale-95 disabled:opacity-50 shadow-xl ${config.button}`}
+          >
             {disabled ? "Processing..." : buttonText}
           </button>
           <input type="file" ref={inputRef} onChange={onFileChange} accept=".json" className="hidden" />
         </>
       ) : (
-        <button onClick={onClick} disabled={disabled} className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-all active:scale-95 disabled:opacity-50 shadow-xl ${colors.match(/btn-bg-[^\s]+/)[0].replace('btn-', '')} ${colors.match(/hover-btn-bg-[^\s]+/)[0].replace('hover-btn-', '')}`}>
+        <button 
+          onClick={onClick} 
+          disabled={disabled} 
+          className={`w-full py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-all active:scale-95 disabled:opacity-50 shadow-xl ${config.button}`}
+        >
           {buttonText}
         </button>
       )}
@@ -170,11 +190,11 @@ const DataManager = () => {
   };
 
   const recordCounts = [
-    { label: "Students", count: students.length },
-    { label: "Staff", count: staff.length },
-    { label: "Classes", count: classes.length },
-    { label: "Subjects", count: Object.values(subjects).reduce((a, c) => a + c.length, 0) },
-    { label: "Grades", count: grades.length },
+    { label: "Students", count: students?.length || 0 },
+    { label: "Staff", count: staff?.length || 0 },
+    { label: "Classes", count: classes?.length || 0 },
+    { label: "Subjects", count: subjects ? Object.values(subjects).reduce((a, c) => a + (Array.isArray(c) ? c.length : 0), 0) : 0 },
+    { label: "Grades", count: grades?.length || 0 },
   ];
 
   return (

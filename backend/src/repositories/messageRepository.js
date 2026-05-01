@@ -1,6 +1,12 @@
 const supabase = require('../lib/supabase');
 const { AppError } = require('../utils/errors');
 
+/**
+ * Column mapping: Supabase uses camelCase as defined in schema.js
+ * senderId, recipientId, text (not content), read (not is_read)
+ * Additional columns added via migration: senderName, type, metadata
+ * We try both schemas for maximum compatibility.
+ */
 class MessageRepository {
   async findByUser(userId, isAdmin) {
     let query = supabase
@@ -9,42 +15,105 @@ class MessageRepository {
       .order('created_at', { ascending: true });
 
     if (!isAdmin) {
-      query = query.or(`sender_id.eq.${userId},recipient_id.eq.${userId},recipient_id.eq.all`);
+      // Try both snake_case and camelCase column names
+      query = query.or(
+        `sender_id.eq.${userId},recipient_id.eq.${userId},recipient_id.eq.all,senderId.eq.${userId},recipientId.eq.${userId},recipientId.eq.all`
+      );
     }
 
     const { data, error } = await query;
-    if (error) throw new AppError('Failed to fetch messages', 500, 'DB_ERROR');
+    if (error) {
+      console.error('[MessageRepository.findByUser] Supabase error:', error);
+      throw new AppError('Failed to fetch messages', 500, 'DB_ERROR');
+    }
     return data || [];
   }
 
   async countUnread(recipientId) {
-    const { count, error } = await supabase
+    // Try snake_case first
+    let { count, error } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true })
       .eq('recipient_id', recipientId)
       .eq('is_read', false);
+
+    if (error) {
+      // Fallback to camelCase
+      const result = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipientId', recipientId)
+        .eq('read', false);
+      count = result.count;
+      error = result.error;
+    }
 
     if (error) throw new AppError('Failed to count unread messages', 500, 'DB_ERROR');
     return count || 0;
   }
 
   async create(payload) {
+    const snakeCasePayload = {
+      id: payload.id,
+      sender_id: payload.sender_id,
+      sender_name: payload.sender_name,
+      recipient_id: payload.recipient_id,
+      type: payload.type || 'text',
+      content: payload.content,
+      metadata: payload.metadata || {},
+      is_read: false,
+    };
+
     const { data, error } = await supabase
       .from('messages')
-      .insert(payload)
+      .insert(snakeCasePayload)
       .select()
       .single();
 
-    if (error) throw new AppError('Failed to create message', 500, 'DB_ERROR');
-    return data;
+    if (!error) return data;
+
+    console.error('[MessageRepository.create] snake_case failed:', error.message, '— trying camelCase schema');
+
+    const camelCasePayload = {
+      id: payload.id,
+      senderId: payload.sender_id,
+      recipientId: payload.recipient_id,
+      text: payload.content,
+      read: false,
+    };
+
+    const fallback = await supabase
+      .from('messages')
+      .insert(camelCasePayload)
+      .select()
+      .single();
+
+    if (fallback.error) {
+      console.error('[MessageRepository.create] camelCase also failed:', fallback.error.message);
+      throw new AppError('Failed to create message: ' + fallback.error.message, 500, 'DB_ERROR');
+    }
+
+    return fallback.data;
   }
+
 
   async markRead(ids) {
     if (!ids || ids.length === 0) return;
-    const { error } = await supabase
+
+    // Try snake_case first
+    let { error } = await supabase
       .from('messages')
       .update({ is_read: true })
       .in('id', ids);
+
+    if (error) {
+      // Fallback camelCase
+      const result = await supabase
+        .from('messages')
+        .update({ read: true })
+        .in('id', ids);
+      error = result.error;
+    }
 
     if (error) throw new AppError('Failed to mark messages as read', 500, 'DB_ERROR');
   }
@@ -79,7 +148,6 @@ class MessageRepository {
   }
 
   async deleteAllInTable(table) {
-    // Deletes every row in a given table. Used only by the factory-reset endpoint.
     const { error } = await supabase
       .from(table)
       .delete()
@@ -90,11 +158,11 @@ class MessageRepository {
 
   async uploadAttachment(file) {
     const ext = file.originalname.split('.').pop();
-    const path = `messages/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+    const filePath = `messages/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
 
     const { error } = await supabase.storage
       .from('attachments')
-      .upload(path, file.buffer, {
+      .upload(filePath, file.buffer, {
         contentType: file.mimetype,
         upsert: true,
       });
@@ -103,8 +171,8 @@ class MessageRepository {
       throw new AppError('Failed to upload file to storage', 500, 'STORAGE_ERROR');
     }
 
-    const { data } = supabase.storage.from('attachments').getPublicUrl(path);
-    return data?.publicUrl || null;
+    const { data } = supabase.storage.from('attachments').getPublicUrl(filePath);
+    return (data && data.publicUrl) || null;
   }
 }
 
