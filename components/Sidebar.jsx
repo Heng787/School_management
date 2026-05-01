@@ -106,7 +106,7 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
       <aside aria-label="Application Sidebar" className={`fixed left-0 top-0 w-64 h-screen bg-white dark:bg-slate-900 border-r border-slate-300 dark:border-slate-800 shadow-xl z-40 transition-transform duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-6 h-16 border-b border-slate-300 dark:border-slate-800/50 bg-white dark:bg-slate-900">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-bold shadow-premium">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-bold shadow-premium">
               S
             </div>
             <h2 className="ml-3 text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight font-display">School<span className="text-primary-500">Admin</span></h2>

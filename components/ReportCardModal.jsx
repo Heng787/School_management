@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { configService } from '../services/configService';
-import { useFocusTrap } from '../hooks/useFocusTrap';
+import Modal from './ui/Modal';
 import ConfirmModal from './ConfirmModal';
 
 // ─── REUSABLE SUB-COMPONENTS ──────────────────────────────────────────────────
@@ -78,7 +78,6 @@ const calculateAttendanceRate = (records) => {
 
 const ReportCardModal = ({ student, onClose }) => {
   const { classes, grades, draftGrades, attendance, enrollments, staff, deleteGrade } = useData();
-  const containerRef = useFocusTrap(true);
   
   // Merge permanent grades with local drafts for the preview
   const combinedGrades = useMemo(() => {
@@ -139,36 +138,25 @@ const ReportCardModal = ({ student, onClose }) => {
   const handlePrint = () => window.print();
 
   return (
-    <div 
-      className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex justify-center items-start overflow-y-auto p-0 sm:p-6 print:p-0 print:bg-white print:block"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="report-card-preview-title"
+    <Modal
+      onClose={onClose}
+      title="Report Card Preview"
+      maxWidth="max-w-4xl"
+      className="print:p-0 print:m-0 print:w-full print:max-w-none print:shadow-none print:border-none print:bg-white"
     >
-      <div 
-        ref={containerRef}
-        className="bg-white border border-slate-200 sm:rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col my-0 sm:my-8 print:my-0 print:shadow-none print:rounded-none print:max-w-none print:w-full animate-in fade-in zoom-in-95 duration-300"
-      >
-        
+      <div className="space-y-6">
         {/* ACTION HEADER (HIDDEN ON PRINT) */}
-        <div className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4 p-4 sm:p-6 border-b border-slate-100 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md sm:rounded-t-2xl print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 -mt-2 print:hidden">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-white shadow-sm rounded-xl border border-slate-200">
-              <svg className="w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div>
-              <h2 id="report-card-preview-title" className="text-lg font-bold text-slate-800">Report Card Preview</h2>
-              <p className="text-xs text-slate-500 font-medium">Review and generate official document</p>
-            </div>
+            <p className="text-xs text-slate-500 font-medium">Review and generate official document</p>
           </div>
 
           <div className="flex items-center gap-3">
+            <label htmlFor="term-select" className="sr-only">Select academic term</label>
             <select
+              id="term-select"
               value={selectedTerm}
               onChange={(e) => setSelectedTerm(e.target.value)}
-              aria-label="Select academic term"
               className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-primary-500 transition-all outline-none"
             >
               {availableTerms.map(t => <option key={t} value={t}>{t}</option>)}
@@ -176,9 +164,9 @@ const ReportCardModal = ({ student, onClose }) => {
             </select>
 
             {selectedTerm && termGrades.length > 0 && (
-              <button 
-                onClick={handleDeleteTerm} 
-                className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors" 
+              <button
+                onClick={handleDeleteTerm}
+                className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
                 aria-label="Delete Term Data"
                 title="Delete Term Data"
               >
@@ -196,15 +184,6 @@ const ReportCardModal = ({ student, onClose }) => {
               </svg>
               Print
             </button>
-            <button 
-              onClick={onClose} 
-              aria-label="Close preview"
-              className="p-2 text-slate-500 hover:text-slate-600 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         </div>
 
@@ -217,8 +196,8 @@ const ReportCardModal = ({ student, onClose }) => {
         />
 
         {/* PRINTABLE CONTENT AREA */}
-        <div id="report-card-printable" className="p-6 sm:p-8 flex-grow print:p-0 flex flex-col">
-          
+        <div id="report-card-printable" className="p-0 flex-grow print:p-0 flex flex-col">
+
           {/* Official Header */}
           <div className="text-center mb-4 border-b-2 border-slate-900 pb-3">
             <h1 className="text-xl font-black text-slate-900 uppercase tracking-[0.1em] mb-1">SchoolAdmin Academy</h1>
@@ -323,20 +302,22 @@ const ReportCardModal = ({ student, onClose }) => {
           </div>
         </div>
       </div>
-      
+
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: A4 portrait; margin: 12mm 15mm; }
-          body * { visibility: hidden !important; }
-          #report-card-printable, #report-card-printable * { visibility: visible !important; }
-          #report-card-printable {
-            position: absolute !important;
-            top: 0 !important; left: 0 !important;
+          body > :not(.modal-root) { display: none !important; }
+          .modal-root { padding: 0 !important; margin: 0 !important; }
+          .modal-content {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
             width: 100% !important;
-            background: white !important;
-            padding: 0 !important; margin: 0 !important;
-            box-shadow: none !important; border-radius: 0 !important;
-            overflow: visible !important;
+            max-width: none !important;
+          }
+          #report-card-printable {
+            visibility: visible !important;
           }
           .principal-sig-img {
             display: block !important;
@@ -345,7 +326,7 @@ const ReportCardModal = ({ student, onClose }) => {
           }
         }
       `}} />
-    </div>
+    </Modal>
   );
 };
 

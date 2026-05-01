@@ -24,11 +24,11 @@ const TeacherTableRow = ({
       case StaffRole.AssistantTeacher:
         return "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50";
       case StaffRole.OfficeWorker:
-        return "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50";
+        return "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50";
       case StaffRole.Guard:
-        return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/50";
+        return "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50";
       case StaffRole.Cleaner:
-        return "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50";
+        return "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50";
       default:
         return "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700";
     }
@@ -100,7 +100,7 @@ const TeacherTableRow = ({
                 {staff.name}
               </span>
               <span
-                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOnLeave ? "bg-amber-400" : "bg-emerald-500"}`}
+                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOnLeave ? "bg-amber-600 dark:bg-amber-400" : "bg-emerald-600 dark:bg-emerald-500"}`}
                 aria-hidden="true"
               />
               <span className="sr-only">

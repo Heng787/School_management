@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { sanitize } from './sanitizer';
 
 // --- Utilities ---
 
@@ -8,13 +9,13 @@ const uid = (prefix) =>
 const today = () => new Date().toISOString().split('T')[0];
 
 const normalizePhone = (raw) => {
-  const s = String(raw || '').trim();
+  const s = sanitize(String(raw || ''));
   if (!s || s === 'undefined') return '';
   return !s.startsWith('0') && s.replace(/\s/g, '').length >= 8 ? '0' + s : s;
 };
 
 const normalizeGender = (raw) => {
-  const s = String(raw || '').trim().toLowerCase();
+  const s = sanitize(String(raw || '')).toLowerCase();
   if (['m', 'male', 'boy', 'man'].includes(s)) return 'Male';
   if (['f', 'female', 'girl', 'woman'].includes(s)) return 'Female';
   return null;
@@ -57,8 +58,8 @@ const extractClassContext = (sheet, sheetName, fileName) => {
   for (const row of sheet.slice(0, 10)) {
     if (!row) continue;
     for (let j = 0; j < row.length; j++) {
-      const val = String(row[j] || '').trim();
-      const next = String(row[j + 1] || '').trim();
+      const val = sanitize(String(row[j] || ''));
+      const next = sanitize(String(row[j + 1] || ''));
       const lv = val.toLowerCase();
 
       if (!level && /^[kg]\d/i.test(val) && val.length <= 4) {
@@ -135,8 +136,7 @@ const detectColumns = (sheet) => {
     const row = sheet[i];
     if (!row) continue;
     for (let j = 0; j < row.length; j++) {
-      const v = String(row[j] || '')
-        .trim()
+      const v = sanitize(String(row[j] || ''))
         .toLowerCase();
 
       if (cols.name === -1 && NAME_KEYS.has(v)) {
@@ -237,7 +237,7 @@ export const parseExcelFile = async (file, onProgress) => {
         continue;
       }
 
-      const name = String(row[cols.name]).trim();
+      const name = sanitize(String(row[cols.name]));
       if (
         !name ||
         name.toLowerCase() === 'name' ||

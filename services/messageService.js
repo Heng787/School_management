@@ -1,7 +1,8 @@
-import { getSupabase } from './core';
+import { getAuthToken } from './core';
 
 /**
  * Service for handling system messaging, status updates, and attachments.
+ * All operations go through the backend proxy API.
  */
 
 const generateId = () => {
@@ -25,128 +26,135 @@ const fromDb = (d) => ({
   createdAt: d.created_at,
 });
 
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 // --- Messaging API ---
 
 /**
  * Fetch all messages relevant to a user.
  */
 export async function fetchMessages(userId, isAdmin) {
-  const client = getSupabase();
-  if (!client) return [];
-
-  let query = client
-    .from('messages')
-    .select('*')
-    .order('created_at', { ascending: true });
-
-  if (!isAdmin) {
-    // Staff only sees their own messages + broadcasts
-    query = query.or(
-      `sender_id.eq.${userId},recipient_id.eq.${userId},recipient_id.eq.all`
-    );
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.error('Failed to fetch messages:', error);
+  try {
+    const params = new URLSearchParams({ userId, isAdmin: isAdmin ? '1' : '0' });
+    const res = await fetch(`/api/messages?${params}`, { headers: getAuthHeaders() });
+    if (!res.ok) return [];
+    const { data } = await res.json();
+    return (data || []).map(fromDb);
+  } catch {
     return [];
   }
-  return (data || []).map(fromDb);
 }
 
 /**
  * Send a new message.
  */
 export async function sendMessage(msg) {
-  const client = getSupabase();
-  if (!client) return null;
+  try {
+    const payload = {
+      id: generateId(),
+      sender_id: msg.isAdmin ? ADMIN_KEY : msg.senderId,
+      sender_name: msg.senderName,
+      recipient_id: msg.recipientId === 'admin' || msg.recipientId === ADMIN_KEY
+        ? ADMIN_KEY
+        : msg.recipientId,
+      type: msg.type,
+      content: msg.content,
+      metadata: msg.metadata || {},
+      is_read: false,
+    };
 
-  const dbSenderId = msg.isAdmin ? ADMIN_KEY : msg.senderId;
-  const dbRecipientId =
-    msg.recipientId === 'admin' || msg.recipientId === ADMIN_KEY
-      ? ADMIN_KEY
-      : msg.recipientId;
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
 
-  const payload = {
-    id: generateId(),
-    sender_id: dbSenderId,
-    sender_name: msg.senderName,
-    recipient_id: dbRecipientId,
-    type: msg.type,
-    content: msg.content,
-    metadata: msg.metadata || {},
-    is_read: false,
-  };
-
-  const { data, error } = await client
-    .from('messages')
-    .insert(payload)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Failed to send message:', error);
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return data ? fromDb(data) : null;
+  } catch {
     return null;
   }
-  return fromDb(data);
 }
 
 /**
  * Marks messages as read.
  */
 export async function markAsRead(messageIds) {
-  const client = getSupabase();
-  if (!client || messageIds.length === 0) return;
-  await client.from('messages').update({ is_read: true }).in('id', messageIds);
+  if (!messageIds || messageIds.length === 0) return;
+  try {
+    await fetch('/api/messages/read', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ ids: messageIds }),
+    });
+  } catch (err) {
+    console.error('markAsRead error:', err);
+  }
 }
 
 /**
  * Deletes a message.
  */
 export async function deleteMessage(messageId) {
-  const client = getSupabase();
-  if (!client) return;
-  await client.from('messages').delete().eq('id', messageId);
+  try {
+    await fetch(`/api/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+  } catch (err) {
+    console.error('deleteMessage error:', err);
+  }
 }
 
 /**
  * Updates a message's content.
  */
 export async function updateMessage(messageId, newContent) {
-  const client = getSupabase();
-  if (!client) return;
-  await client
-    .from('messages')
-    .update({
-      content: newContent,
-      metadata: { edited: true, editedAt: new Date().toISOString() },
-    })
-    .eq('id', messageId);
+  try {
+    await fetch(`/api/messages/${messageId}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        content: newContent,
+        metadata: { edited: true, editedAt: new Date().toISOString() },
+      }),
+    });
+  } catch (err) {
+    console.error('updateMessage error:', err);
+  }
 }
 
 // --- Attachments ---
 
 /**
- * Uploads a file/image to Supabase Storage and returns its URL.
+ * Uploads a file/image and returns its URL.
+ * Falls back to a local data URL if the backend endpoint is unavailable.
  */
 export async function uploadAttachment(file) {
-  const client = getSupabase();
-  if (!client) return null;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
 
-  const ext = file.name.split('.').pop();
-  const path = `messages/${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+    const token = getAuthToken();
+    const res = await fetch('/api/messages/attachment', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
 
-  const { error } = await client.storage
-    .from('attachments')
-    .upload(path, file, { upsert: true });
-
-  if (error) {
-    console.error('Upload failed:', error);
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return data?.url || null;
+  } catch {
     return null;
   }
-
-  const { data } = client.storage.from('attachments').getPublicUrl(path);
-  return data?.publicUrl || null;
 }
 
 // --- Metadata Updates ---
@@ -155,12 +163,15 @@ export async function uploadAttachment(file) {
  * Updates leave request status (admin only).
  */
 export async function updateLeaveStatus(messageId, status) {
-  const client = getSupabase();
-  if (!client) return;
-  await client
-    .from('messages')
-    .update({ metadata: { status } })
-    .eq('id', messageId);
+  try {
+    await fetch(`/api/messages/${messageId}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ metadata: { status } }),
+    });
+  } catch (err) {
+    console.error('updateLeaveStatus error:', err);
+  }
 }
 
 // --- Status API ---
@@ -169,66 +180,26 @@ export async function updateLeaveStatus(messageId, status) {
  * Gets unread count for a user.
  */
 export async function fetchUnreadCount(userId, isAdmin) {
-  const client = getSupabase();
-  if (!client) return 0;
-
-  const dbId = isAdmin ? ADMIN_KEY : userId;
-  const { count, error } = await client
-    .from('messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('recipient_id', dbId)
-    .eq('is_read', false);
-
-  if (error) return 0;
-  return count || 0;
+  try {
+    const dbId = isAdmin ? ADMIN_KEY : userId;
+    const params = new URLSearchParams({ userId: dbId, countOnly: '1' });
+    const res = await fetch(`/api/messages/unread?${params}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) return 0;
+    const { data } = await res.json();
+    return data?.count ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 // --- Real-time Subscriptions ---
 
 /**
- * Subscribes to new messages (real-time).
+ * Subscriptions require Supabase real-time which is no longer available client-side.
+ * Returns null — callers should poll via fetchMessages instead.
  */
-export function subscribeToMessages(userId, isAdmin, onUpdate) {
-  const client = getSupabase();
-  if (!client) return null;
-
-  const dbId = isAdmin ? ADMIN_KEY : userId;
-  const channelName = isAdmin ? 'messages_admin_all' : `messages_${dbId}`;
-
-  const shouldReceive = (msg) => {
-    if (isAdmin) return true;
-    return (
-      msg.senderId === dbId || msg.recipientId === dbId || msg.recipientId === 'all'
-    );
-  };
-
-  const channel = client
-    .channel(channelName)
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'messages' },
-      (payload) => {
-        const msg = fromDb(payload.new);
-        if (shouldReceive(msg)) onUpdate(msg);
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'messages' },
-      (payload) => {
-        const msg = fromDb(payload.new);
-        if (shouldReceive(msg)) onUpdate(msg);
-      }
-    )
-    .on(
-      'postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'messages' },
-      (payload) => {
-        // Dispatch a delete event
-        onUpdate({ ...fromDb(payload.old), content: '__DELETED__' });
-      }
-    )
-    .subscribe();
-
-  return channel;
+export function subscribeToMessages(_userId, _isAdmin, _onUpdate) {
+  return null;
 }

@@ -54,7 +54,7 @@ const MarksPrintModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-start overflow-y-auto p-4 sm:p-8 print:p-0 print:bg-white print:block">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-100 flex justify-center items-start overflow-y-auto p-4 sm:p-8 print:p-0 print:bg-white print:block">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[1200px] flex flex-col print:shadow-none print:rounded-none print:max-w-none print:w-full">
 
         {/* ── Modal Toolbar — hidden on print ── */}
@@ -91,7 +91,7 @@ const MarksPrintModal = ({
         </div>
 
         {/* ── Printable Area ── */}
-        <div id="marks-printable" className="p-8 print:p-0 flex-grow font-serif text-black overflow-x-auto bg-white">
+        <div id="marks-printable" className="p-8 print:p-0 grow font-serif text-black overflow-x-auto bg-white">
 
           {/* Header Block */}
           <div className="relative mb-4" style={{ minHeight: '80px' }}>

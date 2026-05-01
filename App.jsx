@@ -63,6 +63,19 @@ function App() {
   const [currentPage, setCurrentPage] = useState(getInitialPage);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
 
+  // Auto-collapse sidebar on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // --- 2. AUTHENTICATION HANDLERS ---
   const handleLogin = (role) => {
     setCurrentPage(Page.Dashboard);

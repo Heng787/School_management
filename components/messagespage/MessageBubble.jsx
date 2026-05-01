@@ -6,7 +6,7 @@ import IncidentCard from "./IncidentCard";
 // ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
 const MessageAvatar = ({ name }) => (
-  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-xs font-black shrink-0 mt-1 shadow-sm">
+  <div className="w-8 h-8 rounded-full bg-linear-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-xs font-black shrink-0 mt-1 shadow-sm">
     {name.charAt(0).toUpperCase()}
   </div>
 );

@@ -1,33 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
-
 import { TABLES } from '../database/schema';
 
 // --- Internal State ---
-let _supabaseInstance = null;
 
-/**
- * Retrieves the initialized Supabase client instance.
- * Initializes the client if it doesn't exist using environment variables.
- * @returns {Object|null} The Supabase client instance or null if config is missing.
- */
-export const getSupabase = () => {
-  if (_supabaseInstance) return _supabaseInstance;
+export const getAuthToken = () => {
+  return localStorage.getItem('school_admin_token');
+};
 
-  const url = (process.env.SUPABASE_URL || '').trim();
-  const key = (process.env.SUPABASE_ANON_KEY || '').trim();
-
-  if (!url || !key) {
-    console.error('Supabase URL or Anon Key is missing. Sync will not work.');
-    return null;
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-
-  try {
-    _supabaseInstance = createClient(url, key);
-    return _supabaseInstance;
-  } catch (err) {
-    console.error('Failed to initialize Supabase client:', err);
-    return null;
-  }
+  return headers;
 };
 
 /**
@@ -76,23 +63,21 @@ export const localStore = {
 
 // --- Config Helpers ---
 
-/**
- * Synchronizes a single configuration key-value pair to Supabase.
- * @param {string} key - The unique configuration key.
- * @param {any} value - The value to store.
- * @returns {Promise<void>}
- */
 export const pushConfig = async (key, value) => {
-  const client = getSupabase();
   localStore.set(key, value);
+  const token = getAuthToken();
 
-  if (!client || !navigator.onLine) return;
+  if (!token || !navigator.onLine) return;
 
   try {
-    const { error } = await client.from('config').upsert({ key, value });
-    if (error) {
-      console.error(`Failed to sync config ${key}:`, error);
-      throw error;
+    const res = await fetch('/api/sync/config', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify([{ key, value }])
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to sync config ${key}`);
     }
   } catch (err) {
     console.error(`Config sync error for ${key}:`, err);
@@ -115,30 +100,23 @@ const getFilteredLocal = (table) => {
 
 // --- CRUD Operations ---
 
-/**
- * Fetches a collection of records from local storage or cloud.
- * Implements merge logic if local changes exist.
- * @param {string} table - The Supabase table name.
- * @param {Object|Function} mapper - Mapper for data transformation.
- * @returns {Promise<Array<Object>>} The list of records.
- */
 export async function fetchCollection(table, mapper) {
-  const client = getSupabase();
   const local = localStore.get(table, []);
   const isDirty = localStore.isDirty(table);
+  const token = getAuthToken();
 
-  if (!client || !navigator.onLine) return getFilteredLocal(table);
+  if (!token || !navigator.onLine) return getFilteredLocal(table);
 
   try {
-    const { data, error } = await client
-      .from(table)
-      .select('*')
-      .order('created_at', { ascending: true });
+    const res = await fetch(`/api/sync/${table}`, {
+      headers: getAuthHeaders()
+    });
 
-    if (error) {
-      console.error(`Supabase fetch error for ${table}:`, error);
-      return getFilteredLocal(table);
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
     }
+
+    const { data } = await res.json();
 
     let resultData = [];
     if (data && data.length > 0) {
@@ -171,6 +149,10 @@ export async function fetchCollection(table, mapper) {
         .map((q) => q.id)
     );
     const filteredData = resultData.filter((item) => !deletedIds.has(item.id));
+    
+    // Sort local copy by created_at to maintain UI consistency
+    filteredData.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    
     localStore.set(table, filteredData);
     return filteredData;
   } catch (err) {
@@ -179,17 +161,9 @@ export async function fetchCollection(table, mapper) {
   }
 }
 
-/**
- * Pushes a collection of records to Supabase.
- * Marks the table as dirty locally first.
- * @param {string} table - The target Supabase table.
- * @param {Array<Object>} items - The records to upsert.
- * @param {Object|Function} mapper - Mapper for data transformation.
- * @returns {Promise<void>}
- */
 export async function pushCollection(table, items, mapper) {
-  const client = getSupabase();
   const oldItems = localStore.get(table, []);
+  const token = getAuthToken();
 
   // Identify changed or new items to prevent overwriting other admins' concurrent work during sync
   const oldMap = new Map(oldItems.map((i) => [i.id, JSON.stringify(i)]));
@@ -202,7 +176,7 @@ export async function pushCollection(table, items, mapper) {
   localStore.set(table, items);
   localStore.setDirty(table, true);
 
-  if (!client || !navigator.onLine) return;
+  if (!token || !navigator.onLine) return;
 
   try {
     const toMapper = mapper.toDb || mapper;
@@ -217,24 +191,32 @@ export async function pushCollection(table, items, mapper) {
       return;
     }
 
-    const { error } = await client.from(table).upsert(dataToUpsert);
+    const res = await fetch(`/api/sync/${table}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(dataToUpsert)
+    });
 
-    if (error) {
-      console.warn(`Bulk upsert failed for ${table}:`, error.message);
+    if (!res.ok) {
+      console.warn(`Bulk upsert failed for ${table}`);
       // Per-record fallback so one bad record doesn't block others
       let ok = 0;
       let fail = 0;
       for (const record of dataToUpsert) {
-        const { error: e } = await client.from(table).upsert([record]);
-        if (e) {
+        const individualRes = await fetch(`/api/sync/${table}`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify([record])
+        });
+        if (!individualRes.ok) {
           fail++;
-          console.error(`Failed ${table} id=${record.id}:`, e.message);
+          console.error(`Failed ${table} id=${record.id}`);
         } else {
           ok++;
         }
       }
       console.log(`${table}: ${ok} synced, ${fail} failed`);
-      if (fail > 0 && ok === 0) throw error;
+      if (fail > 0 && ok === 0) throw new Error('All upserts failed');
     }
 
     localStore.setDirty(table, false);
@@ -245,14 +227,7 @@ export async function pushCollection(table, items, mapper) {
   }
 }
 
-/**
- * Deletes a record from local storage and queues it for remote deletion.
- * @param {string} table - The target Supabase table.
- * @param {string|number} id - The unique identifier of the record.
- * @returns {Promise<void>}
- */
 export async function deleteRecord(table, id) {
-  const client = getSupabase();
   localStore.set(
     table,
     localStore.get(table, []).filter((item) => item.id !== id)
@@ -264,11 +239,17 @@ export async function deleteRecord(table, id) {
     localStore.set('deleted_queue', queue);
   }
 
-  if (!client || !navigator.onLine) return;
+  const token = getAuthToken();
+  if (!token || !navigator.onLine) return;
 
   try {
-    const { error } = await client.from(table).delete().eq('id', id);
-    if (error) throw error;
+    const res = await fetch(`/api/sync/${table}/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    
+    if (!res.ok) throw new Error('Delete failed on server');
+    
     localStore.set(
       'deleted_queue',
       localStore

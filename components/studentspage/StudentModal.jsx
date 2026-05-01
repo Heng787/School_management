@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useData } from "../../context/DataContext";
 import { StudentStatus } from "../../types";
+import Modal from "../ui/Modal";
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
-const labelCls = "block text-sm font-semibold text-primary-900";
+const labelCls = "block text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[11px]";
 const inputCls =
-  "mt-1 w-full px-3 py-2 bg-white border border-gray-400 rounded-md text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all";
+  "mt-1 w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 hover:border-primary-400 dark:hover:border-primary-600 transition-all duration-200";
 
 // ─── Field primitives ─────────────────────────────────────────────────────────
-const Field = ({ label, children }) => (
+const Field = ({ label, children, id }) => (
   <div>
-    <label className={labelCls}>{label}</label>
+    <label htmlFor={id} className={labelCls}>{label}</label>
     {children}
   </div>
 );
 
-const Input = ({ label, ...props }) => (
-  <Field label={label}>
-    <input className={inputCls} {...props} />
+const Input = ({ label, id, ...props }) => (
+  <Field label={label} id={id || props.name}>
+    <input id={id || props.name} className={inputCls} {...props} />
   </Field>
 );
 
-const Select = ({ label, options, ...props }) => (
-  <Field label={label}>
-    <select className={inputCls} {...props}>
+const Select = ({ label, id, options, ...props }) => (
+  <Field label={label} id={id || props.name}>
+    <select id={id || props.name} className={inputCls} {...props}>
       {options.map((o) => (
         <option key={o} value={o}>
           {o}
@@ -109,84 +110,89 @@ const StudentModal = ({ studentData, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-md z-50 flex justify-center items-center p-2 sm:p-4">
-      <div className="bg-white rounded-xl shadow-2xl p-5 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">
-          {studentData ? "Update Student Record" : "Register New Student"}
-        </h2>
+    <Modal 
+      onClose={onClose} 
+      ariaLabelledBy="student-modal-title"
+      maxWidth="max-w-lg"
+    >
+      <h2 
+        id="student-modal-title"
+        className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white mb-4 sm:mb-6 tracking-tight"
+      >
+        {studentData ? "Update Student Record" : "Register New Student"}
+      </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Full Name *"
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-            <Input
-              label="Date of Birth"
-              type="date"
-              name="dob"
-              value={formData.dob}
-              onChange={handleChange}
-            />
-            <Select
-              label="Sex *"
-              name="sex"
-              value={formData.sex}
-              onChange={handleChange}
-              options={["Male", "Female"]}
-            />
-            <Input
-              label="Phone Number"
-              type="text"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-            />
-            <Select
-              label="Study Status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              options={Object.values(StudentStatus)}
-            />
-            <Input
-              label="Enrollment Date"
-              type="date"
-              name="enrollmentDate"
-              value={formData.enrollmentDate}
-              onChange={handleChange}
-              required
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Full Name *"
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+          <Input
+            label="Date of Birth"
+            type="date"
+            name="dob"
+            value={formData.dob}
+            onChange={handleChange}
+          />
+          <Select
+            label="Sex *"
+            name="sex"
+            value={formData.sex}
+            onChange={handleChange}
+            options={["Male", "Female"]}
+          />
+          <Input
+            label="Phone Number"
+            type="text"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+          />
+          <Select
+            label="Study Status"
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            options={Object.values(StudentStatus)}
+          />
+          <Input
+            label="Enrollment Date"
+            type="date"
+            name="enrollmentDate"
+            value={formData.enrollmentDate}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
-          {error && <ErrorBanner message={error} />}
+        {error && <ErrorBanner message={error} />}
 
-          <div className="flex justify-end pt-6 space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-6 py-2.5 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 shadow-lg shadow-primary-200 flex items-center"
-            >
-              {isSaving && (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-              )}
-              {studentData ? "Update Record" : "Save Student"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end pt-6 space-x-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="px-6 py-2.5 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-500 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 flex items-center"
+          >
+            {isSaving && (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+            )}
+            {studentData ? "Update Record" : "Save Student"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

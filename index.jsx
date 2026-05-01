@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './styles/globals.css';
 
 import { DataProvider } from './context/DataContext';
 import { ThemeProvider } from './context/ThemeContext';

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Sparkles, Check, AlertTriangle } from "lucide-react";
-import { useFocusTrap } from "../hooks/useFocusTrap";
+import Modal from "./ui/Modal";
 
 /**
  * PAGE: components/ImportPreviewModal
@@ -8,7 +8,6 @@ import { useFocusTrap } from "../hooks/useFocusTrap";
  */
 const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
   const [editableStudents, setEditableStudents] = useState([...students]);
-  const containerRef = useFocusTrap(true);
   const hasInferred = editableStudents.some((s) => s._genderInferred);
   const hasConflicts = editableStudents.some(
     (s) => s._possibleMatches && s._possibleMatches.length > 0
@@ -50,43 +49,23 @@ const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
   });
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="import-preview-title"
+    <Modal
+      onClose={onCancel}
+      title="Review Import Data"
+      maxWidth="max-w-4xl"
     >
-      <div 
-        ref={containerRef}
-        className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800"
-      >
-        
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <h2 id="import-preview-title" className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              Review Import Data
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Please verify the extracted data before saving to the database.
-            </p>
-          </div>
-          <button
-            onClick={onCancel}
-            aria-label="Close preview"
-            className="p-2 text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <X className="w-5 h-5" aria-hidden="true" />
-          </button>
-        </div>
+      <div className="space-y-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400 -mt-4">
+          Please verify the extracted data before saving to the database.
+        </p>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="space-y-6">
           {hasInferred && (
-            <div 
-              role="region" 
+            <div
+              role="region"
               aria-labelledby="ai-classification-heading"
-              className="mb-6 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/30 rounded-xl p-4 flex gap-3"
+              className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/30 rounded-xl p-4 flex gap-3"
             >
               <Sparkles className="w-5 h-5 text-primary-600 dark:text-primary-400 shrink-0 mt-0.5" aria-hidden="true" />
               <div>
@@ -94,7 +73,7 @@ const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
                   AI Gender Classification Applied
                 </h3>
                 <p className="text-sm text-primary-700 dark:text-primary-400 mt-1">
-                  Some rows were missing a gender value. The system has automatically inferred them using AI. 
+                  Some rows were missing a gender value. The system has automatically inferred them using AI.
                   Please review the highlighted rows below and correct them with a single click if necessary.
                 </p>
               </div>
@@ -102,10 +81,10 @@ const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
           )}
 
           {hasConflicts && (
-            <div 
+            <div
               role="region"
               aria-labelledby="duplicate-profiles-heading"
-              className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 flex gap-3"
+              className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 flex gap-3"
             >
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
               <div>
@@ -150,125 +129,127 @@ const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
           </div>
 
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">Name</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Level</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Phone</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Sex</th>
-                  {hasConflicts && (
-                    <th scope="col" className="px-4 py-3 font-medium text-amber-700 dark:text-amber-500 w-1/3">
-                      Match Resolution
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {displayedStudents.map((student, idx) => (
-                  <tr 
-                    key={idx} 
-                    className={
-                      student._genderInferred 
-                        ? "bg-primary-50/50 dark:bg-primary-900/10" 
-                        : "bg-white dark:bg-slate-900"
-                    }
-                  >
-                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                      {student.name}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                      {student.level || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                      {student.phone || "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {student._genderInferred && (
-                          <>
-                            <Sparkles className="w-4 h-4 text-primary-500" aria-hidden="true" title="Inferred by AI" />
-                            <span className="sr-only">Gender inferred by AI</span>
-                          </>
-                        )}
-                        <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg w-max" role="group" aria-label="Select gender">
-                          <button
-                            onClick={() => handleGenderChange(student, "Male")}
-                            aria-label={`Set gender for ${student.name} to Male`}
-                            aria-pressed={student.sex === "Male"}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                              student.sex === "Male"
-                                ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-                            }`}
-                          >
-                            Male
-                          </button>
-                          <button
-                            onClick={() => handleGenderChange(student, "Female")}
-                            aria-label={`Set gender for ${student.name} to Female`}
-                            aria-pressed={student.sex === "Female"}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                              student.sex === "Female"
-                                ? "bg-white dark:bg-slate-700 text-pink-600 dark:text-pink-400 shadow-sm"
-                                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-                            }`}
-                          >
-                            Female
-                          </button>
-                        </div>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-medium">Name</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Level</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Phone</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Sex</th>
                     {hasConflicts && (
-                      <td className="px-4 py-3">
-                        {student._possibleMatches && student._possibleMatches.length > 0 ? (
-                          <select
-                            value={student._selectedMatchId}
-                            onChange={(e) => handleMatchChange(student, e.target.value)}
-                            aria-label={`Resolve match for ${student.name}`}
-                            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded px-2 py-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none w-full shadow-sm"
-                          >
-                            <option value="NEW">✨ Create New Student</option>
-                            <optgroup label="Link to Database Profile">
-                              {student._possibleMatches.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                  🔗 {m.name} ({m.sex}, Level: {m.level || "-"}) - ID: {m.id}
-                                </option>
-                              ))}
-                            </optgroup>
-                          </select>
-                        ) : (
-                          <span className="text-slate-500 dark:text-slate-500 text-xs px-2 py-1 rounded bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center w-full">
-                            ✨ New
-                          </span>
-                        )}
-                      </td>
+                      <th scope="col" className="px-4 py-3 font-medium text-amber-700 dark:text-amber-500 w-1/3">
+                        Match Resolution
+                      </th>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {displayedStudents.map((student, idx) => (
+                    <tr
+                      key={idx}
+                      className={
+                        student._genderInferred
+                          ? "bg-primary-50/50 dark:bg-primary-900/10"
+                          : "bg-white dark:bg-slate-900"
+                      }
+                    >
+                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                        {student.name}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                        {student.level || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                        {student.phone || "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {student._genderInferred && (
+                            <>
+                              <Sparkles className="w-4 h-4 text-primary-500" aria-hidden="true" title="Inferred by AI" />
+                              <span className="sr-only">Gender inferred by AI</span>
+                            </>
+                          )}
+                          <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg w-max" role="group" aria-label="Select gender">
+                            <button
+                              onClick={() => handleGenderChange(student, "Male")}
+                              aria-label={`Set gender for ${student.name} to Male`}
+                              aria-pressed={student.sex === "Male"}
+                              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                student.sex === "Male"
+                                  ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                              }`}
+                            >
+                              Male
+                            </button>
+                            <button
+                              onClick={() => handleGenderChange(student, "Female")}
+                              aria-label={`Set gender for ${student.name} to Female`}
+                              aria-pressed={student.sex === "Female"}
+                              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                student.sex === "Female"
+                                  ? "bg-white dark:bg-slate-700 text-pink-600 dark:text-pink-400 shadow-sm"
+                                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                              }`}
+                            >
+                              Female
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                      {hasConflicts && (
+                        <td className="px-4 py-3">
+                          {student._possibleMatches && student._possibleMatches.length > 0 ? (
+                            <select
+                              value={student._selectedMatchId}
+                              onChange={(e) => handleMatchChange(student, e.target.value)}
+                              aria-label={`Resolve match for ${student.name}`}
+                              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded px-2 py-1.5 focus:ring-2 focus:ring-amber-500 focus:outline-none w-full shadow-sm"
+                            >
+                              <option value="NEW">✨ Create New Student</option>
+                              <optgroup label="Link to Database Profile">
+                                {student._possibleMatches.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    🔗 {m.name} ({m.sex}, Level: {m.level || "-"}) - ID: {m.id}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            </select>
+                          ) : (
+                            <span className="text-slate-500 dark:text-slate-500 text-xs px-2 py-1 rounded bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center w-full">
+                              ✨ New
+                            </span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3 rounded-b-2xl">
+        <div className="flex justify-end gap-3 pt-6 shrink-0 border-t border-slate-100 dark:border-slate-800 mt-4">
           <button
             onClick={onCancel}
-            className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
           >
             Cancel Import
           </button>
           <button
             onClick={handleConfirm}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 rounded-lg transition-colors flex items-center gap-2"
+            className="px-8 py-2.5 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/25 flex items-center gap-2"
           >
             <Check className="w-4 h-4" />
             Confirm & Save
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

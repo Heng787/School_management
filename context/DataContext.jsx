@@ -212,11 +212,19 @@ export const DataProvider = ({ children }) => {
 
     localStorage.removeItem('school_admin_deleted_queue');
 
-    const client = (await import('../services/core')).getSupabase();
+    const token = (await import('../services/core')).getAuthToken();
 
-    if (client && navigator.onLine) {
+    if (token && navigator.onLine) {
       await Promise.allSettled(
-        tableSetters.map(({ name }) => client.from(name).delete().neq('id', '__nonexistent__'))
+        tableSetters.map(({ name }) =>
+          fetch(`/api/sync/${name}/all`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        )
       );
     }
 

@@ -1,6 +1,6 @@
 import { classService } from './classService';
 import { configService } from './configService';
-import { getSupabase, localStore } from './core';
+import { localStore, getAuthToken, deleteRecord } from './core';
 import { logService } from './logService';
 import {
   mapStudent,
@@ -75,75 +75,45 @@ export const syncService = {
    * @returns {Promise<void>}
    */
   async syncAll(payload) {
-    const client = getSupabase();
-    if (!client || !navigator.onLine) return;
+    const token = getAuthToken();
+    if (!token || !navigator.onLine) return;
+
+    const getHeaders = () => ({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    });
 
     try {
       // --- Handle Deletions ---
       const deletedQueue = localStore.get('deleted_queue', []);
       if (deletedQueue.length > 0) {
         console.log(`Processing ${deletedQueue.length} queued deletions...`);
-        await Promise.all(
+        await Promise.allSettled(
           deletedQueue.map((item) =>
-            client.from(item.table).delete().eq('id', item.id)
+            fetch(`/api/sync/${item.table}/${item.id}`, {
+              method: 'DELETE',
+              headers: getHeaders(),
+            })
           )
         );
         localStore.set('deleted_queue', []);
       }
 
-      const configToSync = [];
-      if (payload.config) {
-        for (const c of payload.config) {
-          configToSync.push(c);
-        }
-      }
+      const configToSync = payload.config || [];
 
       // --- Define Table Phases ---
-
-      // Phase 1: Parent tables (no FK dependencies)
       const parentTables = [
-        {
-          table: 'students',
-          data: payload.students?.map(mapStudent.toDb) || [],
-        },
-        {
-          table: 'staff',
-          data: payload.staff?.map(mapStaff.toDb) || [],
-        },
-        {
-          table: 'classes',
-          data: payload.classes?.map(mapClass.toDb) || [],
-        },
-        {
-          table: 'events',
-          data: payload.events || [],
-        },
-        {
-          table: 'config',
-          data: configToSync,
-        },
+        { table: 'students', data: payload.students?.map(mapStudent.toDb) || [] },
+        { table: 'staff', data: payload.staff?.map(mapStaff.toDb) || [] },
+        { table: 'classes', data: payload.classes?.map(mapClass.toDb) || [] },
+        { table: 'events', data: payload.events || [] },
       ];
 
-      // Phase 2: Child tables (depend on parent tables via FK)
       const childTables = [
-        {
-          table: 'staff_permissions',
-          data: payload.staffPermissions?.map(mapStaffPermission.toDb) || [],
-        },
-        {
-          table: 'enrollments',
-          data: payload.enrollments?.map(mapEnrollment.toDb) || [],
-        },
-        {
-          table: 'grades',
-          data: (payload.grades || [])
-            .filter((g) => !g.id.startsWith('draft_'))
-            .map(mapGrade.toDb),
-        },
-        {
-          table: 'attendance',
-          data: payload.attendance?.map(mapAttendance.toDb) || [],
-        },
+        { table: 'staff_permissions', data: payload.staffPermissions?.map(mapStaffPermission.toDb) || [] },
+        { table: 'enrollments', data: payload.enrollments?.map(mapEnrollment.toDb) || [] },
+        { table: 'grades', data: (payload.grades || []).filter((g) => !g.id.startsWith('draft_')).map(mapGrade.toDb) },
+        { table: 'attendance', data: payload.attendance?.map(mapAttendance.toDb) || [] },
       ];
 
       // --- Sync Worker ---
@@ -160,46 +130,34 @@ export const syncService = {
           return;
         }
 
-        console.log(
-          `  Syncing ${dataToPush.length} dirty records for table: ${table}`
-        );
+        console.log(`  Syncing ${dataToPush.length} dirty records for table: ${table}`);
 
-        const { error } = await client.from(table).upsert(dataToPush);
+        const res = await fetch(`/api/sync/${table}`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(dataToPush),
+        });
 
-        if (error) {
-          console.warn(`Bulk sync failed for ${table}: ${error.message}`);
-
-          let ok = 0;
-          let fail = 0;
-          for (const record of data) {
-            const { error: singleErr } = await client
-              .from(table)
-              .upsert([record]);
-
-            if (singleErr) {
-              fail++;
-              console.error(
-                `  ↳ ${table} id=${record.id}: ${singleErr.message}`
-              );
-            } else {
-              ok++;
-            }
-          }
-          console.log(`  ↳ ${table} result: ${ok} synced, ${fail} failed`);
+        if (!res.ok) {
+          console.warn(`Bulk sync failed for ${table}`);
         }
 
         localStore.setDirty(table, false);
         localStore.clearDirtyIds(table);
       };
 
-      // --- Execute Phases ---
-      for (const item of parentTables) {
-        await upsertIfDirty(item);
+      // Sync config entries
+      if (configToSync.length > 0) {
+        const res = await fetch('/api/sync/config', {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(configToSync),
+        });
+        if (!res.ok) console.warn('Config sync failed');
       }
 
-      for (const item of childTables) {
-        await upsertIfDirty(item);
-      }
+      for (const item of parentTables) await upsertIfDirty(item);
+      for (const item of childTables) await upsertIfDirty(item);
 
       console.log('Sync cycle complete.');
     } catch (err) {

@@ -55,7 +55,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
   }, [currentUser]);
 
   return (
-    <header className="h-16 bg-white/95 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-[60] px-4 lg:px-6 flex items-center justify-between transition-all duration-300 shadow-sm">
+    <header className="h-16 bg-white/95 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-60 px-4 lg:px-6 flex items-center justify-between transition-all duration-300 shadow-sm">
       <div className="flex items-center space-x-4">
         {/* Sidebar Toggle Button */}
         <button
@@ -74,7 +74,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
         </button>
 
         {/* Breadcrumb Path */}
-        <div className="flex items-center space-x-1.5 text-sm hidden sm:flex">
+        <div className="items-center space-x-1.5 text-sm hidden sm:flex">
           <button
             onClick={() => navigate(Page.Dashboard)}
             aria-label="Go to Dashboard"
@@ -134,7 +134,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
           )}
         </button>
 
-        <div className="flex items-center space-x-2 hidden md:flex">
+        <div className="items-center space-x-2 hidden md:flex">
           <div className="relative">
             {isOnline ? (
               isSyncing ? (
@@ -198,7 +198,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
               <div 
                 role="menu"
                 aria-label="Profile options"
-                className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+                className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-100 animate-in fade-in zoom-in-95 duration-200 origin-top-right"
               >
                 <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1 xl:hidden">
                   <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{currentUser?.name || userRole}</p>

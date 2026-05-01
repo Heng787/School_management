@@ -46,7 +46,7 @@ const StatCard = ({ title, value, subText, trend, trendType = "up", icon, colorC
   };
 
   return (
-    <Card className="!p-5 hover:border-primary-500/30">
+    <Card className="p-5! hover:border-primary-500/30">
       <div className="flex justify-between items-start group">
         <div className="min-w-0">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
@@ -245,7 +245,7 @@ export const AdminDashboard = ({ navigate }) => {
             </svg>
           }
         />
-        <Card title="Enrollment Trend" className="!p-5">
+        <Card title="Enrollment Trend" className="p-5!">
           <div className="h-20 w-[110%] -ml-2 -mb-2 text-primary-500 transition-colors duration-300">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={enrollmentTrends}>
@@ -540,7 +540,7 @@ export const AdminDashboard = ({ navigate }) => {
                     className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors"
                   >
                     <div className="flex items-center gap-3 transition-colors">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-700 text-slate-700 dark:text-slate-400 flex items-center justify-center font-bold text-xs shrink-0 transition-colors">
+                      <div className="w-8 h-8 rounded-full bg-linear-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-700 text-slate-700 dark:text-slate-400 flex items-center justify-center font-bold text-xs shrink-0 transition-colors">
                         {s.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0 transition-colors">
@@ -688,14 +688,14 @@ export const TeacherDashboard = ({ navigate }) => {
     <div className="space-y-6">
       {/* 1. Stat Cards Top Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="!p-5 bg-gradient-to-br from-primary-600 to-primary-700 text-white border-0 shadow-lg shadow-primary-100 dark:shadow-none hover:scale-[1.02] transition-all duration-500 group">
+        <Card className="p-5! bg-linear-to-br from-primary-600 to-primary-700 text-white border-0 shadow-lg shadow-primary-100 dark:shadow-none hover:scale-[1.02] transition-all duration-500 group">
           <p className="text-primary-100/80 text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 transition-colors">Total Students</p>
           <h3 className="text-4xl font-black tracking-tighter drop-shadow-sm">{myStudentsCount}</h3>
           <div className="mt-4 p-2 bg-white/10 rounded-lg backdrop-blur-sm border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
              <p className="text-[9px] font-bold text-center">Manage your classroom</p>
           </div>
         </Card>
-        <Card className="!p-5 transition-all duration-500 hover:-translate-y-1 group">
+        <Card className="p-5! transition-all duration-500 hover:-translate-y-1 group">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 transition-colors">Monthly Avg Attendance</p>
           <h3 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">{avgAttendance}%</h3>
           <div className="mt-4 flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full w-fit border border-emerald-100">
@@ -703,14 +703,14 @@ export const TeacherDashboard = ({ navigate }) => {
              Excellent
           </div>
         </Card>
-        <Card className="!p-5 transition-all duration-500 hover:-translate-y-1">
+        <Card className="p-5! transition-all duration-500 hover:-translate-y-1">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 transition-colors">Class Average</p>
           <h3 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">{avgGrade}</h3>
           <div className="mt-4 text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full w-fit border border-primary-100 uppercase tracking-widest">
              Academic Peak
           </div>
         </Card>
-        <Card className="!p-5 transition-all duration-500 hover:-translate-y-1">
+        <Card className="p-5! transition-all duration-500 hover:-translate-y-1">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 transition-colors">Pending Tasks</p>
           <h3 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">{pendingTasksCount}</h3>
           <div className="mt-4 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full w-fit border border-rose-100 uppercase tracking-widest">
@@ -927,7 +927,7 @@ export const TeacherDashboard = ({ navigate }) => {
         <div className="space-y-6">
           {/* 5. Schedule with status badges */}
           <Card title="Today's Schedule">
-            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-slate-800 before:to-transparent">
+            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-linear-to-b before:from-transparent before:via-slate-200 dark:before:via-slate-800 before:to-transparent">
               {myClasses.length > 0 ? myClasses.map((c, i) => {
                 let status = "Upcoming";
                 let statusColor = "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
@@ -1078,22 +1078,22 @@ export const OfficeWorkerDashboard = () => {
     <div className="space-y-6">
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="!p-5 bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg shadow-purple-100 dark:shadow-none hover:scale-[1.02] transition-transform">
+        <Card className="p-5! bg-linear-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg shadow-purple-100 dark:shadow-none hover:scale-[1.02] transition-transform">
           <p className="text-purple-100 text-xs font-bold uppercase tracking-wider mb-1">Total Students</p>
           <h3 className="text-3xl font-extrabold">{students.length}</h3>
         </Card>
-        <Card className="!p-5 hover:-translate-y-1 transition-transform">
+        <Card className="p-5! hover:-translate-y-1 transition-transform">
           <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Staff On Duty</p>
           <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white">
             {onDutyStaff.filter(s => s.status === 'On Duty').length}
             <span className="text-lg font-medium text-slate-500"> / {staff.length}</span>
           </h3>
         </Card>
-        <Card className="!p-5 hover:-translate-y-1 transition-transform">
+        <Card className="p-5! hover:-translate-y-1 transition-transform">
           <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Pending Tasks</p>
           <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white">{pendingTaskCount}</h3>
         </Card>
-        <Card className="!p-5 hover:-translate-y-1 transition-transform">
+        <Card className="p-5! hover:-translate-y-1 transition-transform">
           <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Available Rooms</p>
           <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white">{roomData.filter(r => !r.isFull).length}</h3>
         </Card>
@@ -1108,7 +1108,7 @@ export const OfficeWorkerDashboard = () => {
               {pendingStudents.map(s => (
                 <div key={s.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-900 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-linear-to-br from-purple-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
                       {s.name.charAt(0).toUpperCase()}
                     </div>
                     <div>

@@ -63,7 +63,7 @@ const AttendancePrintModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-start overflow-y-auto p-4 sm:p-8 print:p-0 print:bg-white print:block">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-100 flex justify-center items-start overflow-y-auto p-4 sm:p-8 print:p-0 print:bg-white print:block">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[1150px] flex flex-col print:shadow-none print:rounded-none print:max-w-none print:w-full">
 
         {/* ── Modal Toolbar — hidden on print ── */}
@@ -100,7 +100,7 @@ const AttendancePrintModal = ({
         </div>
 
         {/* ── Printable Area ── */}
-        <div id="attendance-printable" className="p-8 print:p-0 flex-grow font-sans text-slate-900 overflow-x-auto">
+        <div id="attendance-printable" className="p-8 print:p-0 grow font-sans text-slate-900 overflow-x-auto">
 
           {/* Header */}
           <div className="flex justify-between items-start mb-4 print:mb-3">

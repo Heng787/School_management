@@ -1,27 +1,6 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-// Singleton — re-created only if the API key changes at runtime
-let aiClient = null;
-let aiClientKey = null;
-
 // --- Config & Initialization ---
-
-export const validateAIConfig = () => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) return { valid: false, error: 'NO_KEY' };
-  return { valid: true, apiKey };
-};
-
-const getAIClient = () => {
-  const { valid, apiKey } = validateAIConfig();
-  if (!valid) return null;
-  if (aiClient && aiClientKey === apiKey) return aiClient;
-
-  console.log('AI Key:', apiKey.slice(0, 7) + '...');
-  aiClient = new GoogleGenerativeAI(apiKey);
-  aiClientKey = apiKey;
-  return aiClient;
-};
+// AI is now handled securely on the backend.
+// Phonetic fallback remains on the frontend.
 
 /** Normalises a raw AI value to "Male" | "Female" | null. */
 const GENDER_LOOKUP = {
@@ -222,46 +201,31 @@ export const inferGenderByPhonetics = (name) => {
 // --- AI Batch Processing ---
 
 /**
- * Sends one batch (≤50 names) to Gemini and returns the normalised gender map.
+ * Sends one batch to the backend AI service.
  */
-const inferGenderBatch = async (client, batch) => {
-  const prompt = `You are a professional linguist specializing in Cambodian (Khmer) names.
-Analyze the following list of names and determine if each is "Male" or "Female".
-- Names ending in "ly", "da", "na", "ny", "nika", "vina" are often Female.
-- Names ending in "rith", "vuth", "narith", "hour", "hak", "rak" are often Male.
-
-Names: ${JSON.stringify(batch)}
-
-RETURN A STRICT JSON OBJECT mapping each name to EITHER "Male" or "Female".
-YOU MUST CHOOSE ONE FOR EVERY NAME. DO NOT USE "Unknown", "Unsure", or null.
-If unsure, make your best guess based on phonetic patterns.
-NO MARKDOWN. NO EXPLANATION. RETURN ONLY THE JSON OBJECT.`;
+const inferGenderBatch = async (batch) => {
+  const token = localStorage.getItem('school_admin_token');
+  if (!token) throw new Error('AI_ERROR_AUTH');
 
   try {
-    const model = client.getGenerativeModel({
-      model: 'gemini-flash-latest',
-      generationConfig: { temperature: 0.1 },
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-      ],
+    const res = await fetch('/api/ai/infer-gender', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ names: batch })
     });
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    console.log('AI response (preview):', text.substring(0, 200));
-
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start === -1 || end === -1) {
-      throw new Error('No JSON in AI response');
+    const data = await res.json();
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) throw new Error('AI_ERROR_AUTH');
+      if (res.status === 429) throw new Error('AI_ERROR_QUOTA');
+      throw new Error('AI_ERROR_FAILED');
     }
 
-    const parsed = JSON.parse(text.substring(start, end + 1));
     const normalized = {};
-    for (const [name, value] of Object.entries(parsed)) {
+    for (const [name, value] of Object.entries(data.data || {})) {
       const gender = resolveGender(value);
       if (gender) {
         normalized[name.trim().toLowerCase()] = gender;
@@ -270,21 +234,7 @@ NO MARKDOWN. NO EXPLANATION. RETURN ONLY THE JSON OBJECT.`;
     return normalized;
   } catch (e) {
     console.error('AI batch failed:', e.message);
-
-    if (
-      e.message?.includes('429') ||
-      e.message?.toLowerCase().includes('quota')
-    ) {
-      throw new Error('AI_ERROR_QUOTA');
-    }
-    if (
-      e.message?.includes('401') ||
-      e.message?.includes('403') ||
-      e.message?.includes('API_KEY_INVALID')
-    ) {
-      throw new Error('AI_ERROR_AUTH');
-    }
-    throw new Error('AI_ERROR_FAILED');
+    throw e;
   }
 };
 
@@ -305,13 +255,12 @@ export const inferGenders = async (names) => {
   }
 
   let aiResult = {};
-  const client = getAIClient();
-
-  if (client) {
+  
+  if (navigator.onLine) {
     try {
       // All batches run concurrently
       const results = await Promise.all(
-        batches.map((b) => inferGenderBatch(client, b))
+        batches.map((b) => inferGenderBatch(b))
       );
       results.forEach((r) => Object.assign(aiResult, r));
       console.info(

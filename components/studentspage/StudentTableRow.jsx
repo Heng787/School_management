@@ -37,23 +37,23 @@ const StudentTableRow = ({
     switch (status) {
       case StudentStatus.Active:
         return {
-          cls: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50",
+          cls: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50",
           dot: "bg-emerald-500",
         };
       case StudentStatus.Suspended:
         return {
-          cls: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50",
+          cls: "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50",
           dot: "bg-amber-500",
         };
       case StudentStatus.Dropout:
         return {
-          cls: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700",
-          dot: "bg-slate-400",
+          cls: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700",
+          dot: "bg-slate-500",
         };
       default:
         return {
-          cls: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700",
-          dot: "bg-slate-400",
+          cls: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700",
+          dot: "bg-slate-500",
         };
     }
   };
@@ -108,7 +108,7 @@ const StudentTableRow = ({
           <div 
             role="img"
             aria-label={`Avatar for ${student.name}`}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 select-none ${avatarBg} ${avatarText}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 select-none ${avatarBg} ${avatarText}`}
           >
             {(student.name || "?").charAt(0).toUpperCase()}
           </div>

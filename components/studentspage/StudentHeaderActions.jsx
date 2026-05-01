@@ -74,7 +74,7 @@ const StudentHeaderActions = ({
               type="button"
               onClick={onExportExcel}
               className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-bold rounded-xl transition-all
-                text-white bg-gradient-to-br from-blue-600 to-indigo-700
+                text-white bg-linear-to-br from-blue-600 to-indigo-700
                 hover:from-blue-700 hover:to-indigo-800
                 shadow-lg shadow-blue-900/10"
             >

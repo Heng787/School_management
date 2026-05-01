@@ -1,4 +1,5 @@
 import { StudentStatus, StaffRole } from '../types';
+import { sanitize } from './sanitizer';
 
 // --- Date Normalisation ---
 
@@ -26,9 +27,11 @@ const today = () => new Date().toISOString().split('T')[0];
 // --- CSV Line Parser ---
 
 const unquote = (field) => {
-  return field.startsWith('"') && field.endsWith('"')
-    ? field.slice(1, -1).replace(/""/g, '"')
-    : field;
+  const val =
+    field.startsWith('"') && field.endsWith('"')
+      ? field.slice(1, -1).replace(/""/g, '"')
+      : field;
+  return sanitize(val);
 };
 
 const parseCSVLine = (text) => {

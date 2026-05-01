@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
 import { useData } from "../../context/DataContext";
+import Modal from "../ui/Modal";
 
 // ─── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
@@ -40,52 +40,65 @@ const DeleteModal = ({ show, onClose, onConfirm, confirmText, setConfirmText, is
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => !isDeleting && onClose()} />
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-red-100 dark:border-red-900/50 overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="h-2 w-full bg-gradient-to-r from-red-500 to-rose-600" />
-        <div className="p-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0 border border-red-200 dark:border-red-800/50">
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            </div>
-            <h3 className="text-2xl font-black text-slate-800 dark:text-white">Delete All Data</h3>
-          </div>
+    <Modal
+      onClose={() => !isDeleting && onClose()}
+      title="Delete All Data"
+      maxWidth="max-w-lg"
+    >
+      <div className="h-2 w-full bg-linear-to-r from-red-500 to-rose-600 -mt-6 mb-6 rounded-t-xl" />
+      
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">
+        This will <strong className="text-red-600 dark:text-red-400">permanently erase</strong> the following records from your database and Supabase:
+      </p>
 
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">This will <strong className="text-red-600 dark:text-red-400">permanently erase</strong> the following records from your database and Supabase:</p>
-
-          <div className="flex flex-wrap gap-2 mb-6">
-            {recordCounts.map(({ label, count }) => (
-              <span key={label} className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl">
-                <span className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-[10px]">{count > 99 ? "99+" : count}</span>
-                {label}
-              </span>
-            ))}
-          </div>
-
-          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl text-xs font-bold text-amber-700 dark:text-amber-400 mb-6 flex gap-3">
-            <span className="text-lg">ℹ️</span>
-            <span className="mt-0.5">Settings and system configurations are <strong>not</strong> affected.</span>
-          </div>
-
-          <div className="mb-8">
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Type <span className="text-red-500">DELETE</span> to confirm</label>
-            <input
-              type="text" value={confirmText} onChange={e => setConfirmText(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && onConfirm()} placeholder="DELETE" autoComplete="off" disabled={isDeleting}
-              className="w-full px-5 py-4 border-2 border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white font-mono tracking-widest text-center transition-all disabled:opacity-50"
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <button onClick={() => { onClose(); setConfirmText(""); }} disabled={isDeleting} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50">Cancel</button>
-            <button onClick={onConfirm} disabled={confirmText !== "DELETE" || isDeleting} className="flex-1 py-4 bg-red-600 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-40 shadow-xl shadow-red-500/20">
-              {isDeleting ? "Deleting..." : "Erase Everything"}
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-wrap gap-2 mb-6">
+        {recordCounts.map(({ label, count }) => (
+          <span key={label} className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl">
+            <span className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center text-[10px]">{count > 99 ? "99+" : count}</span>
+            {label}
+          </span>
+        ))}
       </div>
-    </div>
+
+      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-2xl text-xs font-bold text-amber-700 dark:text-amber-400 mb-6 flex gap-3">
+        <span className="text-lg" aria-hidden="true">ℹ️</span>
+        <span className="mt-0.5">Settings and system configurations are <strong>not</strong> affected.</span>
+      </div>
+
+      <div className="mb-8">
+        <label htmlFor="confirm-delete" className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+          Type <span className="text-red-500">DELETE</span> to confirm
+        </label>
+        <input
+          id="confirm-delete"
+          type="text" 
+          value={confirmText} 
+          onChange={e => setConfirmText(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && onConfirm()} 
+          placeholder="DELETE" 
+          autoComplete="off" 
+          disabled={isDeleting}
+          className="w-full px-5 py-4 border-2 border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white font-mono tracking-widest text-center transition-all disabled:opacity-50"
+        />
+      </div>
+
+      <div className="flex gap-4">
+        <button 
+          onClick={() => { onClose(); setConfirmText(""); }} 
+          disabled={isDeleting} 
+          className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button 
+          onClick={onConfirm} 
+          disabled={confirmText !== "DELETE" || isDeleting} 
+          className="flex-1 py-4 bg-red-600 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-40 shadow-xl shadow-red-500/20"
+        >
+          {isDeleting ? "Deleting..." : "Erase Everything"}
+        </button>
+      </div>
+    </Modal>
   );
 };
 

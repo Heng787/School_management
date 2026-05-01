@@ -53,74 +53,55 @@ const LoginPage = ({ onLogin }) => {
     }
   };
 
-  const processLogin = () => {
-    if (selectedRole === UserRole.Admin) {
-      if (password === adminPassword) {
-        setCurrentUser({
-          id: 'admin_1',
-          name: 'Administrator',
-          role: selectedRole,
-        });
-        onLogin(UserRole.Admin);
-      } else {
-        setError('Incorrect admin password.');
-        setIsLoggingIn(false);
+  const processLogin = async () => {
+    try {
+      let identifierPayload = identifier.trim();
+      
+      if (selectedRole === UserRole.Admin) {
+        identifierPayload = 'admin';
       }
-    } else {
-      const searchId = identifier.trim().toLowerCase();
-      const foundStaff = staff.find(
-        (s) =>
-          ((s.name || '').toLowerCase() === searchId ||
-            (s.contact || '').toLowerCase() === searchId) &&
-          s.role === selectedRole,
-      );
 
-      if (foundStaff) {
-        if (foundStaff.password) {
-          if (foundStaff.password === password) {
-            setCurrentUser({
-              id: foundStaff.id,
-              name: foundStaff.name,
-              role: selectedRole,
-            });
-            onLogin(selectedRole);
-          } else {
-            setError('Incorrect password for this staff account.');
-            setIsLoggingIn(false);
-          }
-        } else {
-          setCurrentUser({
-            id: foundStaff.id,
-            name: foundStaff.name,
-            role: selectedRole,
-          });
-          onLogin(selectedRole);
-        }
-      } else {
-        if (staff.some((s) => s.role === selectedRole)) {
-          setError(
-            `No account found for "${identifier}" under the role: ${selectedRole}. Please check spelling or contact number.`,
-          );
-        } else {
-          setCurrentUser({
-            id: 'demo_1',
-            name: `Demo ${selectedRole}`,
-            role: selectedRole,
-          });
-          onLogin(selectedRole);
-        }
-        setIsLoggingIn(false);
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: identifierPayload,
+          password: password
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error?.message || data.message || 'Login failed');
       }
+
+      if (data.success && data.data && data.data.token) {
+        localStorage.setItem('school_admin_token', data.data.token);
+        
+        setCurrentUser({
+          id: data.data.user.id,
+          name: data.data.user.name,
+          role: data.data.user.role || selectedRole,
+        });
+        
+        onLogin(data.data.user.role || selectedRole);
+      } else {
+        throw new Error('Invalid server response');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Incorrect credentials or network error.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
-  const handleAdminLogin = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoggingIn(true);
-    setTimeout(() => {
-      processLogin();
-    }, 1200);
+    await processLogin();
   };
 
   // --- Render Logic ---
@@ -131,6 +112,12 @@ const LoginPage = ({ onLogin }) => {
         background: 'linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #0c1a2e 100%)',
       }}
     >
+      <a
+        href="#login-card"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg font-bold shadow-2xl"
+      >
+        Skip to login form
+      </a>
       {/* Animated background orbs */}
       <style>{`
         @keyframes float-orb {
@@ -158,8 +145,8 @@ const LoginPage = ({ onLogin }) => {
         .input-field {
           background: rgba(255,255,255,0.05);
           border: 1px solid rgba(255,255,255,0.1);
-          color: #f1f5f9;
-          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+          color: var(--color-slate-100);
+          transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
         }
         .input-field::placeholder { color: rgba(148,163,184,0.5); }
         .input-field:focus {
@@ -168,16 +155,16 @@ const LoginPage = ({ onLogin }) => {
           background: rgba(14,165,233,0.06);
           box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
         }
-        .role-select option { background: #1e293b; color: #f1f5f9; }
+        .role-select option { background: var(--color-slate-800); color: var(--color-slate-100); }
         .login-btn {
-          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+          background: var(--primary-gradient);
           box-shadow: 0 4px 24px rgba(14,165,233,0.35);
-          transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+          transition: all var(--transition-base);
         }
         .login-btn:hover:not(:disabled) {
           transform: translateY(-2px) !important;
           box-shadow: 0 8px 32px rgba(14,165,233,0.5);
-          background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+          background: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%);
         }
         .login-btn:active:not(:disabled) {
           transform: translateY(0) scale(0.98) !important;
@@ -249,6 +236,7 @@ const LoginPage = ({ onLogin }) => {
 
       {/* Main card */}
       <div
+        id="login-card"
         className="login-card-enter glass-card w-full max-w-md rounded-3xl p-8 relative overflow-hidden"
         style={{
           boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
@@ -345,6 +333,7 @@ const LoginPage = ({ onLogin }) => {
             </div>
             <button
               onClick={handleInstall}
+              aria-label="Install School Admin Desktop App"
               className="text-[11px] font-bold px-3 py-1.5 rounded-lg"
               style={{
                 background: 'rgba(16,185,129,0.2)',
@@ -507,17 +496,7 @@ const LoginPage = ({ onLogin }) => {
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                required={
-                  selectedRole === UserRole.Admin ||
-                  staff.some(
-                    (s) =>
-                      ((s.name || '').toLowerCase() ===
-                        identifier.trim().toLowerCase() ||
-                        (s.contact || '').toLowerCase() ===
-                          identifier.trim().toLowerCase()) &&
-                      s.password,
-                  )
-                }
+                required={true}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);

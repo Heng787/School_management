@@ -1,78 +1,28 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useData } from "../context/DataContext";
 import { AttendanceStatus } from "../types";
 import { gradeId } from "../services/mappers";
-import { useFocusTrap } from "../hooks/useFocusTrap";
+import Modal from "./ui/Modal";
+
 // ─── SHARED UI COMPONENTS ─────────────────────────────────────────────────────
 
-const CloseIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
 
-const ModalShell = ({ size = "max-w-xl", children, isDraggingEnabled = true }) => {
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-
-  const handleMouseDown = (e) => {
-    if (!isDraggingEnabled) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (e.clientY - rect.top > 80) return; // Only allow dragging from header
-    if (['BUTTON', 'INPUT', 'SELECT', 'A'].includes(e.target.tagName)) return;
-
-    setIsDragging(true);
-    dragStart.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging) return;
-      setPos({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
-    };
-    const handleMouseUp = () => setIsDragging(false);
-
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const trapRef = useFocusTrap(true);
-
-  return (
-    <div ref={trapRef} role="dialog" aria-modal="true" aria-labelledby="modal-title" className="fixed inset-0 bg-slate-900/10 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden pointer-events-auto">
-      <div
-        style={{ transform: `translate(${pos.x}px, ${pos.y}px)`, transition: isDragging ? 'none' : 'transform 0.1s ease-out' }}
-        onMouseDown={handleMouseDown}
-        className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full ${size} overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh] border border-slate-200/50 dark:border-slate-800 ${isDragging ? 'shadow-3xl ring-4 ring-primary-500/10 cursor-grabbing select-none' : ''}`}
-      >
-        {children}
-      </div>
-    </div>
-  );
-};
-
-const ModalHeader = ({ title, subtitle, icon, onClose, children }) => (
+const ModalHeader = ({ id, title, subtitle, icon, onClose, children }) => (
   <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
     <div className="flex items-center gap-4">
       <div className="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 shrink-0">
         {icon}
       </div>
       <div>
-        <h2 id="modal-title" className="text-xl font-black text-slate-800 dark:text-white font-display leading-tight">{title}</h2>
+        <h2 id={id} className="text-xl font-black text-slate-800 dark:text-white font-display leading-tight">{title}</h2>
         <p className="text-xs font-bold text-primary-600 dark:text-primary-400 uppercase tracking-widest">{subtitle}</p>
       </div>
     </div>
     <div className="flex items-center gap-3">
       {children}
       <button aria-label="Close dialog" onClick={onClose} className="p-2 text-slate-500 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-        <CloseIcon />
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
       </button>
     </div>
   </div>
@@ -121,8 +71,14 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
   };
 
   return (
-    <ModalShell size="max-w-2xl">
+    <Modal
+      onClose={onClose}
+      ariaLabelledBy="attendance-modal-title"
+      maxWidth="max-w-2xl"
+      className="p-0 sm:p-0 overflow-hidden"
+    >
       <ModalHeader 
+        id="attendance-modal-title"
         title="Class Attendance" 
         subtitle={classData.name} 
         onClose={onClose}
@@ -190,7 +146,7 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
         <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Cancel</button>
         <button onClick={handleSave} className="px-8 py-2.5 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/25 transition-all">Save Changes</button>
       </div>
-    </ModalShell>
+    </Modal>
   );
 };
 
@@ -302,8 +258,14 @@ export const GradesModal = ({ classData, students, onClose }) => {
   };
 
   return (
-    <ModalShell size="max-w-7xl">
+    <Modal
+      onClose={onClose}
+      ariaLabelledBy="grades-modal-title"
+      maxWidth="max-w-7xl"
+      className="p-0 sm:p-0 overflow-hidden"
+    >
       <ModalHeader 
+        id="grades-modal-title"
         title={`${term} Score Sheet`} 
         subtitle={`Room ${classData.name} • Level ${classData.level}`} 
         onClose={onClose}
@@ -401,6 +363,6 @@ export const GradesModal = ({ classData, students, onClose }) => {
           <button onClick={handleSave} className="px-10 py-2.5 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/25 transition-all">Save Marks</button>
         </div>
       </div>
-    </ModalShell>
+    </Modal>
   );
 };
