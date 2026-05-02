@@ -104,38 +104,18 @@ textarea:focus-visible,
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Glassmorphism
+   Cards & Surfaces
 ────────────────────────────────────────────────────────────────────────── */
-.glass-light {
-  background: var(--glass-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--card-shadow);
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
-.glass-dark {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.glass-card {
-  position: relative;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-premium-hover);
-}
-
-.dark .glass-card:hover {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(59, 130, 246, 0.15);
+.card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -145,43 +125,47 @@ button,
 [role="button"],
 input[type="submit"],
 input[type="button"] {
-  transition: transform var(--transition-fast),
-              box-shadow var(--transition-fast),
-              filter var(--transition-fast);
-  will-change: transform;
-  position: relative;
+  transition: all var(--transition-fast);
   cursor: pointer;
 }
 
 @media (hover: hover) and (pointer: fine) {
   button:not(:disabled):hover,
   [role="button"]:not(:disabled):hover {
-    filter: brightness(1.05);
+    filter: brightness(1.1);
   }
 }
 
 button:not(:disabled):active,
 [role="button"]:not(:disabled):active {
-  transform: scale(0.96) translateY(1px);
-  filter: brightness(0.95);
+  transform: scale(0.98);
 }
 
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none !important;
 }
 
 input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
-  transition: border-color var(--transition-fast),
-              box-shadow var(--transition-fast);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color var(--transition-fast), ring var(--transition-fast);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 .card-shadow {
-  box-shadow: var(--shadow-premium);
+  box-shadow: var(--shadow-md);
 }
+
 
 /* ──────────────────────────────────────────────────────────────────────────
    Animation Utilities

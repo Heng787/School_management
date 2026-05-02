@@ -28,7 +28,7 @@ class MessageService {
     }
 
     const dbPayload = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: payload.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       sender_id: isAdmin ? ADMIN_KEY : senderId,
       sender_name: senderName,
       recipient_id:

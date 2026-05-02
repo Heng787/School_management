@@ -58,6 +58,7 @@ const ClassesPage = () => {
     setHighlightedClassId,
     enrollments,
     currentUser,
+    error,
     addStaffBatch,
     updateClassesBatch,
     updateStudentsBatch,
@@ -379,6 +380,27 @@ const ClassesPage = () => {
               </svg>
             </div>
             <span className="font-bold text-sm">{successMessage}</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="fixed top-24 right-6 z-[60] bg-red-500 text-white px-6 py-3 rounded-xl shadow-2xl animate-in slide-in-from-right-4 duration-300 flex items-center gap-3">
+            <div className="bg-white/20 p-1.5 rounded-full">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="3"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </div>
+            <span className="font-bold text-sm">{error}</span>
           </div>
         )}
 

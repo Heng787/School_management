@@ -23,14 +23,14 @@ import { AttendanceModal, GradesModal } from "../../TeacherActionsModals";
 // --- Shared Components ---
 const Card = ({ title, action, children, className = "", noPadding = false }) => (
   <div
-    className={`glass-card bg-white dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300 ${noPadding ? "" : "p-6"} ${className}`}
+    className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all duration-200 ${noPadding ? "" : "p-6"} ${className}`}
   >
     {title && (
       <div className="flex items-center justify-between mb-5 relative z-10">
         <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
           {title}
         </h3>
-        {action ? action : <div className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-800" />}
+        {action ? action : <div className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />}
       </div>
     )}
     <div className="relative z-10">{children}</div>
@@ -39,21 +39,21 @@ const Card = ({ title, action, children, className = "", noPadding = false }) =>
 
 const StatCard = ({ title, value, subText, trend, trendType = "up", icon, colorClass = "blue" }) => {
   const colors = {
-    blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/20",
-    emerald: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/20",
-    primary: "text-primary-600 bg-primary-50 dark:bg-primary-900/10 border-primary-100 dark:border-primary-900/20",
-    amber: "text-amber-600 bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20",
+    blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/30",
+    emerald: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30",
+    primary: "text-primary-600 bg-primary-50 dark:bg-primary-900/20 border-primary-100 dark:border-primary-800/30",
+    amber: "text-amber-600 bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/30",
   };
 
   return (
-    <Card className="p-5! hover:border-primary-500/30">
-      <div className="flex justify-between items-start group">
+    <Card className="hover:border-primary-500/50">
+      <div className="flex justify-between items-start">
         <div className="min-w-0">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
             {title}
           </p>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-800 dark:text-white">
+            <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               {value}
             </h3>
             {subText && (
@@ -65,14 +65,14 @@ const StatCard = ({ title, value, subText, trend, trendType = "up", icon, colorC
           {trend && (
             <div className={`mt-3 flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold w-fit border ${
               trendType === "up" 
-                ? "text-emerald-600 bg-emerald-50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-800/30" 
-                : "text-amber-600 bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-800/30"
+                ? "text-emerald-600 bg-emerald-50 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800/50" 
+                : "text-amber-600 bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:border-amber-800/50"
             }`}>
               <span>{trend}</span>
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${colors[colorClass]} border shadow-sm`}>
+        <div className={`p-3 rounded-xl ${colors[colorClass]} border`}>
           {icon}
         </div>
       </div>

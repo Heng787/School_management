@@ -3,6 +3,19 @@ import { StaffRole, UserRole } from '../types';
 
 /**
  * Handles all filtering and grouping logic for classes.
+ *
+ * @param {Array<Object>} classes - The complete list of classes.
+ * @param {string} selectedLevel - The currently selected academic level filter ('all' or specific level).
+ * @param {Array<string>} selectedTeacherIds - Array of selected teacher IDs for filtering.
+ * @param {string} selectedTime - The currently selected time slot filter ('all' or specific time).
+ * @param {Object} currentUser - The currently authenticated user object.
+ * @param {Array<Object>} staff - The complete list of staff members.
+ * @param {Array<Object>} timeSlots - The available time slots for scheduling.
+ * @returns {Object} Filtering results containing:
+ * @returns {Array<Object>} returns.availableTeachers - List of staff members with the role of Teacher.
+ * @returns {Array<string>} returns.allSessionLabels - List of all unique session time labels.
+ * @returns {Array<Object>} returns.filteredClasses - The array of classes after applying all filters.
+ * @returns {Object} returns.classesByTimeSlot - An object grouping the filtered classes by their respective time slots.
  */
 export const useClassFiltering = (
   classes,

@@ -13,8 +13,24 @@ const MessageInput = ({
   setAttachment,
   fileInputRef,
   announcementMode,
+  isAdmin,
 }) => {
   const canSend = (text.trim() || attachment) && !sending;
+
+  if (announcementMode && !isAdmin) {
+    return (
+      <div className="px-4 py-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 transition-colors flex items-center justify-center">
+        <div className="flex items-center gap-2.5 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+          <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m0 0v2m0-2h2m-2 0H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+            Only administrators can send announcements
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800

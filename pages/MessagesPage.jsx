@@ -244,7 +244,7 @@ const MessagesPage = () => {
   });
 
   const totalUnread = messages.filter(
-    (m) => !m.isRead && m.recipientId === myDbId,
+    (m) => !m.isRead && (m.recipientId === myDbId || m.recipientId === 'all'),
   ).length;
 
   const isMine = (msg) => {
@@ -265,7 +265,7 @@ const MessagesPage = () => {
     if (!activeConversation && !announcementMode) return;
 
     setSending(true);
-    const recipient = announcementMode ? 'all' : activeConversation;
+    const recipient = (announcementMode && isAdmin) ? 'all' : activeConversation;
 
     // Convert attachment to base64 locally — no backend/Supabase upload needed
     let metadata = undefined;
@@ -291,7 +291,7 @@ const MessagesPage = () => {
       senderId: myDbId,
       senderName: myName,
       recipientId: recipient,
-      type: announcementMode ? 'announcement' : 'text',
+      type: (announcementMode && isAdmin) ? 'announcement' : 'text',
       content: text.trim(),
       metadata,
       isAdmin,
@@ -447,6 +447,7 @@ const MessagesPage = () => {
           setAttachment={setAttachment}
           fileInputRef={fileInputRef}
           announcementMode={announcementMode}
+          isAdmin={isAdmin}
         />
       </div>
 

@@ -195,57 +195,61 @@ const ReportCardModal = ({ student, onClose }) => {
           message={`Permanently delete all ${termGrades.length} grade records for "${selectedTerm}"? This action cannot be undone.`}
         />
 
-        {/* PRINTABLE CONTENT AREA */}
-        <div id="report-card-printable" className="p-0 flex-grow print:p-0 flex flex-col">
+        {/* PRINTABLE CONTENT AREA (A4 WHITE PAPER STYLE) */}
+        <div 
+          id="report-card-printable" 
+          className="bg-white text-slate-900 p-10 sm:p-16 shadow-[0_0_40px_rgba(0,0,0,0.1)] mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col print:shadow-none print:p-0 print:m-0"
+          style={{ colorScheme: 'light' }}
+        >
 
           {/* Official Header */}
-          <div className="text-center mb-4 border-b-2 border-slate-900 pb-3">
-            <h1 className="text-xl font-black text-slate-900 uppercase tracking-[0.1em] mb-1">SchoolAdmin Academy</h1>
-            <p className="text-slate-500 font-bold tracking-[0.3em] uppercase text-[8px]">Academic Progress & Performance Certification</p>
-            <div className="mt-1 flex justify-center gap-10 text-[8px] font-black text-slate-500 uppercase tracking-widest">
+          <div className="text-center mb-10 border-b-2 border-slate-900 pb-6">
+            <h1 className="text-3xl font-black text-slate-900 uppercase tracking-[0.15em] mb-2">SchoolAdmin Academy</h1>
+            <p className="text-slate-500 font-bold tracking-[0.4em] uppercase text-[10px]">Academic Progress & Performance Certification</p>
+            <div className="mt-3 flex justify-center gap-12 text-[10px] font-black text-slate-500 uppercase tracking-widest">
               <span>Academic Session: 2025-2026</span>
               <span className="text-slate-900">Evaluation: {selectedTerm || 'Full Session'}</span>
             </div>
           </div>
 
           {/* Core Profile Information */}
-          <div className="grid grid-cols-2 gap-10 mb-4">
-            <div className="space-y-2">
-              <div className="group">
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-0 block">Full Name</label>
-                <p className="text-base font-black text-slate-900 border-l-4 border-slate-900 pl-3">{student.name}</p>
+          <div className="grid grid-cols-2 gap-12 mb-10">
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1 block">Full Name</label>
+                <p className="text-xl font-black text-slate-900 border-l-4 border-slate-900 pl-4 py-1">{student.name}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-0 block">Student Identifier</label>
-                  <p className="text-[9px] font-mono font-bold text-slate-600">{student.id}</p>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1 block">Student Identifier</label>
+                  <p className="text-xs font-mono font-bold text-slate-600">{student.id}</p>
                 </div>
                 <div>
-                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-0 block">Date of Birth</label>
-                  <p className="text-[9px] font-bold text-slate-600">{student.dob ? new Date(student.dob).toLocaleDateString() : '—'}</p>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1 block">Date of Birth</label>
+                  <p className="text-xs font-bold text-slate-600">{student.dob ? new Date(student.dob).toLocaleDateString() : '—'}</p>
                 </div>
               </div>
             </div>
-            <div className="text-right space-y-2 flex flex-col items-end">
+            <div className="text-right space-y-4 flex flex-col items-end justify-start">
               <div>
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-0 block">Placement / Level</label>
-                <p className="text-base font-black text-slate-900">{studentClass ? `${studentClass.name} (${studentClass.level})` : 'Unassigned'}</p>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1 block">Placement / Level</label>
+                <p className="text-xl font-black text-slate-900">{studentClass ? `${studentClass.name} (${studentClass.level})` : 'Unassigned'}</p>
               </div>
               <div>
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-0 block">Certification Date</label>
-                <p className="text-[9px] font-bold text-slate-600">{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1 block">Certification Date</label>
+                <p className="text-xs font-bold text-slate-600">{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               </div>
             </div>
           </div>
 
           {/* Academic Records Section */}
-          <div className="mb-8">
-            <div className="flex items-end justify-between border-b border-slate-200 pb-2 mb-4">
-              <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Academic Evaluation</h3>
+          <div className="mb-12">
+            <div className="flex items-end justify-between border-b border-slate-200 pb-3 mb-6">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Academic Evaluation</h3>
               {termGrades.length > 0 && (
                 <div className="text-right">
-                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Weighted GPA</span>
-                  <span className="text-xl font-black text-primary-600">{calculateGPA(termGrades)}</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Weighted GPA</span>
+                  <span className="text-4xl font-black text-primary-600">{calculateGPA(termGrades)}</span>
                 </div>
               )}
             </div>
@@ -253,50 +257,50 @@ const ReportCardModal = ({ student, onClose }) => {
             {termGrades.length > 0 ? (() => {
               const half = Math.ceil(termGrades.length / 2);
               return (
-                <div className="grid grid-cols-2 gap-10">
+                <div className="grid grid-cols-2 gap-16">
                   <AcademicTable records={termGrades.slice(0, half)} />
                   <AcademicTable records={termGrades.slice(half)} />
                 </div>
               );
             })() : (
-              <div className="py-8 text-center border-2 border-dashed border-slate-100 rounded-3xl">
-                <p className="text-slate-500 italic text-xs">No academic data available for this term.</p>
+              <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl">
+                <p className="text-slate-400 italic text-sm">No academic data available for this term.</p>
               </div>
             )}
           </div>
 
           {/* Secondary Metrics */}
-          <div className="grid grid-cols-2 gap-12 mb-6">
+          <div className="grid grid-cols-2 gap-16 mb-10">
             <div>
-              <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] border-b border-slate-200 pb-2 mb-4">Engagement Record</h3>
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] border-b border-slate-200 pb-3 mb-6">Engagement Record</h3>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex items-center justify-between shadow-sm">
                 <div>
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Attendance Rate</p>
-                  <p className="text-3xl font-black text-slate-900">{calculateAttendanceRate(studentAttendance)}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance Rate</p>
+                  <p className="text-4xl font-black text-slate-900">{calculateAttendanceRate(studentAttendance)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Total Verified Days</p>
-                  <p className="text-lg font-bold text-slate-600">{studentAttendance.length}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Verified Days</p>
+                  <p className="text-xl font-bold text-slate-600">{studentAttendance.length}</p>
                 </div>
               </div>
             </div>
             <div>
-              <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] border-b border-slate-200 pb-2 mb-4">Educator's Commentary</h3>
-              <div className="h-24 border-2 border-dashed border-slate-200 rounded-xl p-4">
-                <p className="text-slate-300 text-[10px] font-medium leading-relaxed italic">Academic and behavioral notes to be documented manually by the class educator.</p>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] border-b border-slate-200 pb-3 mb-6">Educator's Commentary</h3>
+              <div className="h-32 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex items-center justify-center">
+                <p className="text-slate-300 text-[11px] font-medium leading-relaxed italic text-center">Academic and behavioral notes to be documented manually by the class educator.</p>
               </div>
             </div>
           </div>
 
           {/* Official Signatures */}
-          <div className="mt-8 pt-8 border-t-2 border-slate-900 grid grid-cols-2 gap-24">
+          <div className="mt-auto pt-10 border-t-2 border-slate-900 grid grid-cols-2 gap-32">
             <SignatureBlock label="Class Teacher" name={teacher?.name} />
             <SignatureBlock label="School Principal" name={principalName} signatureUrl={principalSignatureUrl} />
           </div>
 
           {/* Footer Validation */}
-          <div className="mt-16 text-center">
-            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em]">
+          <div className="mt-12 text-center">
+            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em]">
               Digitally verified document • No physical signature required for electronic verification
             </p>
           </div>

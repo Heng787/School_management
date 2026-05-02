@@ -55,39 +55,55 @@ const LoginPage = ({ onLogin }) => {
 
   const processLogin = async () => {
     try {
-      let identifierPayload = identifier.trim();
+      // Simulate a brief network delay for premium UI feel
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      const inputPassword = password.trim();
+      const inputIdentifier = identifier.trim().toLowerCase();
       
       if (selectedRole === UserRole.Admin) {
-        identifierPayload = 'admin';
+        // Use adminPassword from DataContext (defaults to admin123)
+        if (inputPassword === adminPassword) {
+           const adminUser = {
+            id: 'admin_1',
+            name: 'Administrator',
+            role: UserRole.Admin,
+          };
+          
+          // Set a dummy token to satisfy token checks in other parts of the app
+          localStorage.setItem('school_admin_token', 'local_admin_token');
+          
+          setCurrentUser(adminUser);
+          onLogin(UserRole.Admin);
+          return;
+        } else {
+          throw new Error('Incorrect admin password');
+        }
       }
 
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: identifierPayload,
-          password: password
-        })
-      });
+      // Staff Login - check against local staff array from DataContext
+      const matchedStaff = staff.find(s => 
+        (s.name?.toLowerCase() === inputIdentifier || s.contact === inputIdentifier)
+      );
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error?.message || data.message || 'Login failed');
+      if (!matchedStaff) {
+        throw new Error('Staff member not found with that name or contact.');
       }
 
-      if (data.success && data.data && data.data.token) {
-        localStorage.setItem('school_admin_token', data.data.token);
+      // Check password (matches plain text in local data)
+      if (matchedStaff.password === inputPassword) {
+        const staffUser = {
+          id: matchedStaff.id,
+          name: matchedStaff.name,
+          role: matchedStaff.role || selectedRole,
+        };
         
-        setCurrentUser({
-          id: data.data.user.id,
-          name: data.data.user.name,
-          role: data.data.user.role || selectedRole,
-        });
+        localStorage.setItem('school_admin_token', `local_token_${matchedStaff.id}`);
         
-        onLogin(data.data.user.role || selectedRole);
+        setCurrentUser(staffUser);
+        onLogin(staffUser.role);
       } else {
-        throw new Error('Invalid server response');
+        throw new Error('Incorrect password for this staff member.');
       }
     } catch (err) {
       console.error('Login error:', err);

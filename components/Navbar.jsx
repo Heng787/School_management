@@ -55,7 +55,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
   }, [currentUser]);
 
   return (
-    <header className="h-16 bg-white/95 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-60 px-4 lg:px-6 flex items-center justify-between transition-all duration-300 shadow-sm">
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-60 px-4 lg:px-6 flex items-center justify-between transition-all duration-300 shadow-sm">
       <div className="flex items-center space-x-4">
         {/* Sidebar Toggle Button */}
         <button
@@ -93,7 +93,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
       </div>
 
       <div className="flex-1 max-w-md mx-auto px-4 hidden md:block">
-        <div className="glass-dark rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-primary-500/50 transition-all duration-300">
+        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary-500/50 transition-all duration-300 border border-slate-200 dark:border-slate-700">
           <StudentSearch navigate={navigate} />
         </div>
       </div>

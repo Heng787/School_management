@@ -8,6 +8,10 @@ import { deleteRecord, clearLocalCache } from './core';
 
 /**
  * Unified API service combining all domain services.
+ * 
+ * @namespace apiService
+ * @property {Function} deleteRecord - Deletes a record from the specified table.
+ * @property {Function} clearLocalCache - Clears the local database cache.
  */
 export const apiService = {
   ...studentService,

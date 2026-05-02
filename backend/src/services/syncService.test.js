@@ -1,17 +1,24 @@
 /** @vitest-environment node */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import syncService from './syncService';
-import syncRepository from '../repositories/syncRepository';
+const syncRepository = require('../repositories/syncRepository');
 import { sanitizeData } from '../utils/sanitizer';
 
-vi.mock('../repositories/syncRepository');
-vi.mock('../utils/sanitizer', () => ({
-  sanitizeData: vi.fn(d => d)
-}));
+vi.mock('../utils/sanitizer', () => {
+  const mockSanitize = vi.fn(d => d);
+  return {
+    __esModule: true,
+    sanitizeData: mockSanitize,
+    default: { sanitizeData: mockSanitize }
+  };
+});
 
 describe('SyncService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(syncRepository, 'getTableData').mockImplementation(() => Promise.resolve([]));
+    vi.spyOn(syncRepository, 'upsertTableData').mockImplementation(() => Promise.resolve([]));
+    vi.spyOn(syncRepository, 'deleteTableData').mockImplementation(() => Promise.resolve());
   });
 
   it('should get table data for allowed table', async () => {
@@ -37,6 +44,7 @@ describe('SyncService', () => {
   });
 
   it('should delete record from allowed table', async () => {
+    syncRepository.deleteTableData.mockResolvedValue();
     await syncService.deleteRecord('students', '123');
     expect(syncRepository.deleteTableData).toHaveBeenCalledWith('students', '123');
   });

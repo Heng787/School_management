@@ -142,6 +142,7 @@ export async function sendMessage(msg) {
   const token = getAuthToken();
   if (token) {
     const payload = {
+      id:          localMsg.id,
       senderId:    localMsg.senderId,
       senderName:  localMsg.senderName,
       recipientId: localMsg.recipientId,

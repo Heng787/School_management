@@ -77,8 +77,11 @@ class MessageRepository {
     const camelCasePayload = {
       id: payload.id,
       senderId: payload.sender_id,
+      senderName: payload.sender_name,
       recipientId: payload.recipient_id,
+      type: payload.type || 'text',
       text: payload.content,
+      metadata: payload.metadata || {},
       read: false,
     };
 

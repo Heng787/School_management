@@ -1,5 +1,6 @@
 /**
  * Utility for mapping data between database and application formats.
+ * Built with safety checks for mixed camelCase/snake_case local data.
  */
 
 // --- Student Mappers ---
@@ -20,16 +21,12 @@ export const mapStudent = {
     sex: d.sex,
     dob: d.dob,
     phone: d.phone,
-    enrollmentDate: d.enrollment_date,
+    enrollmentDate: d.enrollmentDate || d.enrollment_date,
     status: d.status,
   }),
 };
 
 // --- Grade Mappers ---
-
-export const gradeId = (classId, studentId, subject, term) => {
-  return `grade~${classId}~${studentId}~${subject.replace(/\s+/g, '_')}~${(term || '').replace(/\s+/g, '_')}`;
-};
 
 export const mapGrade = {
   toDb: (g) => ({
@@ -40,16 +37,18 @@ export const mapGrade = {
     term: g.term || null,
   }),
   fromDb: (d) => {
-    // Decode classId from composite ID: grade~{classId}~{studentId}~{subject}~{term}
-    let classId = null;
-    const parts = (d.id || '').split('~');
-    if (parts.length >= 3 && parts[0] === 'grade') {
-      classId = parts[1];
+    // Decode classId from composite ID if missing
+    let classId = d.classId;
+    if (!classId) {
+      const parts = (d.id || '').split('~');
+      if (parts.length >= 3 && parts[0] === 'grade') {
+        classId = parts[1];
+      }
     }
 
     return {
       id: d.id,
-      studentId: d.student_id,
+      studentId: d.studentId || d.student_id,
       classId,
       subject: d.subject,
       score: d.score,
@@ -69,22 +68,17 @@ export const mapAttendance = {
   }),
   fromDb: (d) => {
     // ID format: att_{classId}_{date}_{studentId}
-    let classId = null;
-    if (d.id && d.id.startsWith('att_')) {
-      const suffix = `_${d.date}_${d.student_id}`;
-      if (d.id.endsWith(suffix)) {
-        classId = d.id.substring(4, d.id.length - suffix.length);
-      } else {
-        const parts = d.id.split('_');
-        if (parts.length >= 5) {
-          classId = parts.slice(1, -2).join('_');
-        }
+    let classId = d.classId;
+    if (!classId && d.id && d.id.startsWith('att_')) {
+      const parts = d.id.split('_');
+      if (parts.length >= 5) {
+        classId = parts.slice(1, -2).join('_');
       }
     }
 
     return {
       id: d.id,
-      studentId: d.student_id,
+      studentId: d.studentId || d.student_id,
       date: d.date,
       status: d.status,
       classId,
@@ -103,9 +97,9 @@ export const mapEnrollment = {
   }),
   fromDb: (d) => ({
     id: d.id,
-    studentId: d.student_id,
-    classId: d.class_id,
-    academicYear: d.academic_year,
+    studentId: d.studentId || d.student_id,
+    classId: d.classId || d.class_id,
+    academicYear: d.academicYear || d.academic_year,
   }),
 };
 
@@ -119,7 +113,6 @@ export const mapStaff = {
     subject: s.subject || null,
     contact: s.contact || null,
     hire_date: s.hireDate || null,
-    password: s.password || null,
   }),
   fromDb: (d) => ({
     id: d.id,
@@ -127,8 +120,7 @@ export const mapStaff = {
     role: d.role,
     subject: d.subject,
     contact: d.contact,
-    hireDate: d.hire_date,
-    password: d.password,
+    hireDate: d.hireDate || d.hire_date,
   }),
 };
 
@@ -137,19 +129,13 @@ export const mapStaffPermission = {
     id: p.id,
     staff_id: p.staffId,
     type: p.type,
-    start_date: p.startDate,
-    end_date: p.endDate,
     reason: p.reason,
-    created_at: p.createdAt,
   }),
   fromDb: (d) => ({
     id: d.id,
-    staffId: d.staff_id,
+    staffId: d.staffId || d.staff_id,
     type: d.type,
-    startDate: d.start_date,
-    endDate: d.end_date,
     reason: d.reason,
-    createdAt: d.created_at,
   }),
 };
 
@@ -166,48 +152,16 @@ export const mapClass = {
   fromDb: (d) => ({
     id: d.id,
     name: d.name,
-    teacherId: d.teacher_id,
+    teacherId: d.teacherId || d.teacher_id,
     schedule: d.schedule,
     level: d.level,
   }),
 };
+// --- Helper for ID generation ---
 
-// --- Event Mappers ---
-
-export const mapEvent = {
-  toDb: (e) => ({
-    id: e.id,
-    title: e.title,
-    date: e.date,
-    type: e.type,
-    description: e.description || null,
-  }),
-  fromDb: (d) => ({
-    id: d.id,
-    title: d.title,
-    date: d.date,
-    type: d.type,
-    description: d.description,
-  }),
-};
-
-// --- Message Mappers ---
-
-export const mapMessage = {
-  toDb: (m) => ({
-    id: m.id,
-    sender_id: m.senderId,
-    recipient_id: m.recipientId,
-    text: m.text,
-    timestamp: m.timestamp,
-    read: m.read,
-  }),
-  fromDb: (d) => ({
-    id: d.id,
-    senderId: d.sender_id,
-    recipientId: d.recipient_id,
-    text: d.text,
-    timestamp: d.timestamp,
-    read: d.read,
-  }),
-};
+/**
+ * Generates a stable composite ID for a grade record.
+ * Format: grade~{classId}~{studentId}~{subject}~{term}
+ */
+export const gradeId = (classId, studentId, subject, term) => 
+  `grade~${classId}~${studentId}~${subject}~${term}`;
