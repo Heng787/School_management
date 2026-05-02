@@ -1,4 +1,4 @@
-import { TABLES } from '../database/schema';
+import { TABLES } from '../database/schema.js';
 
 // --- Internal State ---
 
