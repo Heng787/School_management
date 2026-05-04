@@ -30,6 +30,7 @@ const TeachersPage = () => {
   const {
     staff,
     deleteStaff,
+    archiveStaff,
     highlightedStaffId,
     setHighlightedStaffId,
     addStaffBatch,
@@ -68,6 +69,7 @@ const TeachersPage = () => {
   // --- Memoized Data ---
   const filteredStaff = useMemo(() => {
     return staff.filter((s) => {
+      if (s.isArchived) return false;
       const matchesSearch =
         (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (s.contact || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -213,10 +215,12 @@ const TeachersPage = () => {
 
       <ConfirmModal
         isOpen={isConfirmDeleteOpen}
-        title="Remove Staff"
-        message={`Are you sure you want to remove ${staffToDelete?.name} from the system? This will also remove their access to the system.`}
+        title="Archive Staff"
+        message={`Are you sure you want to archive ${staffToDelete?.name}? They will be hidden from the main list, but you can restore them later from the Archive settings.`}
+        confirmText="Archive"
+        confirmColor="amber"
         onConfirm={() => {
-          deleteStaff(staffToDelete?.id);
+          archiveStaff(staffToDelete?.id);
           setStaffToDelete(null);
           setIsConfirmDeleteOpen(false);
         }}

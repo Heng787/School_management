@@ -48,6 +48,20 @@ export const useStudentData = (setError) => {
             (err) => setError(`Batch update failed: ${err.message || err}. Changes kept locally.`)
         ), [setError]);
 
+    const archiveStudent = useCallback((id) => {
+        const student = students.find(s => s.id === id);
+        if (student) {
+            updateStudent({ ...student, isArchived: true });
+        }
+    }, [students, updateStudent]);
+
+    const unarchiveStudent = useCallback((id) => {
+        const student = students.find(s => s.id === id);
+        if (student) {
+            updateStudent({ ...student, isArchived: false });
+        }
+    }, [students, updateStudent]);
+
     const deleteStudent = useCallback(async (id, cleanupFns = {}) => {
         // 1. Update Students local state
         setStudents(prev => prev.filter(s => s.id !== id));
@@ -74,6 +88,8 @@ export const useStudentData = (setError) => {
         addStudents,
         updateStudent,
         updateStudentsBatch,
+        archiveStudent,
+        unarchiveStudent,
         deleteStudent
     };
 };

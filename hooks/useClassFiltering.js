@@ -39,11 +39,11 @@ export const useClassFiltering = (
   // --- Filtering ---
 
   const filteredClasses = useMemo(() => {
-    let baseClasses = classes;
+    let baseClasses = classes.filter(cls => !cls.isArchived);
 
     // Teachers only see their own classes; Admin and Office Workers see all
     if (currentUser?.role === UserRole.Teacher) {
-      baseClasses = classes.filter((cls) => cls.teacherId === currentUser.id);
+      baseClasses = baseClasses.filter((cls) => cls.teacherId === currentUser.id);
     }
 
     return baseClasses

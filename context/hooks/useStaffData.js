@@ -35,6 +35,20 @@ export const useStaffData = (setError) => {
             (err) => setError(`Staff update failed: ${err.message || err}. Changes kept locally.`)
         ), [setError]);
 
+    const archiveStaff = useCallback((id) => {
+        const staffMember = staff.find(s => s.id === id);
+        if (staffMember) {
+            updateStaff({ ...staffMember, isArchived: true });
+        }
+    }, [staff, updateStaff]);
+
+    const unarchiveStaff = useCallback((id) => {
+        const staffMember = staff.find(s => s.id === id);
+        if (staffMember) {
+            updateStaff({ ...staffMember, isArchived: false });
+        }
+    }, [staff, updateStaff]);
+
     const deleteStaff = useCallback(async (id) => {
         setStaff(prev => prev.filter(s => s.id !== id));
         try {
@@ -80,6 +94,8 @@ export const useStaffData = (setError) => {
         addStaff,
         addStaffBatch,
         updateStaff,
+        archiveStaff,
+        unarchiveStaff,
         deleteStaff,
         addStaffPermission,
         updateStaffPermission,

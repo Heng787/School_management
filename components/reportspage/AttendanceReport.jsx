@@ -66,7 +66,7 @@ const TopAbsenceItem = ({ student, count }) => (
   </div>
 );
 
-const HistoryRecord = ({ record, onExcuse, isAdminOrOffice }) => {
+const HistoryRecord = ({ record, onExcuse }) => {
   const isAbsent = record.status === AttendanceStatus.Absent;
   const isLate = record.status === AttendanceStatus.Late;
   const color = isAbsent ? "rose" : isLate ? "amber" : "purple";
@@ -83,14 +83,12 @@ const HistoryRecord = ({ record, onExcuse, isAdminOrOffice }) => {
             {formatDate(record.date)}
           </span>
         </div>
-        {isAdminOrOffice && (
-          <button
-            onClick={() => onExcuse(record)}
-            className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors"
-          >
-            Excuse
-          </button>
-        )}
+        <button
+          onClick={() => onExcuse(record)}
+          className="px-4 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors"
+        >
+          Excuse
+        </button>
       </div>
     </div>
   );
@@ -150,7 +148,11 @@ const AttendanceReport = () => {
     const enrolledIds = new Set(enrollments.filter(e => e.classId === selectedClass.id).map(e => e.studentId));
     
     return students.filter(s => enrolledIds.has(s.id)).map(student => {
-      const recs = filteredAttendance.filter(a => a.studentId === student.id && (a.classId === selectedClass.id || !a.classId));
+      const recs = attendance.filter(a => 
+        a.studentId === student.id && 
+        (a.classId === selectedClass.id || !a.classId) &&
+        a.date.startsWith(exportMonth)
+      );
       const getCount = (s) => recs.filter(a => a.status === s).length;
       
       return {
@@ -162,7 +164,7 @@ const AttendanceReport = () => {
         history: recs.filter(a => a.status !== AttendanceStatus.Present).sort((a, b) => b.date.localeCompare(a.date))
       };
     });
-  }, [students, selectedClass, enrollments, filteredAttendance]);
+  }, [students, selectedClass, enrollments, attendance, exportMonth]);
 
   const draftCount = useMemo(() => {
     if (!selectedClassId || !draftAttendance) return 0;
@@ -274,8 +276,36 @@ const AttendanceReport = () => {
         {selectedClassId && (
           <Card className="p-6">
             <label htmlFor="export-month" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Data Export</label>
-            <div className="flex gap-2">
-              <input id="export-month" type="month" value={exportMonth} onChange={e => setExportMonth(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold outline-none" />
+            <div className="flex gap-2 items-center">
+              <button 
+                onClick={() => {
+                  const d = new Date(exportMonth + '-01');
+                  d.setMonth(d.getMonth() - 1);
+                  setExportMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+                }}
+                className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-slate-600 dark:text-slate-300 flex-shrink-0"
+                title="Previous Month"
+              >
+                ◀
+              </button>
+              <input 
+                id="export-month" 
+                type="month" 
+                value={exportMonth} 
+                onChange={e => setExportMonth(e.target.value)} 
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold outline-none text-center" 
+              />
+              <button 
+                onClick={() => {
+                  const d = new Date(exportMonth + '-01');
+                  d.setMonth(d.getMonth() + 1);
+                  setExportMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+                }}
+                className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-slate-600 dark:text-slate-300 flex-shrink-0"
+                title="Next Month"
+              >
+                ▶
+              </button>
             </div>
             {isAdminOrOffice && (
               <div className="flex gap-2 mt-4">
@@ -345,7 +375,7 @@ const AttendanceReport = () => {
                           {stat.history.length > 0 ? (
                             <div className="border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-4">
                               {stat.history.map((rec, i) => (
-                                <HistoryRecord key={i} record={rec} isAdminOrOffice={isAdminOrOffice} onExcuse={r => updateAttendance({ ...r, status: AttendanceStatus.Present })} />
+                                <HistoryRecord key={i} record={rec} onExcuse={r => updateAttendance({ ...r, status: AttendanceStatus.Present })} />
                               ))}
                             </div>
                           ) : (

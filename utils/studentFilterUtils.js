@@ -121,6 +121,9 @@ export const applyAllFilters = (
   const lowerSearch = searchTerm.trim().toLowerCase();
 
   return students.filter((s) => {
+    // Exclude archived students
+    if (s.isArchived) return false;
+
     // Access constraints
     if (accessSet && !accessSet.has(s.id)) return false;
 

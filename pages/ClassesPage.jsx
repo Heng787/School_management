@@ -49,7 +49,7 @@ const ClassesPage = () => {
     students,
     timeSlots,
     levels,
-    deleteClass,
+    archiveClass,
     addClasses,
     addStudents,
     addEnrollments,
@@ -165,13 +165,13 @@ const ClassesPage = () => {
     );
   };
 
-  // --- Delete Handlers ---
-  const handleDeleteSelected = () => {
+  // --- Archive Handlers ---
+  const handleArchiveSelected = () => {
     if (state.selectedClassIds.size === 0) return;
     state.setIsBulkDeleteConfirmOpen(true);
   };
 
-  const confirmBulkDelete = async () => {
+  const confirmBulkArchive = async () => {
     const idsToDelete = Array.from(state.selectedClassIds);
     if (idsToDelete.length === 0) return;
 
@@ -179,16 +179,16 @@ const ClassesPage = () => {
     setLoadingMessage(`Deleting ${idsToDelete.length} classes...`);
 
     try {
-      // Execute deletions in parallel for efficiency
+      // Execute archiving in parallel for efficiency
       const results = await Promise.allSettled(
-        idsToDelete.map((id) => deleteClass(id)),
+        idsToDelete.map((id) => archiveClass(id)),
       );
 
       const failedCount = results.filter((r) => r.status === 'rejected').length;
 
       if (failedCount > 0) {
         alert(
-          `Deleted ${idsToDelete.length - failedCount} classes. ${failedCount} failed.`,
+          `Archived ${idsToDelete.length - failedCount} classes. ${failedCount} failed.`,
         );
         // Update selection to only include failed items so the user can retry
         const failedIds = idsToDelete.filter(
@@ -200,17 +200,17 @@ const ClassesPage = () => {
       }
       state.setIsBulkDeleteConfirmOpen(false);
     } catch (error) {
-      console.error('Bulk delete failed:', error);
-      alert('An unexpected error occurred during bulk delete.');
+      console.error('Bulk archive failed:', error);
+      alert('An unexpected error occurred during bulk archive.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const confirmDelete = async () => {
+  const confirmArchive = async () => {
     if (state.classToDelete) {
       try {
-        await deleteClass(state.classToDelete.id);
+        await archiveClass(state.classToDelete.id);
         state.setSelectedClassIds((prev) => {
           const next = new Set(prev);
           next.delete(state.classToDelete.id);
@@ -219,12 +219,12 @@ const ClassesPage = () => {
         state.setClassToDelete(null);
         state.setIsConfirmDeleteOpen(false);
       } catch (error) {
-        console.error('Failed to delete class:', error);
+        console.error('Failed to archive class:', error);
       }
     }
   };
 
-  const handleDeleteClassRow = (e, cls) => {
+  const handleArchiveClassRow = (e, cls) => {
     e.stopPropagation();
     state.setClassToDelete(cls);
     state.setIsConfirmDeleteOpen(true);
@@ -414,7 +414,7 @@ const ClassesPage = () => {
           selectedClassIds={state.selectedClassIds}
           isAdmin={isAdmin}
           isConfigOpen={state.isConfigOpen}
-          onDeleteSelected={handleDeleteSelected}
+          onDeleteSelected={handleArchiveSelected}
           onExportSelected={handleExportSelected}
           onDownloadTemplate={() => downloadTemplate()}
           onImportClick={() => triggerFileInput(state.fileInputRef)}
@@ -471,7 +471,7 @@ const ClassesPage = () => {
             onToggleExpand={state.setExpandedClassId}
             onToggleSelect={handleToggleSelect}
             onEdit={handleOpenModal}
-            onDelete={handleDeleteClassRow}
+            onDelete={handleArchiveClassRow}
           />
         </main>
 
@@ -498,16 +498,16 @@ const ClassesPage = () => {
         <ConfirmModal
           isOpen={state.isConfirmDeleteOpen}
           onClose={() => state.setIsConfirmDeleteOpen(false)}
-          onConfirm={confirmDelete}
-          title="Delete Class"
-          message={`Are you sure you want to delete class ${state.classToDelete?.name}? All enrollments and marks for this class will be affected.`}
+          onConfirm={confirmArchive}
+          title="Archive Class"
+          message={`Are you sure you want to archive class ${state.classToDelete?.name}? It will be hidden from the main view but can be restored from settings.`}
         />
         <ConfirmModal
           isOpen={state.isBulkDeleteConfirmOpen}
           onClose={() => state.setIsBulkDeleteConfirmOpen(false)}
-          onConfirm={confirmBulkDelete}
-          title="Delete Multiple Classes"
-          message={`Are you sure you want to delete ${state.selectedClassIds.size} selected classes? This action cannot be undone and will affect all related enrollment data.`}
+          onConfirm={confirmBulkArchive}
+          title="Archive Multiple Classes"
+          message={`Are you sure you want to archive ${state.selectedClassIds.size} selected classes? They will be hidden from the main view but can be restored from settings.`}
         />
       </div>
     </div>

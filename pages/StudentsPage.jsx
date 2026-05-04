@@ -37,6 +37,7 @@ const StudentsPage = () => {
     students,
     staff,
     deleteStudent,
+    archiveStudent,
     highlightedStudentId,
     setHighlightedStudentId,
     addStudents,
@@ -185,7 +186,7 @@ const StudentsPage = () => {
   const handleBulkDelete = async () => {
     const ids = Array.from(selection.selectedStudentIds);
     for (const id of ids) {
-      await deleteStudent(id);
+      await archiveStudent(id);
     }
     selection.clearSelection();
     modals.closeBulkDeleteModal();
@@ -196,7 +197,7 @@ const StudentsPage = () => {
 
     try {
       pagination.setIsDeletingId(id);
-      await deleteStudent(id);
+      await archiveStudent(id);
     } catch (e) {
       console.error(e);
       alert('Deletion failed. Please try again.');
@@ -401,8 +402,10 @@ const StudentsPage = () => {
 
       <ConfirmModal
         isOpen={modals.isConfirmDeleteOpen}
-        title="Delete Student"
-        message={`Are you sure you want to delete ${modals.studentToDelete?.name}? This action cannot be undone.`}
+        title="Archive Student"
+        message={`Are you sure you want to archive ${modals.studentToDelete?.name}? This will hide them from the main list, but you can restore them later from the Archive settings.`}
+        confirmText="Archive"
+        confirmColor="amber"
         onConfirm={() => handleDelete(modals.studentToDelete?.id)}
         onClose={modals.closeDeleteConfirm}
       />
@@ -410,10 +413,10 @@ const StudentsPage = () => {
       {modals.isBulkDeleteModalOpen && (
         <ConfirmModal
           isOpen={modals.isBulkDeleteModalOpen}
-          title="Delete Selected Students"
-          message={`Are you sure you want to permanently delete ${selection.selectedStudentIds.size} selected students? This will also remove their enrollments, attendance, and grades.`}
-          confirmText={`Delete ${selection.selectedStudentIds.size} Students`}
-          confirmColor="red"
+          title="Archive Selected Students"
+          message={`Are you sure you want to archive ${selection.selectedStudentIds.size} selected students? They will be moved to the archive and hidden from this list.`}
+          confirmText={`Archive ${selection.selectedStudentIds.size} Students`}
+          confirmColor="amber"
           onConfirm={handleBulkDelete}
           onClose={modals.closeBulkDeleteModal}
         />

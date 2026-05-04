@@ -63,6 +63,20 @@ export const useAcademicData = (setError) => {
         }
     }, [setError]);
 
+    const archiveClass = useCallback((id) => {
+        const cls = classes.find(c => c.id === id);
+        if (cls) {
+            updateClass({ ...cls, isArchived: true });
+        }
+    }, [classes, updateClass]);
+
+    const unarchiveClass = useCallback((id) => {
+        const cls = classes.find(c => c.id === id);
+        if (cls) {
+            updateClass({ ...cls, isArchived: false });
+        }
+    }, [classes, updateClass]);
+
     // --- Enrollment Operations ---
     const addEnrollments = useCallback((data) =>
         performDataUpdate(
@@ -188,6 +202,14 @@ export const useAcademicData = (setError) => {
             (err) => setError(`Attendance batch save failed: ${err.message || 'Unknown error'}`)
         ), [setError]);
 
+    const updateAttendance = useCallback((updated) =>
+        performDataUpdate(
+            (d) => apiService.saveAttendance(d),
+            setAttendance,
+            (prev) => prev.map(a => a.id === updated.id ? updated : a),
+            (err) => setError(`Attendance update failed: ${err.message || 'Unknown error'}`)
+        ), [setError]);
+
     const saveDraftAttendanceBatch = useCallback((records) => {
         const updatedMap = new Map(records.map(r => [r.id, r]));
         setDraftAttendance((prev) => {
@@ -218,6 +240,8 @@ export const useAcademicData = (setError) => {
         updateClass,
         updateClassesBatch,
         deleteClass,
+        archiveClass,
+        unarchiveClass,
         enrollments,
         setEnrollments,
         addEnrollment,
@@ -234,6 +258,7 @@ export const useAcademicData = (setError) => {
         publishClassGrades,
         attendance,
         setAttendance,
+        updateAttendance,
         saveAttendanceBatch,
         draftAttendance,
         saveDraftAttendanceBatch,

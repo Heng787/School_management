@@ -240,9 +240,9 @@ const StudentTableRow = ({
               {isAdmin && (
                 <ActionBtn
                   onClick={() => onDelete(student)}
-                  title="Delete Student"
-                  ariaLabel={`Delete student ${student.name}`}
-                  color="red"
+                  title="Archive Student"
+                  ariaLabel={`Archive student ${student.name}`}
+                  color="amber"
                   disabled={isDeleting}
                 >
                   {isDeleting ? (
@@ -250,7 +250,7 @@ const StudentTableRow = ({
                   ) : (
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                     </svg>
                   )}
                 </ActionBtn>
@@ -284,6 +284,7 @@ const StudentTableRow = ({
 // ── Helper ─────────────────────────────────────────────────────────────────────
 const actionColors = {
   blue: "text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20",
+  amber: "text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20",
   red:  "text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20",
 };
 
