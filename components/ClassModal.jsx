@@ -148,15 +148,12 @@ const useRoomOptions = (classData) => useMemo(() => {
 // ─── MAIN MODAL ───────────────────────────────────────────────────────────────
 
 const ClassModal = ({ classData, onClose }) => {
-  const isMounted = useRef(true);
-
   // --- 0. ACCESSIBILITY & TITLE ---
   useEffect(() => {
     document.title = 'Class Management | SchoolAdmin Dashboard';
-    return () => { isMounted.current = false; };
   }, []);
 
-  const { staff, students, timeSlots, levels, addClass, updateClass, enrollments, updateClassEnrollments } = useData();
+  const { staff, students, classes, timeSlots, levels, addClass, updateClass, enrollments, updateClassEnrollments, addActivityLog } = useData();
 
   // --- STATE ---
   const [formData, setFormData] = useState({
@@ -223,7 +220,7 @@ const ClassModal = ({ classData, onClose }) => {
     }
   }, [scheduleType, selectedTime]);
 
-  // --- HANDLERS ---
+    // --- HANDLERS ---
   const handleTeacherSearch = (query) => {
     const trimmed = query.trimStart(); // Allow trailing spaces during typing
     setTeacherSearch(trimmed);
@@ -255,12 +252,16 @@ const ClassModal = ({ classData, onClose }) => {
         const id = `class_${Date.now()}`;
         await addClass({ ...formData, id });
         await updateClassEnrollments(id, studentIds);
+        
+        addActivityLog({
+          action: `New class "${formData.name}" created for Level "${formData.level}"`
+        });
       }
-      if (isMounted.current) onClose();
+      onClose();
     } catch (err) {
-      if (isMounted.current) setError('Failed to save class. Please try again.');
+      setError('Failed to save class. Please try again.');
     } finally {
-      if (isMounted.current) setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
@@ -350,7 +351,17 @@ const ClassModal = ({ classData, onClose }) => {
             value={studentSearch}
             onChange={handleStudentSearch}
             suggestions={studentSuggestions}
-            onSelect={(s) => { setSelectedStudents(p => [...p, s]); setStudentSearch(''); }}
+            onSelect={(s) => { 
+              const existingEnr = enrollments.find(e => e.studentId === s.id && (classData ? e.classId !== classData.id : true));
+              if (existingEnr) {
+                const enrolledClass = classes.find(c => c.id === existingEnr.classId);
+                setError(`The student name ( ${s.name} ) is already in class ( ${enrolledClass?.name || 'another class'} )`);
+                return;
+              }
+              setSelectedStudents(p => [...p, s]); 
+              setStudentSearch(''); 
+              setError('');
+            }}
             placeholder="Search students to enroll..."
             renderItem={(s) => (
               <>

@@ -27,12 +27,6 @@ const getCutoffDate = (timeRange) => {
   return d.toLocaleDateString("en-CA");
 };
 
-const downloadCSV = (filename, rows) => {
-  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  Object.assign(document.createElement("a"), { href: url, download: filename }).click();
-  URL.revokeObjectURL(url);
-};
 
 const formatDate = (dateStr) =>
   new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
@@ -105,7 +99,11 @@ const HistoryRecord = ({ record, onExcuse, isAdminOrOffice }) => {
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const AttendanceReport = () => {
-  const { students, classes, attendance, enrollments, updateAttendance, currentUser, staff } = useData();
+  const { 
+    students, classes, attendance, enrollments, 
+    updateAttendance, currentUser, staff,
+    draftAttendance, publishClassAttendance, addActivityLog
+  } = useData();
 
   // --- PERSISTED FILTERS ---
   const [selectedClassId, setSelectedClassId] = useSession("reports_attendance_class");
@@ -118,8 +116,14 @@ const AttendanceReport = () => {
   // --- LOCAL UI STATE ---
   const [expandedStudentId, setExpandedStudentId] = useState(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState("daily"); // "daily" (summary) or "monthly" (grid)
 
   const isAdminOrOffice = ["Admin", "Office Worker"].includes(currentUser?.role);
+
+  const accessibleClasses = useMemo(() => {
+    if (isAdminOrOffice) return classes;
+    return classes.filter(c => c.teacherId === currentUser?.id);
+  }, [classes, isAdminOrOffice, currentUser]);
 
   // --- DERIVED DATA ---
   const filteredAttendance = useMemo(() => {
@@ -139,7 +143,7 @@ const AttendanceReport = () => {
       .filter(x => x.student);
   }, [filteredAttendance, students]);
 
-  const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
+  const selectedClass = useMemo(() => accessibleClasses.find(c => c.id === selectedClassId), [accessibleClasses, selectedClassId]);
 
   const classStats = useMemo(() => {
     if (!selectedClass) return [];
@@ -160,31 +164,34 @@ const AttendanceReport = () => {
     });
   }, [students, selectedClass, enrollments, filteredAttendance]);
 
+  const draftCount = useMemo(() => {
+    if (!selectedClassId || !draftAttendance) return 0;
+    return draftAttendance.filter(a => a.classId === selectedClassId).length;
+  }, [draftAttendance, selectedClassId]);
+
+  const hasOverdueDrafts = useMemo(() => {
+    if (!selectedClassId || !draftAttendance) return false;
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    return draftAttendance.some(a => a.classId === selectedClassId && a.date.substring(0, 7) < currentMonth);
+  }, [draftAttendance, selectedClassId]);
+
   // --- HANDLERS ---
-  const handleExportMonthly = () => {
-    if (!selectedClass || !exportMonth) return;
-    const [year, month] = exportMonth.split("-");
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const enrolledIds = new Set(enrollments.filter(e => e.classId === selectedClass.id).map(e => e.studentId));
-    
-    const rows = [
-      `Monthly Attendance Report - ${selectedClass.name} (${selectedClass.level})`,
-      `Month: ${exportMonth},Generated: ${new Date().toLocaleDateString()}`,
-      "",
-      "Student ID,Student Name," + Array.from({ length: daysInMonth }, (_, i) => i + 1).join(",")
-    ];
 
-    students.filter(s => enrolledIds.has(s.id)).forEach(s => {
-      const row = [s.id, s.name];
-      for (let i = 1; i <= daysInMonth; i++) {
-        const date = `${year}-${month}-${String(i).padStart(2, "0")}`;
-        const record = attendance.find(a => a.studentId === s.id && a.date === date && (a.classId === selectedClass.id || !a.classId));
-        row.push(record ? record.status.charAt(0) : "");
-      }
-      rows.push(row.join(","));
-    });
-
-    downloadCSV(`Attendance_${selectedClass.name}_${exportMonth}.csv`, rows);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const handlePublish = async () => {
+    if (!selectedClassId || isPublishing) return;
+    setIsPublishing(true);
+    try {
+      await publishClassAttendance(selectedClassId);
+      addActivityLog({
+        action: `Teacher "${currentUser.name}" submitted monthly attendance for ${selectedClass?.name}`
+      });
+      alert("Attendance submitted successfully!");
+    } catch (err) {
+      alert("Failed to submit attendance: " + err.message);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -238,13 +245,26 @@ const AttendanceReport = () => {
               className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-primary-500/10 transition-all shadow-sm"
             >
               <option value="">Select a class to view report...</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name} ({c.level}) — {c.schedule}</option>)}
+              {accessibleClasses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.level}) — {c.schedule}</option>)}
             </select>
           </div>
           {selectedClassId && (
             <div className="flex items-center gap-3 shrink-0 pt-6 sm:pt-0">
+              {!isAdminOrOffice && draftCount > 0 && (
+                <button 
+                  onClick={handlePublish} 
+                  disabled={isPublishing}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-xl ${
+                    hasOverdueDrafts 
+                      ? "bg-rose-600 text-white hover:bg-rose-700 shadow-rose-500/20" 
+                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20"
+                  }`}
+                >
+                  {isPublishing ? "Submitting..." : `Submit Monthly (${draftCount})`}
+                </button>
+              )}
               <div className="h-10 w-px bg-slate-100 dark:bg-slate-800 mx-2 hidden sm:block" />
-              <button onClick={() => setIsPrintModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-primary-700 shadow-xl shadow-primary-500/20 transition-all active:scale-95">
+              <button onClick={() => setIsPrintModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all active:scale-95">
                 Print Report
               </button>
             </div>
@@ -255,17 +275,20 @@ const AttendanceReport = () => {
           <Card className="p-6">
             <label htmlFor="export-month" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Data Export</label>
             <div className="flex gap-2">
-              <input id="export-month" type="month" value={exportMonth} onChange={e => setExportMonth(e.target.value)} className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold outline-none" />
-              <button aria-label="Download monthly attendance CSV" onClick={handleExportMonthly} className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              </button>
+              <input id="export-month" type="month" value={exportMonth} onChange={e => setExportMonth(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold outline-none" />
             </div>
+            {isAdminOrOffice && (
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => setViewMode("daily")} className={`flex-1 py-2 text-[10px] font-black rounded-lg uppercase ${viewMode === "daily" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>Daily</button>
+                <button onClick={() => setViewMode("monthly")} className={`flex-1 py-2 text-[10px] font-black rounded-lg uppercase ${viewMode === "monthly" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>Grid</button>
+              </div>
+            )}
           </Card>
         )}
       </div>
 
-      {/* ─── DETAILED CLASS TABLE ─── */}
-      {selectedClassId && (
+      {/* ─── DETAILED CLASS TABLE (Daily View) ─── */}
+      {selectedClassId && viewMode === "daily" && (
         <Card>
           <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap gap-8 justify-center sm:justify-end">
             <StatBadge label="Present" value={classStats.reduce((a, s) => a + s.present, 0)} colorClass="text-emerald-500" />
@@ -342,6 +365,16 @@ const AttendanceReport = () => {
         </Card>
       )}
 
+      {/* ─── MONTHLY GRID VIEW ─── */}
+      {selectedClassId && viewMode === "monthly" && (
+        <MonthlyAttendanceGrid 
+          selectedClass={selectedClass}
+          exportMonth={exportMonth}
+          students={students.filter(s => enrollments.some(e => e.classId === selectedClass.id && e.studentId === s.id))}
+          attendance={attendance}
+        />
+      )}
+
       {/* ─── PRINT MODAL ─── */}
       <AttendancePrintModal
         isOpen={isPrintModalOpen}
@@ -353,6 +386,95 @@ const AttendanceReport = () => {
         staff={staff}
       />
     </div>
+  );
+};
+
+const MonthlyAttendanceGrid = ({ selectedClass, exportMonth, students, attendance }) => {
+  const [yearStr, monthStr] = exportMonth.split("-");
+  const year = parseInt(yearStr);
+  const monthIdx = parseInt(monthStr) - 1;
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+  const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const dayNums = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const recMap = useMemo(() => {
+    const map = {};
+    attendance
+      .filter(a => a.date.startsWith(`${yearStr}-${monthStr}`) && (a.classId === selectedClass.id || !a.classId))
+      .forEach(a => {
+        const abbr = { Present: "P", Absent: "A", Late: "L", Permission: "Perm" }[a.status] || a.status.charAt(0);
+        if (!map[a.studentId]) map[a.studentId] = {};
+        map[a.studentId][a.date] = { abbr, status: a.status };
+      });
+    return map;
+  }, [attendance, yearStr, monthStr, selectedClass.id]);
+
+  return (
+    <Card className="animate-in slide-in-from-right-4 duration-500">
+      <div className="overflow-x-auto scrollbar-thin">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/50">
+              <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest min-w-[150px]">Student</th>
+              {dayNums.map(d => {
+                const dayName = DOW[new Date(year, monthIdx, d).getDay()];
+                const isWeekend = dayName === "Sa" || dayName === "Su";
+                return (
+                  <th key={d} className={`border-b border-slate-200 dark:border-slate-700 px-2 py-3 text-center min-w-[36px] ${isWeekend ? 'bg-slate-100 dark:bg-slate-800/80' : ''}`}>
+                    <p className="text-[9px] font-black text-slate-400 leading-none mb-1">{dayName}</p>
+                    <p className="text-[11px] font-black text-slate-800 dark:text-white leading-none">{d}</p>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {students.map(s => {
+              const studentRecs = recMap[s.id] || {};
+              return (
+                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                    {s.name}
+                  </td>
+                  {dayNums.map(d => {
+                    const dateKey = `${yearStr}-${monthStr}-${String(d).padStart(2, "0")}`;
+                    const dayName = DOW[new Date(year, monthIdx, d).getDay()];
+                    const isWeekend = dayName === "Sa" || dayName === "Su";
+                    const data = studentRecs[dateKey];
+                    
+                    let colorClass = "text-slate-300 dark:text-slate-700";
+                    if (data?.status === "Present") colorClass = "text-emerald-500 font-black";
+                    if (data?.status === "Absent") colorClass = "text-rose-500 font-black bg-rose-50 dark:bg-rose-900/20";
+                    if (data?.status === "Late") colorClass = "text-amber-500 font-black bg-amber-50 dark:bg-amber-900/20";
+                    if (data?.status === "Permission") colorClass = "text-purple-500 font-black bg-purple-50 dark:bg-purple-900/20";
+
+                    return (
+                      <td key={d} className={`px-1 py-3 text-center text-[10px] border-r border-slate-50 dark:border-slate-800/50 ${isWeekend ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''} ${colorClass}`}>
+                        {data?.abbr || (isWeekend ? "" : "-")}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="p-4 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex gap-6 justify-center">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" /> Present (P)
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-rose-500" /> Absent (A)
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-amber-500" /> Late (L)
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-purple-500" /> Permission (Perm)
+        </div>
+      </div>
+    </Card>
   );
 };
 

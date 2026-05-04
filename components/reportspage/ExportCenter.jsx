@@ -70,12 +70,27 @@ const EXPORT_MODES = [
 ];
 
 const ExportCenter = () => {
-  const { students, classes, staff, grades, attendance, enrollments } = useData();
+  const { students, classes, staff, grades, attendance, enrollments, currentUser } = useData();
 
   // --- STATE ---
   const [exportMode, setExportMode] = useState("class");
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("");
+
+  // --- ROLE LOGIC ---
+  const isAdminOrOffice = useMemo(() => 
+    ["Admin", "Office Worker"].includes(currentUser?.role)
+  , [currentUser]);
+
+  const exportModes = useMemo(() => {
+    if (isAdminOrOffice) return EXPORT_MODES;
+    return EXPORT_MODES.filter(m => m.value === "class");
+  }, [isAdminOrOffice]);
+
+  const accessibleClasses = useMemo(() => {
+    if (isAdminOrOffice) return classes;
+    return classes.filter(c => c.teacherId === currentUser?.id);
+  }, [classes, isAdminOrOffice, currentUser]);
 
   // --- DERIVED DATA ---
   const levelOptions = useMemo(() => 
@@ -83,14 +98,14 @@ const ExportCenter = () => {
   , [classes]);
 
   const classOptions = useMemo(() => 
-    classes.map(c => {
+    accessibleClasses.map(c => {
       const teacher = staff?.find(s => s.id === c.teacherId);
       return {
         value: c.id,
         label: `${c.name} (${c.level}) ${teacher ? `— ${teacher.name}` : ""} | ${c.schedule}`
       };
     })
-  , [classes, staff]);
+  , [accessibleClasses, staff]);
 
   const targetStudents = useMemo(() => {
     if (exportMode === "class") {
@@ -164,7 +179,7 @@ const ExportCenter = () => {
         <ModeToggle 
           value={exportMode} 
           onChange={(v) => { setExportMode(v); setSelectedClassId(""); setSelectedLevel(""); }} 
-          options={EXPORT_MODES} 
+          options={exportModes} 
         />
 
         <div className="space-y-6">

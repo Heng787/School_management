@@ -46,7 +46,7 @@ const TableHeader = ({ subjects }) => (
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const MarksEntry = () => {
-  const { students, classes, subjects, grades, draftGrades, saveDraftGradeBatch, enrollments, staff } = useData();
+  const { students, classes, subjects, grades, draftGrades, saveDraftGradeBatch, enrollments, staff, currentUser } = useData();
 
   // --- PERSISTED FILTERS ---
   const [selectedClassId, setSelectedClassId] = useSession("reports_marks_class", "");
@@ -66,7 +66,13 @@ const MarksEntry = () => {
     return Array.from(merged.values());
   }, [grades, draftGrades]);
 
-  const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
+  const isAdminOrOffice = ["Admin", "Office Worker"].includes(currentUser?.role);
+  const accessibleClasses = useMemo(() => {
+    if (isAdminOrOffice) return classes;
+    return classes.filter(c => c.teacherId === currentUser?.id);
+  }, [classes, isAdminOrOffice, currentUser]);
+
+  const selectedClass = useMemo(() => accessibleClasses.find(c => c.id === selectedClassId), [accessibleClasses, selectedClassId]);
 
   const classSubjects = useMemo(() => {
     if (!selectedClass) return [];
@@ -169,7 +175,7 @@ const MarksEntry = () => {
               className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
             >
               <option value="">Select Target Class...</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name} ({c.level}) — {staff.find(s => s.id === c.teacherId)?.name || 'No Teacher'}</option>)}
+              {accessibleClasses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.level}) — {staff?.find(s => s.id === c.teacherId)?.name || 'No Teacher'}</option>)}
             </select>
           </div>
           <div className="w-full sm:w-48">

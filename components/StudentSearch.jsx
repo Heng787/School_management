@@ -60,12 +60,12 @@ const ResultItem = ({
     <li
       onClick={onSelect}
       onMouseOver={onHover}
-      className={`px-4 py-3 cursor-pointer ${isActive ? 'bg-primary-100' : 'hover:bg-gray-100'}`}
+      className={`px-4 py-3 cursor-pointer transition-colors ${isActive ? 'bg-primary-50 dark:bg-primary-900/40 border-l-4 border-primary-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-transparent'}`}
     >
-      <p className="font-semibold text-gray-800">
+      <p className="font-bold text-slate-800 dark:text-slate-100">
         <Highlight text={data.name} query={query} />
       </p>
-      <p className="text-sm text-gray-600">{subtitle}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
     </li>
   );
 };
@@ -90,7 +90,7 @@ const StudentSearch = ({ navigate }) => {
 
   // Build results on query change
   useEffect(() => {
-    if (query.length < 2) {
+    if (query.length < 1) {
       setResults([]);
       setIsOpen(false);
       return;
@@ -115,7 +115,7 @@ const StudentSearch = ({ navigate }) => {
     ];
 
     setResults(combined);
-    setIsOpen(combined.length > 0);
+    setIsOpen(true);
     setActiveIndex(-1);
   }, [query, students, staff, classes]);
 
@@ -196,7 +196,7 @@ const StudentSearch = ({ navigate }) => {
       return [
         <li
           key={`hdr-${type}`}
-          className="px-4 py-2 text-xs font-bold text-gray-500 uppercase bg-gray-50 sticky top-0"
+          className="px-4 py-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-50/80 dark:bg-slate-800/80 sticky top-0 backdrop-blur-md"
         >
           {label}
         </li>,
@@ -206,18 +206,18 @@ const StudentSearch = ({ navigate }) => {
   };
 
   return (
-    <div className="relative w-full max-w-md" ref={searchRef}>
+    <div className="relative w-full max-w-lg mx-auto" ref={searchRef}>
       <div className="relative group">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+        <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
           <svg
-            className="w-5 h-5 text-slate-500 group-focus-within:text-primary-500 transition-colors"
+            className="w-4 h-4 text-slate-400 group-focus-within:text-primary-500 transition-colors"
             viewBox="0 0 24 24"
             fill="none"
           >
             <path
               d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -229,12 +229,19 @@ const StudentSearch = ({ navigate }) => {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search students, teachers, classes..."
-          className="w-full py-2 pl-10 pr-4 text-slate-800 bg-slate-50 border border-slate-300 rounded-lg hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all placeholder:text-slate-500 shadow-sm"
+          className="w-full py-2.5 pl-10 pr-4 text-center text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl hover:bg-white dark:hover:bg-slate-900 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 shadow-inner"
         />
       </div>
-      {isOpen && (
-        <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-          {renderResults()}
+      {isOpen && query.length > 0 && (
+        <ul className="absolute z-[100] w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-h-80 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-300 scrollbar-thin">
+          {results.length > 0 ? (
+            renderResults()
+          ) : (
+            <li className="px-4 py-8 text-center">
+              <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest animate-pulse">No matches found</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-1">Try a different name or ID</p>
+            </li>
+          )}
         </ul>
       )}
     </div>

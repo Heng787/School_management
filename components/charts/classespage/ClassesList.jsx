@@ -69,7 +69,7 @@ const ClassList = ({
                   const isSelected = selectedClassIds.has(cls.id);
                   const teacherName = getTeacherName(cls.teacherId, cls);
                   const studentCount = enrollments.filter(
-                    (e) => e.classId === cls.id,
+                    (e) => e.classId === cls.id && students.some(s => s.id === e.studentId)
                   ).length;
                   const capacity = cls.capacity || 30; // Use dynamic capacity if available
                   const percentage = Math.min(

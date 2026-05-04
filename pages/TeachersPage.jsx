@@ -38,6 +38,7 @@ const TeachersPage = () => {
   } = useData();
 
   const isAdmin = currentUser?.role === UserRole.Admin;
+  const isRestricted = isAdmin || currentUser?.role === UserRole.OfficeWorker;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
@@ -158,6 +159,7 @@ const TeachersPage = () => {
         {/* Staff Table */}
         <TeacherTable
           isAdmin={isAdmin}
+          isRestricted={isRestricted}
           staff={staff}
           filteredStaff={filteredStaff}
           currentPage={currentPage}

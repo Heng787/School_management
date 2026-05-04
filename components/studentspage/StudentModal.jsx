@@ -74,7 +74,7 @@ const validate = ({ name, sex, dob, enrollmentDate }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const StudentModal = ({ studentData, onClose }) => {
-  const { addStudent, updateStudent, levels } = useData();
+  const { addStudent, updateStudent, levels, addActivityLog } = useData();
   const [formData, setFormData] = useState(
     () => studentData ?? defaultForm(levels),
   );
@@ -101,6 +101,12 @@ const StudentModal = ({ studentData, onClose }) => {
       await (studentData
         ? updateStudent({ ...studentData, ...formData })
         : addStudent(formData));
+      
+      if (!studentData) {
+        addActivityLog({
+          action: `Student "${formData.name}" added to the system`
+        });
+      }
       onClose();
     } catch {
       setError("Save failed. Please check your connection and try again.");

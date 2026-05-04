@@ -37,7 +37,7 @@ const Card = ({ title, action, children, className = "", noPadding = false }) =>
   </div>
 );
 
-const StatCard = ({ title, value, subText, trend, trendType = "up", icon, colorClass = "blue" }) => {
+const StatCard = ({ title, value, subText, trend, trendType = "up", icon, colorClass = "blue", action }) => {
   const colors = {
     blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/30",
     emerald: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30",
@@ -46,12 +46,9 @@ const StatCard = ({ title, value, subText, trend, trendType = "up", icon, colorC
   };
 
   return (
-    <Card className="hover:border-primary-500/50">
+    <Card className="hover:border-primary-500/50" title={title} action={action}>
       <div className="flex justify-between items-start">
         <div className="min-w-0">
-          <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
-            {title}
-          </p>
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               {value}
@@ -95,6 +92,8 @@ export const AdminDashboard = ({ navigate }) => {
     clearActivityLogs,
   } = useData();
 
+  const [attView, setAttView] = useState("daily"); // "daily" | "monthly"
+
   // 1. Student Lifecycle & Attendance
   const today = new Date().toLocaleDateString("en-CA");
   const studentIds = new Set(students.map((s) => s.id));
@@ -112,6 +111,11 @@ export const AdminDashboard = ({ navigate }) => {
     totalMarkedToday > 0
       ? Math.round((uniquePresentStudents.size / totalMarkedToday) * 100)
       : 0;
+
+  const currentMonthStr = new Date().toISOString().substring(0, 7);
+  const monthlyAttendance = attendance.filter(a => a.date.startsWith(currentMonthStr));
+  const monthlyPresent = monthlyAttendance.filter(a => a.status === AttendanceStatus.Present).length;
+  const monthlyRate = monthlyAttendance.length > 0 ? Math.round((monthlyPresent / monthlyAttendance.length) * 100) : 0;
 
   const currentMonth = new Date().getMonth();
   const newAdmissions = students.filter(
@@ -163,12 +167,12 @@ export const AdminDashboard = ({ navigate }) => {
   });
 
   // Recent activity
-  const recentActivity = activityLogs.slice(0, 5).map(log => ({
+  const recentActivity = activityLogs.slice(0, 15).map(log => ({
     id: log.id,
     type: log.action.toLowerCase().includes('issue') ? 'Issue' : 'Entry',
-    personName: log.action.split('"')[1] || 'Staff',
-    timestamp: new Date(log.id).toISOString(),
-    purpose: log.action
+    timestamp: log.id,
+    action: log.action,
+    time: log.time
   }));
   const upcomingEvents = events
     .filter((e) => new Date(e.date) >= new Date())
@@ -221,11 +225,19 @@ export const AdminDashboard = ({ navigate }) => {
           }
         />
         <StatCard
-          title="Daily Attendance"
-          value={`${attendanceRate}%`}
-          trend="2% vs yesterday"
+          title={attView === "daily" ? "Daily Attendance" : "Monthly Attendance"}
+          value={`${attView === "daily" ? attendanceRate : monthlyRate}%`}
+          trend={attView === "daily" ? "2% vs yesterday" : "Steady trend"}
           trendType="up"
           colorClass="emerald"
+          action={
+            <button
+              onClick={() => setAttView(attView === "daily" ? "monthly" : "daily")}
+              className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-tighter hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 transition-all border border-slate-200 dark:border-slate-600"
+            >
+              {attView === "daily" ? "Switch to Monthly" : "Switch to Daily"}
+            </button>
+          }
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -446,7 +458,7 @@ export const AdminDashboard = ({ navigate }) => {
               </button>
             }
           >
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               {recentActivity.map((log) => (
                 <div key={log.id} className="flex items-start gap-3 group transition-all">
                   <div
@@ -470,68 +482,31 @@ export const AdminDashboard = ({ navigate }) => {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p className="text-sm text-slate-700 dark:text-slate-300 transition-colors">
-                      <span className="font-bold">{log.personName}</span>{" "}
-                      {log.type === "Entry" ? "checked in" : "logged an issue"}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-700 dark:text-slate-300 font-medium break-words">
+                      {log.action}
                     </p>
-                    <div className="flex items-center gap-2 mt-0.5 transition-colors">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-600 font-medium transition-colors">
-                        {new Date(log.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      {log.purpose && (
-                        <span className="text-[10px] text-slate-500 dark:text-slate-500 font-medium truncate max-w-[150px] transition-colors">
-                          — {log.purpose}
-                        </span>
-                      )}
-                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-600 font-bold mt-0.5 tracking-wider uppercase">
+                      {log.time || new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
                   </div>
                 </div>
               ))}
               {recentActivity.length === 0 && (
-                <div
-                  className="flex items-start gap-3 opacity-50 grayscale cursor-default transition-all hover:grayscale-0"
-                  title="Example Activity Placeholder"
-                >
-                  <div className="mt-1 flex items-center justify-center w-6 h-6 rounded-full shrink-0 bg-slate-200 text-slate-500">
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="3"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-12 h-12 bg-slate-50 dark:bg-slate-900/50 rounded-full flex items-center justify-center mb-3">
+                     <svg className="w-6 h-6 text-slate-300 dark:text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                     </svg>
                   </div>
-                  <div>
-                    <p className="text-sm text-slate-500">
-                      <span className="font-bold">System Admin</span> updated
-                      settings
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        08:00 AM
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
-                        — Example activity log
-                      </span>
-                    </div>
-                  </div>
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">No Recent Activity</p>
                 </div>
               )}
             </div>
           </Card>
 
           <Card title="Today's Staff Status">
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               {staffStatuses
                 .sort((a, b) => (a.status === "On Leave" ? -1 : 1))
                 .map((s) => (
@@ -580,7 +555,7 @@ export const TeacherDashboard = ({ navigate }) => {
     currentUser, classes, enrollments, students, 
     draftGrades, publishClassGrades, attendance,
     draftAttendance, publishClassAttendance,
-    tasks, updateTask, addTask 
+    tasks, updateTask, addTask, addActivityLog 
   } = useData();
   const [isSending, setIsSending] = useState({}); // {[classId]: boolean}
   const myClasses = classes.filter((c) => c.teacherId === currentUser?.id);
@@ -591,25 +566,86 @@ export const TeacherDashboard = ({ navigate }) => {
   const [sentStatus, setSentStatus] = useState({});
   const [newTaskText, setNewTaskText] = useState("");
 
-  const handleSendToAdmin = async (e, classId) => {
-    e.stopPropagation();
-    if (isSending[classId]) return;
+  const overdueReports = useMemo(() => {
+    if (!draftAttendance || draftAttendance.length === 0) return [];
+    
+    const now = new Date();
+    const currentMonth = now.toISOString().substring(0, 7); // "YYYY-MM"
+    
+    // Filter drafts belonging to my classes that are from a previous month
+    const overdue = draftAttendance.filter(a => {
+      if (!a.date) return false;
+      const draftMonth = a.date.substring(0, 7);
+      return draftMonth < currentMonth && myClassIds.has(a.classId);
+    });
 
-    setIsSending(prev => ({ ...prev, [classId]: true }));
+    // Group by class
+    const grouped = overdue.reduce((acc, a) => {
+      if (!acc[a.classId]) {
+        const cls = myClasses.find(c => c.id === a.classId);
+        acc[a.classId] = { 
+          classId: a.classId, 
+          className: cls?.name || "Unknown", 
+          count: 0,
+          month: a.date.substring(0, 7)
+        };
+      }
+      acc[a.classId].count++;
+      return acc;
+    }, {});
+
+    return Object.values(grouped);
+  }, [draftAttendance, myClassIds, myClasses]);
+
+  const handleSendAttendance = async (e, classId) => {
+    if (e) e.stopPropagation();
+    const key = `${classId}_attendance`;
+    if (isSending[key]) return;
+
+    setIsSending(prev => ({ ...prev, [key]: true }));
     try {
-      const p1 = publishClassGrades(classId);
-      const p2 = publishClassAttendance(classId);
-      await Promise.all([p1, p2]);
+      await publishClassAttendance(classId);
       
-      setSentStatus((prev) => ({ ...prev, [classId]: true }));
+      const cls = classes.find(c => c.id === classId);
+      addActivityLog({
+        action: `Teacher "${currentUser.name}" sent monthly attendance for Class "${cls?.name || 'Unknown'}"`
+      });
+
+      setSentStatus((prev) => ({ ...prev, [key]: true }));
       setTimeout(() => {
-        setSentStatus((prev) => ({ ...prev, [classId]: false }));
+        setSentStatus((prev) => ({ ...prev, [key]: false }));
       }, 5000);
     } catch (err) {
-      console.error("Failed to publish data", err);
-      alert("Failed to send to admin");
+      console.error("Failed to publish attendance", err);
+      alert("Failed to send attendance to admin");
     } finally {
-      setIsSending(prev => ({ ...prev, [classId]: false }));
+      setIsSending(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleSendGrades = async (e, classId) => {
+    e.stopPropagation();
+    const key = `${classId}_grades`;
+    if (isSending[key]) return;
+
+    setIsSending(prev => ({ ...prev, [key]: true }));
+    try {
+      await publishClassGrades(classId);
+      
+      const cls = classes.find(c => c.id === classId);
+      addActivityLog({
+        action: `Teacher "${currentUser.name}" sent grades for Class "${cls?.name || 'Unknown'}"`
+      });
+
+      setSentStatus((prev) => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setSentStatus((prev) => ({ ...prev, [key]: false }));
+      }, 5000);
+    } catch (err) {
+      console.error("Failed to publish grades", err);
+      alert("Failed to send grades to admin");
+    } finally {
+      setIsSending(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -686,6 +722,39 @@ export const TeacherDashboard = ({ navigate }) => {
 
   return (
     <div className="space-y-6">
+      {/* 0. Monthly Submission Alert */}
+      {overdueReports.length > 0 && (
+        <div className="bg-linear-to-r from-rose-500 to-orange-600 rounded-3xl p-6 text-white shadow-xl shadow-rose-500/20 animate-in slide-in-from-top-4 duration-700">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl shadow-inner">
+                📅
+              </div>
+              <div>
+                <h2 className="text-2xl font-black tracking-tight">Monthly Submission Required</h2>
+                <p className="text-rose-100 font-bold mt-1 uppercase tracking-widest text-[10px]">
+                  You have {overdueReports.length} reports from previous months pending submission
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              {overdueReports.map(report => (
+                <button
+                  key={report.classId}
+                  onClick={(e) => handleSendAttendance(e, report.classId)}
+                  className="px-6 py-3 bg-white text-rose-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-50 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  Submit {report.className}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. Stat Cards Top Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="p-5! bg-linear-to-br from-primary-600 to-primary-700 text-white border-0 shadow-lg shadow-primary-100 dark:shadow-none hover:scale-[1.02] transition-all duration-500 group">
@@ -788,30 +857,36 @@ export const TeacherDashboard = ({ navigate }) => {
                           Grades
                         </button>
                       </div>
-                      <button
-                        onClick={(e) => handleSendToAdmin(e, c.id)}
-                        disabled={sentStatus[c.id] || isSending[c.id] || (draftsForClass.length === 0 && (draftAttendance || []).filter(a => a.classId === c.id).length === 0)}
-                        className={`w-full py-2 rounded-lg text-sm font-bold flex items-center justify-center space-x-2 transition-all ${
-                          sentStatus[c.id]
-                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"
-                            : "bg-white text-emerald-600 border border-emerald-200 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-500 dark:border-emerald-800/50 dark:hover:bg-emerald-900/20 disabled:opacity-50"
-                        }`}
-                      >
-                        {isSending[c.id] ? (
-                          <div className="flex items-center gap-2">
-                             <div className="w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                             <span>Sending...</span>
-                          </div>
-                        ) : sentStatus[c.id] ? (
-                          <span>Sent successfully!</span>
-                        ) : (
-                          <span>
-                            {(draftsForClass.length > 0 || (draftAttendance || []).filter(a => a.classId === c.id).length > 0) 
-                              ? `Send to Admin (${draftsForClass.length + (draftAttendance || []).filter(a => a.classId === c.id).length})` 
-                              : "Send to Admin"}
-                          </span>
-                        )}
-                      </button>
+
+                      <div className="flex space-x-2">
+                        {/* Send Attendance Button */}
+                        <button
+                          onClick={(e) => handleSendAttendance(e, c.id)}
+                          disabled={sentStatus[`${c.id}_attendance`] || isSending[`${c.id}_attendance`] || (draftAttendance || []).filter(a => a.classId === c.id).length === 0}
+                          className={`flex-1 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center transition-all ${
+                            sentStatus[`${c.id}_attendance`]
+                              ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400"
+                              : (draftAttendance || []).some(a => a.classId === c.id && a.date.substring(0, 7) < new Date().toISOString().substring(0, 7))
+                                ? "bg-rose-600 text-white border border-rose-500 shadow-lg shadow-rose-500/20 hover:bg-rose-500"
+                                : "bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-400 dark:border-blue-800/50 disabled:opacity-50"
+                          }`}
+                        >
+                          {isSending[`${c.id}_attendance`] ? "Sending..." : sentStatus[`${c.id}_attendance`] ? "Sent!" : `Submit Monthly (${(draftAttendance || []).filter(a => a.classId === c.id).length})`}
+                        </button>
+
+                        {/* Send Grades Button */}
+                        <button
+                          onClick={(e) => handleSendGrades(e, c.id)}
+                          disabled={sentStatus[`${c.id}_grades`] || isSending[`${c.id}_grades`] || draftsForClass.length === 0}
+                          className={`flex-1 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center transition-all ${
+                            sentStatus[`${c.id}_grades`]
+                              ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400"
+                              : "bg-white text-purple-600 border border-purple-200 hover:bg-purple-50 dark:bg-slate-900 dark:text-purple-400 dark:border-purple-800/50 disabled:opacity-50"
+                          }`}
+                        >
+                          {isSending[`${c.id}_grades`] ? "Sending..." : sentStatus[`${c.id}_grades`] ? "Sent!" : `Send Grades (${draftsForClass.length})`}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -1024,6 +1099,27 @@ export const OfficeWorkerDashboard = () => {
     });
   };
 
+  const [attView, setAttView] = useState("daily"); // "daily" | "monthly"
+
+  // 1. Student Attendance Logic
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const studentIds = new Set(students.map((s) => s.id));
+  const todaysAttendance = attendance.filter(
+    (a) => a.date === todayStr && studentIds.has(a.studentId),
+  );
+  const uniquePresentStudents = new Set(
+    todaysAttendance
+      .filter((a) => a.status === AttendanceStatus.Present)
+      .map((a) => a.studentId),
+  );
+  const totalMarkedToday = new Set(todaysAttendance.map((a) => a.studentId)).size;
+  const attendanceRate = totalMarkedToday > 0 ? Math.round((uniquePresentStudents.size / totalMarkedToday) * 100) : 0;
+
+  const currentMonthStr = new Date().toISOString().substring(0, 7);
+  const monthlyAttendance = attendance.filter(a => a.date.startsWith(currentMonthStr));
+  const monthlyPresent = monthlyAttendance.filter(a => a.status === AttendanceStatus.Present).length;
+  const monthlyRate = monthlyAttendance.length > 0 ? Math.round((monthlyPresent / monthlyAttendance.length) * 100) : 0;
+
   // 2. Room Capacity — real data
   const capacity = 30;
   const roomData = classes.map(c => {
@@ -1072,31 +1168,61 @@ export const OfficeWorkerDashboard = () => {
   const todayLogs = activityLogs
     .slice()
     .reverse()
-    .slice(0, 8);
+    .slice(0, 15);
 
   return (
     <div className="space-y-6">
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="p-5! bg-linear-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg shadow-purple-100 dark:shadow-none hover:scale-[1.02] transition-transform">
-          <p className="text-purple-100 text-xs font-bold uppercase tracking-wider mb-1">Total Students</p>
-          <h3 className="text-3xl font-extrabold">{students.length}</h3>
-        </Card>
-        <Card className="p-5! hover:-translate-y-1 transition-transform">
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Staff On Duty</p>
-          <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white">
-            {onDutyStaff.filter(s => s.status === 'On Duty').length}
-            <span className="text-lg font-medium text-slate-500"> / {staff.length}</span>
-          </h3>
-        </Card>
-        <Card className="p-5! hover:-translate-y-1 transition-transform">
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Pending Tasks</p>
-          <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white">{pendingTaskCount}</h3>
-        </Card>
-        <Card className="p-5! hover:-translate-y-1 transition-transform">
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Available Rooms</p>
-          <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white">{roomData.filter(r => !r.isFull).length}</h3>
-        </Card>
+        <StatCard
+          title="Total Students"
+          value={students.length}
+          colorClass="primary"
+          icon={
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2" />
+            </svg>
+          }
+        />
+        <StatCard
+          title="Staff On Duty"
+          value={onDutyStaff.filter(s => s.status === 'On Duty').length}
+          subText={`/ ${staff.length}`}
+          colorClass="amber"
+          icon={
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04M12 2.944V21m0-18.056L3.382 5.984m8.618-3.04l8.618 3.04M12 21.056L3.382 5.984M12 21.056l8.618-15.072" />
+            </svg>
+          }
+        />
+        <StatCard
+          title={attView === "daily" ? "Daily Attendance" : "Monthly Attendance"}
+          value={`${attView === "daily" ? attendanceRate : monthlyRate}%`}
+          colorClass="emerald"
+          action={
+            <button
+              onClick={() => setAttView(attView === "daily" ? "monthly" : "daily")}
+              className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-md text-[9px] font-black uppercase tracking-tighter hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 transition-all border border-slate-200 dark:border-slate-600"
+            >
+              {attView === "daily" ? "Monthly" : "Daily"}
+            </button>
+          }
+          icon={
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
+        <StatCard
+          title="Pending Tasks"
+          value={pendingTaskCount}
+          colorClass="blue"
+          icon={
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          }
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1192,7 +1318,7 @@ export const OfficeWorkerDashboard = () => {
         <div className="space-y-6">
           {/* Room Capacity */}
           <Card title="Room Capacity">
-            <div className="space-y-4 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
               {roomData.map(r => (
                 <div key={r.id}>
                   <div className="flex justify-between text-xs font-bold mb-1">
@@ -1213,7 +1339,7 @@ export const OfficeWorkerDashboard = () => {
 
           {/* Staff on Duty */}
           <Card title="Staff on Duty">
-            <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
               {onDutyStaff.map(s => (
                 <div key={s.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -1247,7 +1373,7 @@ export const OfficeWorkerDashboard = () => {
               </button>
             }
           >
-            <div className="space-y-3 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
               {todayLogs.map(log => (
                 <div key={log.id} className="flex items-start gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-1.5 shrink-0" />

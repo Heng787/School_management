@@ -113,6 +113,7 @@ export const mapStaff = {
     subject: s.subject || null,
     contact: s.contact || null,
     hire_date: s.hireDate || null,
+    password: s.password || null,
   }),
   fromDb: (d) => ({
     id: d.id,
@@ -121,6 +122,7 @@ export const mapStaff = {
     subject: d.subject,
     contact: d.contact,
     hireDate: d.hireDate || d.hire_date,
+    password: d.password || null,
   }),
 };
 

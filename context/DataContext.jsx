@@ -140,12 +140,7 @@ export const DataProvider = ({ children }) => {
         }
 
         if (operationalOps.activityLogs.length === 0) {
-          operationalOps.setActivityLogs([
-            { id: Date.now() - 10000, action: 'Student "Alice Johnson" enrollment approved', time: '08:30 AM' },
-            { id: Date.now() - 20000, action: 'Daily attendance marked for Class K1A', time: '09:15 AM' },
-            { id: Date.now() - 30000, action: 'New staff member "John Smith" added', time: '10:00 AM' },
-            { id: Date.now() - 40000, action: 'Academic calendar updated for Q2', time: '11:45 AM' }
-          ]);
+          // Keep empty if no activity logs exist
         }
 
         if (g && g.length < 5 && c && c.length > 1) {
@@ -238,11 +233,19 @@ export const DataProvider = ({ children }) => {
       staffOps.setStaff(data.staff || []);
       staffOps.setStaffPermissions(data.staffPermissions || []);
       academicOps.setClasses(data.classes || []);
+      academicOps.setEnrollments(data.enrollments || []);
+      academicOps.setGrades(data.grades || []);
+      academicOps.setAttendance(data.attendance || []);
       operationalOps.setEvents(data.events || []);
       configOps.setSubjects(data.subjects || []);
       configOps.setLevels(data.levels || []);
       configOps.setTimeSlots(data.timeSlots || []);
       configOps.setAdminPasswordState(data.adminPassword || 'admin123');
+      operationalOps.setTasks(data.tasks || []);
+      operationalOps.setActivityLogs(data.activityLogs || []);
+      academicOps.setDraftGrades(data.draftGrades || []);
+      academicOps.setDraftAttendance(data.draftAttendance || []);
+      operationalOps.addActivityLog({ action: 'System data successfully imported' });
       syncOps.setLastSyncedAt(new Date());
     } finally {
       setLoading(false);
@@ -258,6 +261,24 @@ export const DataProvider = ({ children }) => {
     }
   }, []);
 
+  // Wrap deleteStudent to include cascading cleanup
+  const deleteStudent = useCallback(async (id) => {
+    return studentOps.deleteStudent(id, {
+      setEnrollments: academicOps.setEnrollments,
+      setAttendance: academicOps.setAttendance,
+      setGrades: academicOps.setGrades
+    });
+  }, [studentOps, academicOps]);
+
+  // Wrap deleteStaff to include potential cleanup (e.g. unassigning from classes)
+  const deleteStaff = useCallback(async (id) => {
+    // Before deleting staff, unassign them from any classes they teach
+    academicOps.setClasses(prev => prev.map(cls => 
+      cls.teacherId === id ? { ...cls, teacherId: '' } : cls
+    ));
+    return staffOps.deleteStaff(id);
+  }, [staffOps, academicOps]);
+
   const value = useMemo(() => ({
     ...studentOps,
     ...staffOps,
@@ -265,6 +286,8 @@ export const DataProvider = ({ children }) => {
     ...configOps,
     ...operationalOps,
     ...syncOps,
+    deleteStudent, // Override with wrapped version
+    deleteStaff,   // Override with wrapped version
     loading,
     error,
     currentUser,
@@ -282,7 +305,8 @@ export const DataProvider = ({ children }) => {
   }), [
     studentOps, staffOps, academicOps, configOps, operationalOps, syncOps,
     loading, error, currentUser, highlightedStudentId, highlightedStaffId, 
-    highlightedClassId, setError, handleSetCurrentUser, importAllData, deleteAllData
+    highlightedClassId, setError, handleSetCurrentUser, importAllData, deleteAllData,
+    deleteStudent, deleteStaff
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -30,8 +30,8 @@ const AcademicTable = ({ records }) => {
       <tbody className="divide-y divide-slate-100">
         {records.map((grade, idx) => (
           <tr key={idx} className="group">
-            <td className="py-2.5 text-xs font-bold text-slate-700 group-hover:text-primary-600 transition-colors">{grade.subject}</td>
-            <td className="py-2.5 text-right text-xs font-black text-slate-900">{getLetterGrade(grade.score)}</td>
+            <td className="py-1.5 text-xs font-bold text-slate-700 group-hover:text-primary-600 transition-colors">{grade.subject}</td>
+            <td className="py-1.5 text-right text-xs font-black text-slate-900">{getLetterGrade(grade.score)}</td>
           </tr>
         ))}
       </tbody>
@@ -43,19 +43,21 @@ const AcademicTable = ({ records }) => {
  * Signature block for teacher or principal
  */
 const SignatureBlock = ({ label, name, signatureUrl }) => (
-  <div className="text-center flex flex-col items-center">
-    <div className="h-16 flex items-end justify-center mb-1">
-      {signatureUrl && (
+  <div className="text-center flex flex-col items-center flex-1">
+    <div className="h-12 flex items-end justify-center mb-1">
+      {signatureUrl ? (
         <img
           src={signatureUrl}
           alt={`${label} signature`}
           className="h-14 object-contain mix-blend-multiply principal-sig-img"
         />
+      ) : (
+        <div className="h-10" /> /* Placeholder space */
       )}
     </div>
-    <div className="w-full border-t border-slate-900 pt-2">
-      <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none">{label}</p>
-      <p className="text-sm font-bold text-slate-700 mt-1.5">{name || '—'}</p>
+    <div className="w-full border-t-2 border-slate-900 pt-2">
+      <p className="text-[10px] font-black text-black uppercase tracking-widest leading-none">{label}</p>
+      <p className="text-sm font-bold text-slate-900 mt-1.5">{name || '________________'}</p>
     </div>
   </div>
 );
@@ -142,9 +144,9 @@ const ReportCardModal = ({ student, onClose }) => {
       onClose={onClose}
       title="Report Card Preview"
       maxWidth="max-w-4xl"
-      className="print:p-0 print:m-0 print:w-full print:max-w-none print:shadow-none print:border-none print:bg-white"
+      className="print-root-fix print:p-0 print:m-0 print:w-full print:max-w-none print:shadow-none print:border-none print:bg-white"
     >
-      <div className="space-y-6">
+      <div id="report-card-printable-container" className="space-y-6">
         {/* ACTION HEADER (HIDDEN ON PRINT) */}
         <div className="flex flex-wrap items-center justify-between gap-4 -mt-2 print:hidden">
           <div className="flex items-center gap-4">
@@ -198,12 +200,12 @@ const ReportCardModal = ({ student, onClose }) => {
         {/* PRINTABLE CONTENT AREA (A4 WHITE PAPER STYLE) */}
         <div 
           id="report-card-printable" 
-          className="bg-white text-slate-900 p-10 sm:p-16 shadow-[0_0_40px_rgba(0,0,0,0.1)] mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col print:shadow-none print:p-0 print:m-0"
+          className="bg-white text-slate-900 p-8 sm:p-12 shadow-[0_0_40px_rgba(0,0,0,0.1)] mx-auto w-full max-w-[210mm] flex flex-col print:shadow-none print:p-8 print:m-0"
           style={{ colorScheme: 'light' }}
         >
 
           {/* Official Header */}
-          <div className="text-center mb-10 border-b-2 border-slate-900 pb-6">
+          <div className="text-center mb-6 border-b-2 border-slate-900 pb-4">
             <h1 className="text-3xl font-black text-slate-900 uppercase tracking-[0.15em] mb-2">SchoolAdmin Academy</h1>
             <p className="text-slate-500 font-bold tracking-[0.4em] uppercase text-[10px]">Academic Progress & Performance Certification</p>
             <div className="mt-3 flex justify-center gap-12 text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -213,7 +215,7 @@ const ReportCardModal = ({ student, onClose }) => {
           </div>
 
           {/* Core Profile Information */}
-          <div className="grid grid-cols-2 gap-12 mb-10">
+          <div className="grid grid-cols-2 gap-12 mb-6">
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1 block">Full Name</label>
@@ -243,7 +245,7 @@ const ReportCardModal = ({ student, onClose }) => {
           </div>
 
           {/* Academic Records Section */}
-          <div className="mb-12">
+          <div className="mb-8">
             <div className="flex items-end justify-between border-b border-slate-200 pb-3 mb-6">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Academic Evaluation</h3>
               {termGrades.length > 0 && (
@@ -270,10 +272,10 @@ const ReportCardModal = ({ student, onClose }) => {
           </div>
 
           {/* Secondary Metrics */}
-          <div className="grid grid-cols-2 gap-16 mb-10">
+          <div className="grid grid-cols-2 gap-16 mb-6">
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] border-b border-slate-200 pb-3 mb-6">Engagement Record</h3>
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex items-center justify-between shadow-sm">
+              <div className="bg-slate-50 print:bg-slate-50 border border-slate-200 print:border-slate-400 rounded-2xl p-6 flex items-center justify-between shadow-sm">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance Rate</p>
                   <p className="text-4xl font-black text-slate-900">{calculateAttendanceRate(studentAttendance)}</p>
@@ -286,14 +288,14 @@ const ReportCardModal = ({ student, onClose }) => {
             </div>
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] border-b border-slate-200 pb-3 mb-6">Educator's Commentary</h3>
-              <div className="h-32 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex items-center justify-center">
+              <div className="h-32 border-2 border-dashed border-slate-300 print:border-slate-500 rounded-2xl p-6 flex items-center justify-center">
                 <p className="text-slate-300 text-[11px] font-medium leading-relaxed italic text-center">Academic and behavioral notes to be documented manually by the class educator.</p>
               </div>
             </div>
           </div>
 
           {/* Official Signatures */}
-          <div className="mt-auto pt-10 border-t-2 border-slate-900 grid grid-cols-2 gap-32">
+          <div className="signature-area mt-10 pt-8 border-t-2 border-black flex justify-between gap-24 px-8 pb-10">
             <SignatureBlock label="Class Teacher" name={teacher?.name} />
             <SignatureBlock label="School Principal" name={principalName} signatureUrl={principalSignatureUrl} />
           </div>
@@ -309,24 +311,52 @@ const ReportCardModal = ({ student, onClose }) => {
 
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          @page { size: A4 portrait; margin: 12mm 15mm; }
-          body > :not(.modal-root) { display: none !important; }
-          .modal-root { padding: 0 !important; margin: 0 !important; }
-          .modal-content {
+          @page { size: A4 portrait; margin: 10mm; }
+
+          /* Global Reset for Print */
+          body {
+            visibility: hidden !important;
+            background: white !important;
+          }
+
+          /* Force Visibility for the report card only */
+          #report-card-printable-container,
+          #report-card-printable-container * {
+            visibility: visible !important;
+          }
+
+          /* Position the report card at the very top of the printed page */
+          #report-card-printable-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            display: block !important;
+          }
+
+          /* Adjust the actual printable paper element */
+          #report-card-printable {
+            display: flex !important;
+            width: 100% !important;
+            max-width: none !important;
             box-shadow: none !important;
             border: none !important;
             padding: 0 !important;
             margin: 0 !important;
-            width: 100% !important;
-            max-width: none !important;
+            background: white !important;
+            color: black !important;
           }
-          #report-card-printable {
-            visibility: visible !important;
-          }
-          .principal-sig-img {
-            display: block !important;
+
+          /* Force high-contrast colors and signatures */
+          #report-card-printable * {
+            color: black !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+
+          /* Prevent signature area from splitting across pages */
+          .signature-area {
+            page-break-inside: avoid !important;
           }
         }
       `}} />

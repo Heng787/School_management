@@ -14,6 +14,7 @@ const MessageAvatar = ({ name }) => (
 const FileAttachment = ({ file, isMine }) => (
   <a
     href={file.fileUrl}
+    download={file.fileName || "Document"}
     target="_blank"
     rel="noreferrer"
     className={`flex items-center gap-3 mb-2 px-4 py-3 rounded-2xl transition-all shadow-sm border ${
@@ -92,13 +93,30 @@ const MessageBubble = ({ msg, isMine, isAdmin, onStatusChange, onDelete, onEdit 
               </div>
             )}
 
+            {/* Legacy Single Attachment Support */}
             {msg.metadata?.imageUrl && (
               <a href={msg.metadata.imageUrl} target="_blank" rel="noreferrer" className="block mb-3 overflow-hidden rounded-xl border border-black/5 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
                 <img src={msg.metadata.imageUrl} alt="attachment" className="max-w-full sm:max-w-[300px] object-cover" />
               </a>
             )}
+            {msg.metadata?.fileUrl && !msg.metadata?.imageUrl && (
+              <FileAttachment file={{ fileUrl: msg.metadata.fileUrl, fileName: msg.metadata.fileName }} isMine={isMine} />
+            )}
 
-            {msg.metadata?.fileUrl && !msg.metadata?.imageUrl && <FileAttachment file={msg.metadata} isMine={isMine} />}
+            {/* New Multiple Attachments Support */}
+            {msg.metadata?.attachments && msg.metadata.attachments.length > 0 && (
+              <div className="flex flex-col gap-2 mb-3">
+                {msg.metadata.attachments.map((at, i) => (
+                  at.type === 'image' ? (
+                    <a key={i} href={at.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-black/5 dark:border-white/5 shadow-sm hover:shadow-md transition-all">
+                      <img src={at.url} alt={at.name} className="max-w-full sm:max-w-[320px] object-cover" />
+                    </a>
+                  ) : (
+                    <FileAttachment key={i} file={{ fileUrl: at.url, fileName: at.name }} isMine={isMine} />
+                  )
+                ))}
+              </div>
+            )}
 
             {msg.content && <p className="text-[13px] sm:text-sm font-medium leading-relaxed whitespace-pre-wrap">{msg.content}</p>}
             

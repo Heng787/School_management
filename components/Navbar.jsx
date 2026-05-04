@@ -55,7 +55,7 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
   }, [currentUser]);
 
   return (
-    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-60 px-4 lg:px-6 flex items-center justify-between transition-all duration-300 shadow-sm">
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-[60] px-4 lg:px-6 flex items-center justify-between transition-all duration-300 shadow-sm">
       <div className="flex items-center space-x-4">
         {/* Sidebar Toggle Button */}
         <button
@@ -92,10 +92,8 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
         </div>
       </div>
 
-      <div className="flex-1 max-w-md mx-auto px-4 hidden md:block">
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary-500/50 transition-all duration-300 border border-slate-200 dark:border-slate-700">
-          <StudentSearch navigate={navigate} />
-        </div>
+      <div className="flex-1 max-w-lg mx-auto px-4 hidden md:block">
+        <StudentSearch navigate={navigate} />
       </div>
 
       <div className="flex items-center space-x-4 lg:space-x-6">
@@ -166,75 +164,76 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
 
         <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 hidden md:block"></div>
 
-        <div className="flex items-center space-x-3">
-          <div className="text-right hidden xl:block">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{currentUser?.name || userRole}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-500 capitalize">{userRole.toLowerCase()}</p>
-          </div>
-          <div 
-            className="relative"
-            onBlur={(e) => {
-              // If focus moves to something outside the profile menu, close it
-              if (!e.currentTarget.contains(e.relatedTarget)) {
-                setTimeout(() => setIsProfileOpen(false), 200);
-              }
-            }}
+        <div 
+          className="relative"
+          onBlur={(e) => {
+            // If focus moves to something outside the profile menu, close it
+            if (!e.currentTarget.contains(e.relatedTarget)) {
+              setTimeout(() => setIsProfileOpen(false), 200);
+            }
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            aria-label="User profile menu"
+            aria-haspopup="true"
+            aria-expanded={isProfileOpen}
+            className="flex items-center space-x-3 group focus:outline-none rounded-xl p-1 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
           >
-            <button
-              type="button"
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              aria-label="User profile menu"
-              aria-haspopup="true"
-              aria-expanded={isProfileOpen}
-              className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-primary-600 dark:text-primary-400 font-black shadow-sm hover:shadow-md hover:border-primary-300 dark:hover:border-primary-500 transition-all focus:ring-2 focus:ring-primary-500 focus:outline-none focus:ring-offset-2 overflow-hidden group"
-            >
+            <div className="text-right hidden xl:block">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{currentUser?.name || userRole}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-500 capitalize">{userRole.toLowerCase()}</p>
+            </div>
+            
+            <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-primary-600 dark:text-primary-400 font-black shadow-sm group-hover:shadow-md group-hover:border-primary-300 dark:group-hover:border-primary-500 transition-all overflow-hidden">
               <span className="group-hover:scale-110 transition-transform duration-300">
                 {(currentUser?.name || userRole).charAt(0).toUpperCase()}
               </span>
-            </button>
+            </div>
+          </button>
 
-            {/* Dropdown Menu */}
-            {isProfileOpen && (
-              <div 
-                role="menu"
-                aria-label="Profile options"
-                className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-100 animate-in fade-in zoom-in-95 duration-200 origin-top-right"
-              >
-                <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1 xl:hidden">
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{currentUser?.name || userRole}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-500 capitalize">{userRole.toLowerCase()}</p>
-                </div>
-                {userRole === UserRole.Admin && (
-                  <>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => { navigate(Page.Settings); setIsProfileOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white flex items-center space-x-3 transition-colors focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-800"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>Settings</span>
-                    </button>
-                    <div className="h-px bg-slate-200 dark:bg-slate-800 my-1"></div>
-                  </>
-                )}
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => { onLogout(); setIsProfileOpen(false); }}
-                  className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-3 transition-colors cursor-pointer focus:outline-none focus:bg-red-50 dark:focus:bg-red-900/20"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span>Sign Out</span>
-                </button>
+          {/* Dropdown Menu */}
+          {isProfileOpen && (
+            <div 
+              role="menu"
+              aria-label="Profile options"
+              className="absolute right-0 mt-3 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-[100] animate-in fade-in zoom-in-95 duration-200 origin-top-right"
+            >
+              <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 mb-1 xl:hidden">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{currentUser?.name || userRole}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-500 capitalize">{userRole.toLowerCase()}</p>
               </div>
-            )}
-          </div>
+              {userRole === UserRole.Admin && (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { navigate(Page.Settings); setIsProfileOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white flex items-center space-x-3 transition-colors focus:outline-none focus:bg-slate-50 dark:focus:bg-slate-800"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Settings</span>
+                  </button>
+                  <div className="h-px bg-slate-200 dark:bg-slate-800 my-1"></div>
+                </>
+              )}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { onLogout(); setIsProfileOpen(false); }}
+                className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-3 transition-colors cursor-pointer focus:outline-none focus:bg-red-50 dark:focus:bg-red-900/20"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

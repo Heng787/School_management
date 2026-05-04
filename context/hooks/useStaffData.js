@@ -48,7 +48,10 @@ export const useStaffData = (setError) => {
         performDataUpdate(
             (d) => apiService.saveStaffPermissions(d),
             setStaffPermissions,
-            (prev) => [...prev, { ...data, id: `perm_${Date.now()}` }],
+            (prev) => {
+                if (data.requestId && prev.some(p => p.requestId === data.requestId)) return prev;
+                return [...prev, { ...data, id: `perm_${Date.now()}` }];
+            },
             (err) => setError(`Permission save failed: ${err.message || err}`)
         ), [setError]);
 

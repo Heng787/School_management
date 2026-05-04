@@ -127,25 +127,48 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
                 <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{student.name}</span>
               </div>
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                {Object.values(AttendanceStatus).map(status => (
-                  <button
-                    key={status}
-                    aria-pressed={statusMap[student.id] === status}
-                    onClick={() => setStatusMap(p => ({ ...p, [student.id]: status }))}
-                    className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${statusMap[student.id] === status ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" : "text-slate-500 hover:text-slate-600"}`}
-                  >
-                    {status}
-                  </button>
-                ))}
+                {Object.values(AttendanceStatus).map(status => {
+                  const isActive = statusMap[student.id] === status;
+                  let activeClass = "";
+                  if (isActive) {
+                    switch (status) {
+                      case AttendanceStatus.Present: activeClass = "bg-blue-600 text-white shadow-md shadow-blue-500/30"; break;
+                      case AttendanceStatus.Absent: activeClass = "bg-rose-600 text-white shadow-md shadow-rose-500/30"; break;
+                      case AttendanceStatus.Late: activeClass = "bg-amber-500 text-white shadow-md shadow-amber-500/30"; break;
+                      case AttendanceStatus.Permission: activeClass = "bg-purple-600 text-white shadow-md shadow-purple-500/30"; break;
+                      default: activeClass = "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm";
+                    }
+                  } else {
+                    activeClass = "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200";
+                  }
+
+                  return (
+                    <button
+                      key={status}
+                      aria-pressed={isActive}
+                      onClick={() => setStatusMap(p => ({ ...p, [student.id]: status }))}
+                      className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${activeClass}`}
+                    >
+                      {status}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end gap-3 shrink-0">
-        <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Cancel</button>
-        <button onClick={handleSave} className="px-8 py-2.5 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/25 transition-all">Save Changes</button>
+      <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
+            * This will save as a draft. You must submit all drafts to Admin at the end of the month.
+          </p>
+        </div>
+        <div className="flex justify-end gap-3 shrink-0">
+          <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Cancel</button>
+          <button onClick={handleSave} className="px-8 py-2.5 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/25 transition-all">Save Daily Draft</button>
+        </div>
       </div>
     </Modal>
   );

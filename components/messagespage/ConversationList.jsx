@@ -18,6 +18,7 @@ const ConversationList = ({
   searchQuery,
   setSearchQuery,
   totalUnread,
+  broadcastUnread,
 }) => {
   if (!isMultiRecipient) return null;
 
@@ -107,6 +108,11 @@ const ConversationList = ({
                 {isAdmin ? "Broadcast to all staff" : "General announcements"}
               </p>
             </div>
+            {broadcastUnread > 0 && (
+              <span className="min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 animate-pulse shadow-lg shadow-rose-500/20">
+                {broadcastUnread}
+              </span>
+            )}
           </ConvItem>
         )}
 
@@ -136,6 +142,11 @@ const ConversationList = ({
                 {/* Status Dot */}
                 <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm
                   ${conv.status === 'online' ? 'bg-emerald-500' : conv.status === 'away' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                
+                {/* Unread Indicator on Avatar */}
+                {conv.unread > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm animate-pulse z-10" />
+                )}
               </div>
 
               {/* Text Info */}
@@ -174,7 +185,7 @@ const ConversationList = ({
                     <p className="text-xs text-slate-300 dark:text-slate-700 italic">No messages yet</p>
                   )}
                   {conv.unread > 0 && (
-                    <span className="min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 animate-pulse shadow-lg shadow-primary-500/20">
+                    <span className="min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 animate-pulse shadow-lg shadow-rose-500/20">
                       {conv.unread}
                     </span>
                   )}

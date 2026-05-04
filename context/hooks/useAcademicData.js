@@ -118,6 +118,8 @@ export const useAcademicData = (setError) => {
                 return next;
             });
             
+            // Wait a tiny bit for React state batching to at least queue the update
+            await new Promise(resolve => setTimeout(resolve, 0));
             return true;
         } catch (err) {
             setError(`Safe enrollment update failed: ${err.message || 'Unknown error'}`);

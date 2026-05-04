@@ -125,7 +125,11 @@ const DeleteModal = ({ show, onClose, onConfirm, confirmText, setConfirmText, is
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const DataManager = () => {
-  const { students, staff, classes, events, subjects, levels, timeSlots, grades, adminPassword, importAllData, deleteAllData } = useData();
+  const { 
+    students, staff, staffPermissions, classes, enrollments, grades, attendance, 
+    draftGrades, draftAttendance, events, subjects, levels, timeSlots, 
+    tasks, activityLogs, adminPassword, importAllData, deleteAllData 
+  } = useData();
   const fileInputRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -133,7 +137,32 @@ const DataManager = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExport = async () => {
-    const fullData = { students, staff, classes, events, subjects, levels, timeSlots, adminPassword, exportDate: new Date().toISOString() };
+    // Gather local messages not managed by main context
+    let messages = [];
+    try {
+      messages = JSON.parse(localStorage.getItem('school_admin_messages_local') || '[]');
+    } catch {}
+
+    const fullData = { 
+      students, 
+      staff, 
+      staffPermissions,
+      classes, 
+      enrollments, 
+      grades, 
+      attendance, 
+      draftGrades,
+      draftAttendance,
+      events, 
+      subjects, 
+      levels, 
+      timeSlots, 
+      tasks,
+      activityLogs,
+      messages,
+      adminPassword, 
+      exportDate: new Date().toISOString() 
+    };
     const jsonString = JSON.stringify(fullData, null, 2);
     const fileName = `school_admin_backup_${new Date().toISOString().split("T")[0]}.json`;
 
@@ -192,9 +221,10 @@ const DataManager = () => {
   const recordCounts = [
     { label: "Students", count: students?.length || 0 },
     { label: "Staff", count: staff?.length || 0 },
+    { label: "Permissions", count: staffPermissions?.length || 0 },
     { label: "Classes", count: classes?.length || 0 },
-    { label: "Subjects", count: subjects ? Object.values(subjects).reduce((a, c) => a + (Array.isArray(c) ? c.length : 0), 0) : 0 },
     { label: "Grades", count: grades?.length || 0 },
+    { label: "Activity", count: activityLogs?.length || 0 },
   ];
 
   return (

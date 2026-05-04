@@ -33,6 +33,7 @@ export const useStudentActions = (dependencies) => {
     addSubject,
     addLevel,
     addClasses,
+    addActivityLog,
     filteredStudents,
   } = dependencies;
 
@@ -257,9 +258,12 @@ export const useStudentActions = (dependencies) => {
           (importState.importPreviewData.type === 'excel'
             ? importState.importPreviewData.mappedGrades?.length || 0
             : 0),
-        errorCount: studentErrors.length,
         errors: studentErrors,
         warnings,
+      });
+
+      addActivityLog({
+        action: `Imported ${finalAdd.length} students ${finalUpdate.length > 0 ? `and updated ${finalUpdate.length} records` : ''}`
       });
     } catch (e) {
       console.error(e);

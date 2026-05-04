@@ -44,6 +44,18 @@ export const syncService = {
       tasks.push(classService.saveClasses(data.classes));
     }
 
+    if (data.enrollments && Array.isArray(data.enrollments) && data.enrollments.length > 0) {
+      tasks.push(studentService.saveEnrollments(data.enrollments));
+    }
+
+    if (data.grades && Array.isArray(data.grades) && data.grades.length > 0) {
+      tasks.push(studentService.saveGrades(data.grades));
+    }
+
+    if (data.attendance && Array.isArray(data.attendance) && data.attendance.length > 0) {
+      tasks.push(studentService.saveAttendance(data.attendance));
+    }
+
     if (data.events && Array.isArray(data.events) && data.events.length > 0) {
       tasks.push(logService.saveEvents(data.events));
     }
@@ -62,6 +74,30 @@ export const syncService = {
 
     if (data.adminPassword) {
       tasks.push(configService.saveAdminPassword(data.adminPassword));
+    }
+
+    if (data.staffPermissions && Array.isArray(data.staffPermissions)) {
+      tasks.push(staffService.saveStaffPermissions(data.staffPermissions));
+    }
+
+    if (data.tasks && Array.isArray(data.tasks)) {
+      localStore.set('tasks', data.tasks);
+    }
+
+    if (data.activityLogs && Array.isArray(data.activityLogs)) {
+      localStore.set('activity_logs', data.activityLogs);
+    }
+
+    if (data.draftGrades && Array.isArray(data.draftGrades)) {
+      localStore.set('draft_grades', data.draftGrades);
+    }
+
+    if (data.draftAttendance && Array.isArray(data.draftAttendance)) {
+      localStore.set('draft_attendance', data.draftAttendance);
+    }
+
+    if (data.messages && Array.isArray(data.messages)) {
+      localStore.set('messages_local', data.messages);
     }
 
     if (tasks.length > 0) {

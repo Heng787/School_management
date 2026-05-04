@@ -15,6 +15,7 @@ const TeacherTable = ({
   highlightedStaffId,
   staffPermissions,
   isAdmin,
+  isRestricted,
   onEdit,
   onDelete,
   onInvite,
@@ -66,6 +67,7 @@ const TeacherTable = ({
                   isHighlighted={isHighlighted}
                   isOnLeave={isOnLeave}
                   isAdmin={isAdmin}
+                  isRestricted={isRestricted}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onInvite={onInvite}

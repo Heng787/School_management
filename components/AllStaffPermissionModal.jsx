@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 
 import { useData } from '../context/DataContext';
 
-import { LeaveType } from '../types';
+import { LeaveType, UserRole } from '../types';
 import Modal from './ui/Modal';
 
 const leaveColor = (type) => {
@@ -17,14 +17,35 @@ const leaveColor = (type) => {
 };
 
 const AllStaffPermissionModal = ({ onClose }) => {
-  const { staffPermissions, staff, deleteStaffPermission } = useData();
+  const { staffPermissions, staff, deleteStaffPermission, currentUser } = useData();
   const [expandedStaffId, setExpandedStaffId] = useState(null);
   const [deletingPermissionId, setDeletingPermissionId] = useState(null);
+  
+  // Filters
+  const [filterType, setFilterType] = useState('All');
+  const [filterDateStart, setFilterDateStart] = useState('');
+  const [filterDateEnd, setFilterDateEnd] = useState('');
 
-  // Group permissions by staff, only show staff who HAVE permissions
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // Group permissions by staff, only show staff who HAVE permissions matching filters
+  const filteredPermissions = useMemo(() => {
+    return staffPermissions.filter(p => {
+        if (filterType !== 'All' && p.type !== filterType) return false;
+        if (filterDateStart && p.startDate < filterDateStart) return false;
+        if (filterDateEnd && p.startDate > filterDateEnd) return false;
+        return true;
+    });
+  }, [staffPermissions, filterType, filterDateStart, filterDateEnd]);
+
   const groupedByStaff = useMemo(() => {
     const map = new Map();
-    staffPermissions.forEach(p => {
+    filteredPermissions.forEach(p => {
       if (!map.has(p.staffId)) {
         const staffMember = staff.find(s => s.id === p.staffId);
         map.set(p.staffId, {
@@ -42,7 +63,7 @@ const AllStaffPermissionModal = ({ onClose }) => {
     });
 
     return Array.from(map.values()).sort((a, b) => a.staffName.localeCompare(b.staffName));
-  }, [staffPermissions, staff]);
+  }, [filteredPermissions, staff]);
 
   const toggleExpand = (staffId) => {
     setExpandedStaffId(prev => prev === staffId ? null : staffId);
@@ -55,13 +76,53 @@ const AllStaffPermissionModal = ({ onClose }) => {
             title="Permission History"
             maxWidth="max-w-2xl"
         >
-            <div className="space-y-1 mb-6">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {groupedByStaff.length} staff with records
-                </p>
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Leave Type</label>
+                        <select 
+                            value={filterType} 
+                            onChange={(e) => setFilterType(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                        >
+                            <option value="All">All Types</option>
+                            <option value={LeaveType.Annual}>Annual Leave</option>
+                            <option value={LeaveType.Personal}>Personal/Sick</option>
+                            <option value={LeaveType.NonPersonal}>Non-Personal</option>
+                        </select>
+                    </div>
+                    <div className="flex-1 flex gap-2">
+                        <div className="flex-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">From</label>
+                            <input 
+                                type="date" 
+                                value={filterDateStart} 
+                                onChange={(e) => setFilterDateStart(e.target.value)}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-primary-500 outline-none"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">To</label>
+                            <input 
+                                type="date" 
+                                value={filterDateEnd} 
+                                onChange={(e) => setFilterDateEnd(e.target.value)}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-primary-500 outline-none"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex items-end">
+                        <button 
+                            onClick={() => { setFilterType('All'); setFilterDateStart(''); setFilterDateEnd(''); }}
+                            className="text-xs font-bold text-primary-600 hover:text-primary-700 underline px-2 py-1.5"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div className="overflow-y-auto grow space-y-3 max-h-[60vh] pr-1">
+            <div className="overflow-y-auto grow space-y-3 max-h-[50vh] pr-1">
                 {groupedByStaff.length === 0 ? (
                     <div className="text-center py-20 flex flex-col items-center space-y-3 text-slate-500">
                         <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,9 +184,9 @@ const AllStaffPermissionModal = ({ onClose }) => {
                                                             <svg className="w-4 h-4 mr-1 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                             </svg>
-                                                            {new Date(p.startDate).toLocaleDateString()}
+                                                            {formatDate(p.startDate)}
                                                             {p.startDate !== p.endDate && (
-                                                                <span className="ml-1 text-slate-500">→ {new Date(p.endDate).toLocaleDateString()}</span>
+                                                                <span className="ml-1 text-slate-500">→ {formatDate(p.endDate)}</span>
                                                             )}
                                                         </span>
                                                     </div>
@@ -136,15 +197,15 @@ const AllStaffPermissionModal = ({ onClose }) => {
 
                                                 {/* Inline delete */}
                                                 {deletingPermissionId === p.id ? (
-                                                    <div className="flex items-center space-x-1.5 shrink-0">
-                                                        <span className="text-xs font-bold text-red-600 uppercase">Sure?</span>
-                                                        <button onClick={() => setDeletingPermissionId(null)} className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 rounded-md transition-colors">No</button>
-                                                        <button onClick={() => { deleteStaffPermission(p.id); setDeletingPermissionId(null); }} className="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">Yes</button>
+                                                    <div className="flex items-center space-x-1.5 shrink-0 animate-in slide-in-from-right-2 duration-200">
+                                                        <span className="text-[10px] font-black text-rose-600 uppercase">Delete?</span>
+                                                        <button onClick={() => setDeletingPermissionId(null)} className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase">No</button>
+                                                        <button onClick={() => { deleteStaffPermission(p.id); setDeletingPermissionId(null); }} className="px-2 py-1 text-[10px] font-black text-white bg-rose-600 rounded-md">YES</button>
                                                     </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => setDeletingPermissionId(p.id)}
-                                                        className="shrink-0 p-1.5 text-red-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                        className="shrink-0 p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                                                         title="Delete"
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

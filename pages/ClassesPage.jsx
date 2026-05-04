@@ -63,6 +63,7 @@ const ClassesPage = () => {
     updateClassesBatch,
     updateStudentsBatch,
     addTimeSlotsBatch,
+    addActivityLog,
   } = useData();
 
   const isAdmin = currentUser?.role === UserRole.Admin;
@@ -315,6 +316,10 @@ const ClassesPage = () => {
           (importPreviewData.addedClassesCount || 0),
         errorCount: importPreviewData.errors.length,
         errors: importPreviewData.errors,
+      });
+
+      addActivityLog({
+        action: `Imported ${importPreviewData.addedClassesCount || 0} classes and ${finalAdd.length} students`
       });
 
       setSuccessMessage(

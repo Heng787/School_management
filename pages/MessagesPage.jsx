@@ -33,7 +33,7 @@ import { UserRole } from '../types';
  */
 const MessagesPage = () => {
   // --- Context & Data ---
-  const { currentUser, staff, classes, staffPermissions, addStaffPermission } = useData();
+  const { currentUser, staff, classes, staffPermissions, addStaffPermission, addActivityLog } = useData();
   const isAdmin = currentUser?.role === UserRole.Admin;
   const myDbId = isAdmin ? ADMIN_KEY : currentUser?.id || '';
   const myName = currentUser?.name || 'Administrator';
@@ -46,9 +46,11 @@ const MessagesPage = () => {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [modal, setModal] = useState(null);
-  const [attachment, setAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [announcementMode, setAnnouncementMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastNotificationId, setLastNotificationId] = useState(null);
+  const [activeNotification, setActiveNotification] = useState(null);
 
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
@@ -110,6 +112,27 @@ const MessagesPage = () => {
     };
   }, [myDbId, isAdmin, load]);
 
+  // Toast Notification Logic
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    
+    // If it's a new message, not from me, and not in the currently open chat
+    if (
+      lastMsg.id !== lastNotificationId && 
+      lastMsg.senderId !== myDbId && 
+      lastMsg.recipientId !== 'all' && // Ignore broadcasts for toast
+      lastMsg.senderId !== activeConversation &&
+      !lastMsg.isRead
+    ) {
+      setLastNotificationId(lastMsg.id);
+      setActiveNotification(lastMsg);
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => setActiveNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, activeConversation, myDbId, lastNotificationId]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeConversation]);
@@ -117,10 +140,14 @@ const MessagesPage = () => {
   useEffect(() => {
     if (!activeConversation) return;
     const unread = conversationMessages
-      .filter((m) => !m.isRead && m.recipientId === myDbId)
+      .filter((m) => !m.isRead && (m.recipientId === myDbId || m.recipientId === 'all'))
       .map((m) => m.id);
-    if (unread.length > 0) markAsRead(unread);
-  }, [activeConversation, messages]);
+    if (unread.length > 0) {
+      markAsRead(unread);
+      // Instant UI update
+      setMessages(prev => prev.map(m => unread.includes(m.id) ? { ...m, isRead: true } : m));
+    }
+  }, [activeConversation, messages.length]); // Use length to avoid infinite loop but catch new messages
 
   // --- Memoized Data ---
   const staffConversations = useMemo(() => {
@@ -243,9 +270,11 @@ const MessagesPage = () => {
     );
   });
 
-  const totalUnread = messages.filter(
-    (m) => !m.isRead && (m.recipientId === myDbId || m.recipientId === 'all'),
+  const broadcastUnread = messages.filter(
+    (m) => !m.isRead && m.recipientId === 'all',
   ).length;
+
+  const totalUnread = staffConversations.reduce((acc, c) => acc + c.unread, 0) + broadcastUnread;
 
   const isMine = (msg) => {
     if (isAdmin) return !staffIdSet.has(msg.senderId);
@@ -259,7 +288,7 @@ const MessagesPage = () => {
   // --- Action Handlers ---
   const handleSend = async (e) => {
     e?.preventDefault();
-    if ((!text.trim() && !attachment) || sending) return;
+    if ((!text.trim() && attachments.length === 0) || sending) return;
 
     // Guard: must have a conversation selected
     if (!activeConversation && !announcementMode) return;
@@ -267,23 +296,26 @@ const MessagesPage = () => {
     setSending(true);
     const recipient = (announcementMode && isAdmin) ? 'all' : activeConversation;
 
-    // Convert attachment to base64 locally — no backend/Supabase upload needed
-    let metadata = undefined;
-    if (attachment) {
-      const isImage = attachment.type.startsWith('image/');
-      try {
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(attachment);
-        });
-        metadata = isImage
-          ? { imageUrl: base64, fileName: attachment.name }
-          : { fileUrl: base64, fileName: attachment.name };
-      } catch {
-        // If FileReader fails, skip the attachment
-        console.warn('[handleSend] Could not read attachment as base64');
+    // Convert attachments to base64 locally
+    const processedAttachments = [];
+    if (attachments.length > 0) {
+      for (const file of attachments) {
+        const isImage = file.type.startsWith('image/');
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          processedAttachments.push({
+            url: base64,
+            name: file.name,
+            type: isImage ? 'image' : 'file'
+          });
+        } catch {
+          console.warn('[handleSend] Could not read file:', file.name);
+        }
       }
     }
 
@@ -293,14 +325,14 @@ const MessagesPage = () => {
       recipientId: recipient,
       type: (announcementMode && isAdmin) ? 'announcement' : 'text',
       content: text.trim(),
-      metadata,
+      metadata: processedAttachments.length > 0 ? { attachments: processedAttachments } : undefined,
       isAdmin,
     });
 
     if (newMsg) {
       setMessages((prev) => [...prev, newMsg]);
       setText('');
-      setAttachment(null);
+      setAttachments([]);
     }
     setSending(false);
   };
@@ -336,6 +368,9 @@ const MessagesPage = () => {
   };
 
   const handleStatusChange = async (id, status) => {
+    const msg = messages.find((m) => m.id === id);
+    if (!msg || msg.metadata?.status === status) return;
+
     await updateLeaveStatus(id, status);
     setMessages((prev) =>
       prev.map((m) =>
@@ -344,9 +379,15 @@ const MessagesPage = () => {
     );
 
     if (status === 'approved') {
-      const msg = messages.find((m) => m.id === id);
       if (msg && msg.metadata) {
+        // Prevent duplicate permission if it already exists
+        const exists = staffPermissions.some(p => p.requestId === id);
+        if (exists) return;
+
+        const staffMember = staff.find(s => s.id === msg.senderId);
+
         await addStaffPermission({
+          requestId: id,
           staffId: msg.senderId,
           type: msg.metadata.leaveType || 'Personal Leave',
           startDate:
@@ -357,6 +398,10 @@ const MessagesPage = () => {
             ? msg.content.split('Reason:')[1]?.trim()
             : msg.content,
           createdAt: new Date().toISOString(),
+        });
+
+        addActivityLog({
+          action: `Admin approved "${msg.metadata.leaveType || 'Leave Request'}" for staff "${staffMember?.name || msg.senderName || 'Unknown'}"`
         });
       }
     }
@@ -384,6 +429,7 @@ const MessagesPage = () => {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         totalUnread={totalUnread}
+        broadcastUnread={broadcastUnread}
       />
 
       {/* Chat Panel */}
@@ -443,8 +489,8 @@ const MessagesPage = () => {
           setText={setText}
           handleSend={handleSend}
           sending={sending}
-          attachment={attachment}
-          setAttachment={setAttachment}
+          attachments={attachments}
+          setAttachments={setAttachments}
           fileInputRef={fileInputRef}
           announcementMode={announcementMode}
           isAdmin={isAdmin}
@@ -467,6 +513,40 @@ const MessagesPage = () => {
             handleQuickSend(content, metadata, 'incident')
           }
         />
+      )}
+
+      {/* Floating Notification Toast */}
+      {activeNotification && (
+        <div 
+          onClick={() => {
+            setActiveConversation(activeNotification.senderId);
+            setMobileShowChat(true);
+            setActiveNotification(null);
+          }}
+          className="fixed bottom-24 right-6 left-6 md:left-auto md:w-80 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-primary-200 dark:border-primary-800 p-4 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-bottom-5 fade-in duration-300 cursor-pointer group hover:scale-[1.02] transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary-500/20 group-hover:rotate-12 transition-transform">
+              {activeNotification.senderName.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest leading-none mb-1">New Message</p>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveNotification(null); }}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{activeNotification.senderName}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate line-clamp-1 mt-0.5">{activeNotification.content}</p>
+            </div>
+          </div>
+          <div className="absolute inset-0 border-2 border-primary-500 rounded-2xl animate-pulse opacity-20 pointer-events-none" />
+        </div>
       )}
     </div>
   );

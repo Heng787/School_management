@@ -81,6 +81,32 @@ const editLocalMessage = (id, newContent) => {
   } catch (err) {}
 };
 
+const updateLocalMessageMetadata = (id, metadata) => {
+  try {
+    const msgs = getLocalMessages();
+    const idx = msgs.findIndex((m) => m.id === id);
+    if (idx !== -1) {
+      msgs[idx].metadata = { ...msgs[idx].metadata, ...metadata };
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(msgs));
+    }
+  } catch (err) {}
+};
+
+const markLocalAsRead = (ids) => {
+  try {
+    const msgs = getLocalMessages();
+    let changed = false;
+    ids.forEach(id => {
+      const idx = msgs.findIndex(m => m.id === id);
+      if (idx !== -1 && !msgs[idx].isRead) {
+        msgs[idx].isRead = true;
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem(LOCAL_KEY, JSON.stringify(msgs));
+  } catch (err) {}
+};
+
 // --- Messaging API ---
 
 /**
@@ -101,10 +127,19 @@ export async function fetchMessages(userId, isAdmin) {
     const { data } = await res.json();
     const remoteMsgs = (data || []).map(fromDb);
 
-    // Merge: remote messages take priority, but keep local-only ones
+    // Merge: remote messages take priority, but respect local 'isRead' status
+    const merged = remoteMsgs.map(rm => {
+      const lm = localMsgs.find(l => l.id === rm.id);
+      // If locally marked as read, keep it read even if server hasn't synced yet
+      if (lm && lm.isRead && !rm.isRead) {
+        return { ...rm, isRead: true };
+      }
+      return rm;
+    });
+
     const remoteIds = new Set(remoteMsgs.map((m) => m.id));
     const localOnly = localMsgs.filter((m) => !remoteIds.has(m.id));
-    return [...remoteMsgs, ...localOnly].sort(
+    return [...merged, ...localOnly].sort(
       (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
     );
   } catch (err) {
@@ -176,12 +211,14 @@ export async function sendMessage(msg) {
  */
 export async function markAsRead(messageIds) {
   if (!messageIds || messageIds.length === 0) return;
+  // Update locally first
+  markLocalAsRead(messageIds);
   try {
-    await fetch('/api/messages/read', {
+    fetch('/api/messages/read', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ ids: messageIds }),
-    });
+    }).catch((err) => console.warn('Backend markAsRead unreachable:', err));
   } catch (err) {
     console.error('markAsRead error:', err);
   }
@@ -256,12 +293,14 @@ export async function uploadAttachment(file) {
  * Updates leave request status (admin only).
  */
 export async function updateLeaveStatus(messageId, status) {
+  // Always update locally first for immediate persistence
+  updateLocalMessageMetadata(messageId, { status });
   try {
-    await fetch(`/api/messages/${messageId}`, {
+    fetch(`/api/messages/${messageId}`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify({ metadata: { status } }),
-    });
+    }).catch((err) => console.warn('Backend update unreachable:', err));
   } catch (err) {
     console.error('updateLeaveStatus error:', err);
   }
@@ -273,21 +312,40 @@ export async function updateLeaveStatus(messageId, status) {
  * Gets unread count for a user.
  */
 export async function fetchUnreadCount(userId, isAdmin) {
+  // Get local unread messages first
+  const localMsgs = getLocalMessages();
+  const dbId = isAdmin ? ADMIN_KEY : userId;
+  
+  // Messages I received that are still unread locally
+  const localUnreadIds = new Set(
+    localMsgs
+      .filter(m => !m.isRead && (m.recipientId === dbId || m.recipientId === 'all'))
+      .map(m => m.id)
+  );
+
   try {
-    const dbId = isAdmin ? ADMIN_KEY : userId;
     const params = new URLSearchParams({ userId: dbId, countOnly: '1' });
     const res = await fetch(`/api/messages/unread?${params}`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) {
-      console.error('[fetchUnreadCount] API error', res.status);
-      return 0;
+      return localUnreadIds.size;
     }
-    const { data } = await res.json();
-    return (data && data.count != null) ? data.count : 0;
+    const { data, messages } = await res.json();
+    
+    // If the API returns the actual message IDs, we can be more precise
+    if (messages) {
+      const serverUnreadIds = messages.map(m => m.id);
+      // Only count messages that are unread on server AND unread locally
+      const finalUnread = serverUnreadIds.filter(id => localUnreadIds.has(id));
+      return finalUnread.length;
+    }
+
+    // Fallback: return server count but capped by local knowledge if possible
+    // Or just return the server count if we don't have details
+    return (data && data.count != null) ? data.count : localUnreadIds.size;
   } catch (err) {
-    console.error('[fetchUnreadCount] Network error:', err);
-    return 0;
+    return localUnreadIds.size;
   }
 }
 

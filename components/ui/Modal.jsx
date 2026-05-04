@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { motion } from 'framer-motion';
 
 /**
  * COMPONENT: Modal
  * DESCRIPTION: A reusable accessible modal wrapper that handles focus trapping,
- * backdrop clicks, and ARIA roles.
+ * backdrop clicks, ARIA roles, and draggability.
  */
 const Modal = ({ 
   children, 
@@ -15,6 +16,7 @@ const Modal = ({
   className = '' 
 }) => {
   const containerRef = useFocusTrap(true);
+  const constraintsRef = useRef(null);
 
   // Handle Escape key
   useEffect(() => {
@@ -29,20 +31,35 @@ const Modal = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200"
+      ref={constraintsRef}
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-8 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
+      <motion.div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={ariaLabelledBy}
-        className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 sm:p-8 w-full ${maxWidth} max-h-[95vh] overflow-y-auto border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200 ${className}`}
+        drag
+        dragConstraints={constraintsRef}
+        dragMomentum={false}
+        dragElastic={0.1}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full ${maxWidth} max-h-[95vh] flex flex-col border border-slate-200 dark:border-slate-800 transition-colors duration-200 ${className}`}
       >
-        {children}
-      </div>
+        {/* Drag Handle Indicator */}
+        <div className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing group">
+          <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 group-hover:bg-slate-300 dark:group-hover:bg-slate-700 transition-colors" />
+        </div>
+
+        <div className="p-6 sm:p-8 pt-2 overflow-y-auto">
+          {children}
+        </div>
+      </motion.div>
     </div>
   );
 };
