@@ -91,8 +91,15 @@ const Sidebar = ({ navigate, currentPage, userRole, isOpen, onClose }) => {
       setUnreadCount(count);
     };
     check();
-    const interval = setInterval(check, 15000);
-    return () => clearInterval(interval);
+    
+    // Listen for manual "read" events from MessagesPage
+    window.addEventListener('messagesRead', check);
+    
+    const interval = setInterval(check, 10000); // Faster polling (10s)
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('messagesRead', check);
+    };
   }, [currentUser, isAdmin]);
 
   // --- 2. RENDER ---

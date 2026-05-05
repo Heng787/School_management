@@ -50,8 +50,15 @@ const Navbar = ({ userRole, onLogout, navigate, onToggleSidebar, isSidebarOpen, 
       setUnreadCount(count);
     };
     checkUnread();
-    const interval = setInterval(checkUnread, 15000);
-    return () => clearInterval(interval);
+    
+    // Listen for manual "read" events from MessagesPage
+    window.addEventListener('messagesRead', checkUnread);
+    
+    const interval = setInterval(checkUnread, 10000); // Faster polling (10s)
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('messagesRead', checkUnread);
+    };
   }, [currentUser]);
 
   return (

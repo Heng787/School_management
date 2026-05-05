@@ -146,6 +146,8 @@ const MessagesPage = () => {
       markAsRead(unread);
       // Instant UI update
       setMessages(prev => prev.map(m => unread.includes(m.id) ? { ...m, isRead: true } : m));
+      // Notify global layout (sidebar/navbar) to clear badges
+      window.dispatchEvent(new CustomEvent('messagesRead'));
     }
   }, [activeConversation, messages, myDbId]); // Fixed: depends on messages to catch new ones while open
 
