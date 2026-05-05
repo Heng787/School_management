@@ -40,6 +40,25 @@ const getAuthHeaders = () => {
 // --- Local Storage Helpers (thesis defense fallback) ---
 
 const LOCAL_KEY = 'school_admin_messages_local';
+const READ_IDS_KEY = 'school_admin_read_ids_v1';
+
+const getLocallyReadIds = () => {
+  try {
+    return JSON.parse(localStorage.getItem(READ_IDS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const addLocallyReadIds = (ids) => {
+  try {
+    const current = new Set(getLocallyReadIds());
+    ids.forEach(id => current.add(id));
+    // Keep only the last 500 read IDs to prevent storage bloat
+    const limited = [...current].slice(-500);
+    localStorage.setItem(READ_IDS_KEY, JSON.stringify(limited));
+  } catch (err) {}
+};
 
 const getLocalMessages = () => {
   try {
@@ -94,6 +113,7 @@ const updateLocalMessageMetadata = (id, metadata) => {
 
 const markLocalAsRead = (ids) => {
   try {
+    addLocallyReadIds(ids);
     const msgs = getLocalMessages();
     let changed = false;
     ids.forEach(id => {
@@ -126,11 +146,14 @@ export async function fetchMessages(userId, isAdmin) {
     }
     const { data } = await res.json();
     const remoteMsgs = (data || []).map(fromDb);
+    const locallyReadIds = new Set(getLocallyReadIds());
 
     // Merge: remote messages take priority, but respect local 'isRead' status
     const merged = remoteMsgs.map(rm => {
+      if (locallyReadIds.has(rm.id)) {
+        return { ...rm, isRead: true };
+      }
       const lm = localMsgs.find(l => l.id === rm.id);
-      // If locally marked as read, keep it read even if server hasn't synced yet
       if (lm && lm.isRead && !rm.isRead) {
         return { ...rm, isRead: true };
       }
@@ -332,18 +355,18 @@ export async function fetchUnreadCount(userId, isAdmin) {
       return localUnreadIds.size;
     }
     const { data, messages } = await res.json();
+    const locallyReadIds = new Set(getLocallyReadIds());
     
     // If the API returns the actual message IDs, we can be more precise
     if (messages) {
       const serverUnreadIds = messages.map(m => m.id);
       // Only count messages that are unread on server AND unread locally
-      const finalUnread = serverUnreadIds.filter(id => localUnreadIds.has(id));
+      const finalUnread = serverUnreadIds.filter(id => !locallyReadIds.has(id));
       return finalUnread.length;
     }
 
     // Fallback: return server count but capped by local knowledge if possible
-    // Or just return the server count if we don't have details
-    return (data && data.count != null) ? data.count : localUnreadIds.size;
+    return (data && data.count != null) ? Math.max(0, data.count - locallyReadIds.size) : localUnreadIds.size;
   } catch (err) {
     return localUnreadIds.size;
   }

@@ -147,7 +147,7 @@ const MessagesPage = () => {
       // Instant UI update
       setMessages(prev => prev.map(m => unread.includes(m.id) ? { ...m, isRead: true } : m));
     }
-  }, [activeConversation, messages.length]); // Use length to avoid infinite loop but catch new messages
+  }, [activeConversation, messages, myDbId]); // Fixed: depends on messages to catch new ones while open
 
   // --- Memoized Data ---
   const staffConversations = useMemo(() => {
