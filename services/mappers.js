@@ -37,13 +37,14 @@ export const mapGrade = {
     term: g.term || null,
   }),
   fromDb: (d) => {
-    // Decode classId from composite ID if missing
+    // Decode classId and date from composite ID if missing
     let classId = d.classId;
-    if (!classId) {
-      const parts = (d.id || '').split('~');
-      if (parts.length >= 3 && parts[0] === 'grade') {
-        classId = parts[1];
-      }
+    let date = d.date;
+    if (d.id && d.id.startsWith('grade~')) {
+      const parts = d.id.split('~');
+      // Format: grade~{classId}~{studentId}~{subject}~{term}~{date}
+      if (!classId && parts[1]) classId = parts[1];
+      if (!date && parts[5]) date = parts[5];
     }
 
     return {
@@ -53,6 +54,7 @@ export const mapGrade = {
       subject: d.subject,
       score: d.score,
       term: d.term || null,
+      date: date || null,
     };
   },
 };
@@ -111,6 +113,7 @@ export const mapStaff = {
     name: s.name,
     role: s.role,
     subject: s.subject || null,
+    dob: s.dob || null,
     contact: s.contact || null,
     hire_date: s.hireDate || null,
     password: s.password || null,
@@ -120,6 +123,7 @@ export const mapStaff = {
     name: d.name,
     role: d.role,
     subject: d.subject,
+    dob: d.dob,
     contact: d.contact,
     hireDate: d.hireDate || d.hire_date,
     password: d.password || null,
@@ -165,5 +169,5 @@ export const mapClass = {
  * Generates a stable composite ID for a grade record.
  * Format: grade~{classId}~{studentId}~{subject}~{term}
  */
-export const gradeId = (classId, studentId, subject, term) => 
-  `grade~${classId}~${studentId}~${subject}~${term}`;
+export const gradeId = (classId, studentId, subject, term, date) => 
+  `grade~${classId}~${studentId}~${subject}~${term}${date ? `~${date}` : ''}`;

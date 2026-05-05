@@ -13,7 +13,7 @@ const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
     (s) => s._possibleMatches && s._possibleMatches.length > 0
   );
 
-  const [showInferredOnly, setShowInferredOnly] = useState(hasInferred);
+  const [showInferredOnly, setShowInferredOnly] = useState(false); // No limit: show all by default
   const [showConflictsOnly, setShowConflictsOnly] = useState(hasConflicts);
 
   const handleGenderChange = (studentToChange, newSex) => {
@@ -52,15 +52,27 @@ const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
     <Modal
       onClose={onCancel}
       title="Review Import Data"
-      maxWidth="max-w-4xl"
+      fullScreen={true}
     >
-      <div className="space-y-6">
-        <p className="text-sm text-slate-500 dark:text-slate-400 -mt-4">
-          Please verify the extracted data before saving to the database.
-        </p>
+      <div className="p-6 sm:p-10 lg:p-16 space-y-8 max-w-7xl mx-auto">
+        {/* Full-Screen Header */}
+        <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Review Import Data</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">
+              Please verify the extracted data before saving to the database.
+            </p>
+          </div>
+          <button 
+            onClick={onCancel}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6 text-slate-400" />
+          </button>
+        </div>
 
         {/* Content */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {hasInferred && (
             <div
               role="region"
@@ -133,7 +145,7 @@ const ImportPreviewModal = ({ students, onConfirm, onCancel }) => {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
                   <tr>
-                    <th scope="col" className="px-4 py-3 font-medium">Name</th>
+                    <th scope="col" className="px-4 py-3 font-medium w-1/3">Name</th>
                     <th scope="col" className="px-4 py-3 font-medium">Level</th>
                     <th scope="col" className="px-4 py-3 font-medium">Phone</th>
                     <th scope="col" className="px-4 py-3 font-medium">Sex</th>

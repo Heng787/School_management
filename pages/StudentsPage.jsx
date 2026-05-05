@@ -57,6 +57,7 @@ const StudentsPage = () => {
     updateStudentsBatch,
     addEnrollments,
     saveGradeBatch,
+    addActivityLog,
   } = useData();
 
   // --- Custom Hooks for State Management ---
@@ -86,6 +87,7 @@ const StudentsPage = () => {
     addSubject,
     addLevel,
     addClasses,
+    addActivityLog,
     filteredStudents: applyAllFilters(
       students,
       currentUser,

@@ -555,7 +555,8 @@ export const TeacherDashboard = ({ navigate }) => {
     currentUser, classes, enrollments, students, 
     draftGrades, publishClassGrades, attendance,
     draftAttendance, publishClassAttendance,
-    tasks, updateTask, addTask, addActivityLog 
+    tasks, updateTask, addTask, addActivityLog,
+    grades
   } = useData();
   const [isSending, setIsSending] = useState({}); // {[classId]: boolean}
   const myClasses = classes.filter((c) => c.teacherId === currentUser?.id);
@@ -676,7 +677,29 @@ export const TeacherDashboard = ({ navigate }) => {
     return Math.round((attendedCount / thisMonthRecs.length) * 100);
   }, [myAttendance]);
 
-  const avgGrade = "A-";
+  const { avgGrade, gradeBadge } = useMemo(() => {
+    const teacherGrades = (grades || []).filter(g => myClassIds.has(g.classId));
+    if (teacherGrades.length === 0) return { avgGrade: "None", gradeBadge: null };
+    
+    const sum = teacherGrades.reduce((acc, g) => acc + (Number(g.score) || 0), 0);
+    const avg = sum / teacherGrades.length;
+    
+    const getGradeInfo = (score) => {
+      if (score >= 9.5) return { label: "A+", badge: "Academic Peak", color: "primary" };
+      if (score >= 9.0) return { label: "A", badge: "Academic Peak", color: "primary" };
+      if (score >= 8.5) return { label: "A-", badge: "Academic Peak", color: "primary" };
+      if (score >= 8.0) return { label: "B+", badge: "Solid Performance", color: "emerald" };
+      if (score >= 7.5) return { label: "B", badge: "Solid Performance", color: "emerald" };
+      if (score >= 7.0) return { label: "B-", badge: "Satisfactory", color: "amber" };
+      if (score >= 6.5) return { label: "C+", badge: "Satisfactory", color: "amber" };
+      if (score >= 6.0) return { label: "C", badge: "Satisfactory", color: "amber" };
+      if (score >= 5.0) return { label: "D", badge: "Needs Focus", color: "rose" };
+      return { label: "F", badge: "Urgent Support", color: "rose" };
+    };
+
+    const info = getGradeInfo(avg);
+    return { avgGrade: info.label, gradeBadge: info };
+  }, [grades, myClassIds]);
 
   const weeklyAttendanceData = useMemo(() => {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -775,9 +798,11 @@ export const TeacherDashboard = ({ navigate }) => {
         <Card className="p-5! transition-all duration-500 hover:-translate-y-1">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 transition-colors">Class Average</p>
           <h3 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">{avgGrade}</h3>
-          <div className="mt-4 text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full w-fit border border-primary-100 uppercase tracking-widest">
-             Academic Peak
-          </div>
+          {gradeBadge && (
+            <div className={`mt-4 text-[10px] font-bold text-${gradeBadge.color}-600 bg-${gradeBadge.color}-50 px-2 py-0.5 rounded-full w-fit border border-${gradeBadge.color}-100 uppercase tracking-widest`}>
+               {gradeBadge.badge}
+            </div>
+          )}
         </Card>
         <Card className="p-5! transition-all duration-500 hover:-translate-y-1">
           <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 transition-colors">Pending Tasks</p>
@@ -1083,6 +1108,7 @@ export const OfficeWorkerDashboard = () => {
     students, updateStudent,
     classes, enrollments,
     staff, staffPermissions,
+    attendance,
     tasks, updateTask, addTask,
     activityLogs, addActivityLog, clearActivityLogs,
     currentUser,

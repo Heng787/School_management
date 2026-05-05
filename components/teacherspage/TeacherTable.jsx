@@ -20,6 +20,7 @@ const TeacherTable = ({
   onDelete,
   onInvite,
   onPermission,
+  classes,
 }) => {
   const highlightedRowRef = useRef(null);
 
@@ -73,6 +74,7 @@ const TeacherTable = ({
                   onInvite={onInvite}
                   onPermission={onPermission}
                   highlightedRowRef={isHighlighted ? highlightedRowRef : null}
+                  classes={classes}
                 />
               );
             })}

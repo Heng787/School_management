@@ -7,6 +7,7 @@ const MarksPrintModal = ({
   onClose,
   selectedClass,
   selectedTerm,
+  selectedDate,
   students,
   subjects,
   localGrades,
@@ -50,7 +51,7 @@ const MarksPrintModal = ({
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `${selectedTerm} Scores`);
-    XLSX.writeFile(wb, `Marks_${selectedClass.name}_${selectedTerm}.xlsx`);
+    XLSX.writeFile(wb, `Marks_${selectedClass.name}_${selectedTerm}_${selectedDate}.xlsx`);
   };
 
   return (
@@ -105,7 +106,9 @@ const MarksPrintModal = ({
             {/* Center title */}
             <div className="text-center">
               <h1 className="text-base font-black text-blue-900 uppercase tracking-wide">Promotion Daily Score Sheet</h1>
-              <h2 className="text-[11px] font-black text-blue-900 mt-0.5 uppercase">{selectedTerm} — {new Date().getFullYear()}</h2>
+              <h2 className="text-[11px] font-black text-blue-900 mt-0.5 uppercase">
+                {selectedTerm} — {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+              </h2>
             </div>
           </div>
 

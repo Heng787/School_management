@@ -46,11 +46,12 @@ const TableHeader = ({ subjects }) => (
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const MarksEntry = () => {
-  const { students, classes, subjects, grades, draftGrades, saveDraftGradeBatch, enrollments, staff, currentUser } = useData();
+  const { students, classes, subjects, grades, draftGrades, saveGradeBatch, saveDraftGradeBatch, enrollments, staff, currentUser } = useData();
 
   // --- PERSISTED FILTERS ---
   const [selectedClassId, setSelectedClassId] = useSession("reports_marks_class", "");
   const [selectedTerm, setSelectedTerm] = useSession("reports_marks_term", "Midterm");
+  const [selectedDate, setSelectedDate] = useSession("reports_marks_date", new Date().toISOString().split('T')[0]);
 
   // --- LOCAL STATE ---
   const [localGrades, setLocalGrades] = useState({});
@@ -76,11 +77,11 @@ const MarksEntry = () => {
 
   const classSubjects = useMemo(() => {
     if (!selectedClass) return [];
-    const existing = Array.from(new Set(combinedGrades.filter(g => g.classId === selectedClassId && g.term === selectedTerm).map(g => g.subject)));
-    if (existing.length > 0) return existing;
+    const existing = combinedGrades.filter(g => g.classId === selectedClassId && g.term === selectedTerm && g.date === selectedDate).map(g => g.subject);
     const category = /^K\s*\d+/.test((selectedClass.level || "").trim().toUpperCase()) ? "Kid" : "JuniorSenior";
-    return subjects[category] || [];
-  }, [combinedGrades, selectedClass, selectedTerm, subjects, selectedClassId]);
+    const defaults = subjects[category] || [];
+    return Array.from(new Set([...defaults, ...existing]));
+  }, [combinedGrades, selectedClass, selectedTerm, selectedDate, subjects, selectedClassId]);
 
   const classStudents = useMemo(() => {
     if (!selectedClass) return [];
@@ -89,22 +90,22 @@ const MarksEntry = () => {
   }, [students, selectedClass, enrollments, selectedClassId]);
 
   // --- INITIALIZATION ---
-  const lastLoadedRef = React.useRef(""); // Format: classId|term
+  const lastLoadedRef = React.useRef(""); // Format: classId|term|date
 
   useEffect(() => {
     if (!selectedClassId) return;
     
-    const contextKey = `${selectedClassId}|${selectedTerm}`;
+    const contextKey = `${selectedClassId}|${selectedTerm}|${selectedDate}`;
     const isNewContext = lastLoadedRef.current !== contextKey;
 
     if (isNewContext) {
-      const initial = gradesService.initializeLocalGrades(classStudents, classSubjects, combinedGrades, selectedClassId, selectedTerm);
+      const initial = gradesService.initializeLocalGrades(classStudents, classSubjects, combinedGrades, selectedClassId, selectedTerm, selectedDate);
       setLocalGrades(initial);
       setModifiedIds(new Set());
       setSaveSuccess(false);
       lastLoadedRef.current = contextKey;
     }
-  }, [classStudents, classSubjects, selectedClassId, selectedTerm]); // Removed 'grades' to prevent sync-induced resets
+  }, [classStudents, classSubjects, selectedClassId, selectedTerm, selectedDate]); // Removed 'grades' to prevent sync-induced resets
 
   // --- HANDLERS ---
   const handleGradeChange = (studentId, subject, value) => {
@@ -121,8 +122,14 @@ const MarksEntry = () => {
     if (modifiedIds.size === 0 || isSaving) return;
     setIsSaving(true);
     try {
-      const records = gradesService.buildGradeRecords(modifiedIds, localGrades, classSubjects, combinedGrades, selectedClassId, selectedTerm);
-      if (records.length > 0) await saveDraftGradeBatch(records);
+      const records = gradesService.buildGradeRecords(modifiedIds, localGrades, classSubjects, combinedGrades, selectedClassId, selectedTerm, selectedDate);
+      if (records.length > 0) {
+        if (isAdminOrOffice) {
+          await saveGradeBatch(records);
+        } else {
+          await saveDraftGradeBatch(records);
+        }
+      }
       setSaveSuccess(true);
       setModifiedIds(new Set());
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -157,7 +164,7 @@ const MarksEntry = () => {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Academic Marks");
-    XLSX.writeFile(wb, `Marks_${selectedClass.name}_${selectedTerm}.xlsx`);
+    XLSX.writeFile(wb, `Marks_${selectedClass.name}_${selectedTerm}_${selectedDate}.xlsx`);
   };
 
   return (
@@ -183,6 +190,16 @@ const MarksEntry = () => {
             <select id="academic-term-select" value={selectedTerm} onChange={e => setSelectedTerm(e.target.value)} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white outline-none">
               {["Midterm", "Finals", "Q1", "Q2", "Q3", "Q4"].map(t => <option key={t} value={t}>{t}</option>)}
             </select>
+          </div>
+          <div className="w-full sm:w-48">
+            <label htmlFor="academic-date-select" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Exam Date</label>
+            <input 
+              type="date" 
+              id="academic-date-select" 
+              value={selectedDate} 
+              onChange={e => setSelectedDate(e.target.value)} 
+              className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white outline-none"
+            />
           </div>
         </div>
 
@@ -287,6 +304,7 @@ const MarksEntry = () => {
         onClose={() => setIsPrintModalOpen(false)}
         selectedClass={selectedClass}
         selectedTerm={selectedTerm}
+        selectedDate={selectedDate}
         students={classStudents}
         subjects={classSubjects}
         localGrades={localGrades}

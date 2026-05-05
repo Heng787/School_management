@@ -172,20 +172,36 @@ export const useAcademicData = (setError) => {
     const saveDraftGradeBatch = useCallback((records) => {
         const updatedMap = new Map(records.map(r => [r.id, r]));
         setDraftGrades((prev) => {
-            const newDrafts = [...prev.filter(r => !updatedMap.has(r.id)), ...records];
-            localStore.set('draft_grades', newDrafts);
-            return newDrafts;
+            const filtered = prev.filter(r => !updatedMap.has(r.id));
+            const toAdd = records.filter(r => r.score !== null && r.score !== undefined && r.score !== "");
+            const next = [...filtered, ...toAdd];
+            localStore.set('draft_grades', next);
+            return next;
         });
     }, []);
 
-    const publishClassGrades = useCallback(async (classId) => {
-        const draftsToPublish = draftGrades.filter(g => g.classId === classId);
-        if (draftsToPublish.length === 0) return;
+    const clearDraftGrades = useCallback((classId, term, date) => {
+        setDraftGrades((prev) => {
+            const next = prev.filter(g => {
+                const matchClass = g.classId === classId;
+                const matchTerm = term ? g.term === term : true;
+                const matchDate = date ? g.date === date : true;
+                return !(matchClass && matchTerm && matchDate);
+            });
+            localStore.set('draft_grades', next);
+            return next;
+        });
+    }, []);
+
+    const publishClassGrades = useCallback(async (classId, records) => {
+        const toPublish = records || draftGrades.filter(g => g.classId === classId);
+        if (toPublish.length === 0) return;
         
-        await saveGradeBatch(draftsToPublish);
+        await saveGradeBatch(toPublish);
         
         setDraftGrades((prev) => {
-            const newDrafts = prev.filter(g => g.classId !== classId);
+            const publishedIds = new Set(toPublish.map(r => r.id));
+            const newDrafts = prev.filter(g => !publishedIds.has(g.id));
             localStore.set('draft_grades', newDrafts);
             return newDrafts;
         });
@@ -213,9 +229,19 @@ export const useAcademicData = (setError) => {
     const saveDraftAttendanceBatch = useCallback((records) => {
         const updatedMap = new Map(records.map(r => [r.id, r]));
         setDraftAttendance((prev) => {
-            const newDrafts = [...prev.filter(r => !updatedMap.has(r.id)), ...records];
-            localStore.set('draft_attendance', newDrafts);
-            return newDrafts;
+            const filtered = prev.filter(r => !updatedMap.has(r.id));
+            const toAdd = records.filter(r => r.status !== null && r.status !== undefined && r.status !== "");
+            const next = [...filtered, ...toAdd];
+            localStore.set('draft_attendance', next);
+            return next;
+        });
+    }, []);
+
+    const clearDraftAttendance = useCallback((classId, date) => {
+        setDraftAttendance((prev) => {
+            const next = prev.filter(a => !(a.classId === classId && a.date === date));
+            localStore.set('draft_attendance', next);
+            return next;
         });
     }, []);
 
@@ -254,14 +280,18 @@ export const useAcademicData = (setError) => {
         updateGrade,
         saveGradeBatch,
         draftGrades,
+        setDraftGrades,
         saveDraftGradeBatch,
+        clearDraftGrades,
         publishClassGrades,
         attendance,
         setAttendance,
         updateAttendance,
         saveAttendanceBatch,
         draftAttendance,
+        setDraftAttendance,
         saveDraftAttendanceBatch,
+        clearDraftAttendance,
         publishClassAttendance
     };
 };

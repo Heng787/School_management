@@ -11,7 +11,7 @@ const TeacherModal = ({ staffData, onClose }) => {
   const { addStaff, updateStaff } = useData();
   const [formData, setFormData] = useState({
     name: "",
-    role: "",
+    role: StaffRole.Teacher, // Default to Teacher to avoid empty role on submit
     subject: "",
     email: "",
     phone: "",
@@ -38,12 +38,12 @@ const TeacherModal = ({ staffData, onClose }) => {
       }
       setFormData({
         name: staffData.name,
-        role: staffData.role,
+        role: staffData.role || StaffRole.Teacher, // Fallback to Teacher if role is missing
         subject: staffData.subject || "",
         email: initialEmail,
         phone: initialPhone,
         dob: staffData.dob || "",
-        hireDate: staffData.hireDate,
+        hireDate: staffData.hireDate || new Date().toISOString().split("T")[0],
       });
     }
   }, [staffData]);
@@ -104,8 +104,8 @@ const TeacherModal = ({ staffData, onClose }) => {
   };
 
   const inputClasses =
-    "mt-1 w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent";
-  const labelClasses = "block text-sm font-medium text-primary-900";
+    "mt-1 w-full px-3 py-2 !bg-white !text-slate-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors";
+  const labelClasses = "block text-sm font-bold text-white mb-1";
 
   return (
     <Modal

@@ -36,6 +36,7 @@ const TeachersPage = () => {
     addStaffBatch,
     staffPermissions,
     currentUser,
+    classes,
   } = useData();
 
   const isAdmin = currentUser?.role === UserRole.Admin;
@@ -175,6 +176,7 @@ const TeachersPage = () => {
           onInvite={(staffMember) => setInviteStaff(staffMember)}
           onPermission={(staffMember) => setPermissionStaff(staffMember)}
           setCurrentPage={setCurrentPage}
+          classes={classes}
         />
       </main>
 

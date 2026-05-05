@@ -29,13 +29,12 @@ const ModalHeader = ({ id, title, subtitle, icon, onClose, children }) => (
   </div>
 );
 
-// ─── ATTENDANCE MODAL ─────────────────────────────────────────────────────────
-
 export const AttendanceModal = ({ classData, students, onClose }) => {
-  const { attendance, draftAttendance, saveDraftAttendanceBatch } = useData();
+  const { attendance, draftAttendance, saveDraftAttendanceBatch, clearDraftAttendance } = useData();
   const [date, setDate] = useState(() => new Date().toLocaleDateString("en-CA"));
   const [statusMap, setStatusMap] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [isModified, setIsModified] = useState(false);
 
   const lastLoadedRef = useRef(""); // date|classId
 
@@ -52,8 +51,9 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
       s.id, dailyRecords.find(a => a.studentId === s.id)?.status ?? AttendanceStatus.Present
     ]));
     setStatusMap(initialMap);
+    setIsModified(false);
     lastLoadedRef.current = contextKey;
-  }, [date, students, attendance, classData.id]);
+  }, [date, students, attendance, classData.id, draftAttendance]);
 
   const filteredStudents = useMemo(() => 
     students.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())),
@@ -68,6 +68,12 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
       status: statusMap[s.id] ?? AttendanceStatus.Present,
     }));
     saveDraftAttendanceBatch(payload);
+    setIsModified(false);
+    onClose();
+  };
+
+  const handleDiscard = () => {
+    clearDraftAttendance(classData.id, date);
     onClose();
   };
 
@@ -111,7 +117,7 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all"
           />
         </div>
-        <button onClick={() => setStatusMap(Object.fromEntries(students.map(s => [s.id, AttendanceStatus.Present])))} className="px-4 py-2.5 text-xs font-black text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 rounded-2xl border border-primary-100 dark:border-primary-800 transition-all uppercase tracking-widest">
+        <button onClick={() => { setStatusMap(Object.fromEntries(students.map(s => [s.id, AttendanceStatus.Present]))); setIsModified(true); }} className="px-4 py-2.5 text-xs font-black text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 rounded-2xl border border-primary-100 dark:border-primary-800 transition-all uppercase tracking-widest">
           All Present
         </button>
       </div>
@@ -146,7 +152,7 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
                     <button
                       key={status}
                       aria-pressed={isActive}
-                      onClick={() => setStatusMap(p => ({ ...p, [student.id]: status }))}
+                      onClick={() => { setStatusMap(p => ({ ...p, [student.id]: status })); setIsModified(true); }}
                       className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-tighter ${activeClass}`}
                     >
                       {status}
@@ -160,13 +166,21 @@ export const AttendanceModal = ({ classData, students, onClose }) => {
       </div>
 
       <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-4 shrink-0">
-        <div className="flex-1">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
-            * This will save as a draft. You must submit all drafts to Admin at the end of the month.
-          </p>
+        <div className="flex items-center gap-3">
+          {isModified ? (
+            <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full border border-amber-100 dark:border-amber-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Unsaved Changes</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-100 dark:border-emerald-800 animate-in fade-in zoom-in duration-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Draft Secured</span>
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-3 shrink-0">
-          <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Cancel</button>
+          <button onClick={handleDiscard} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-rose-500 transition-colors">Discard</button>
           <button onClick={handleSave} className="px-8 py-2.5 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/25 transition-all">Save Daily Draft</button>
         </div>
       </div>
@@ -187,10 +201,15 @@ const getScoreStyle = (val) => {
 };
 
 export const GradesModal = ({ classData, students, onClose }) => {
-  const { grades, draftGrades, subjects: globalSubjects, saveDraftGradeBatch } = useData();
+  const { grades, draftGrades, subjects: globalSubjects, saveDraftGradeBatch, clearDraftGrades } = useData();
   const [term, setTerm] = useState("Midterm");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [scoreMap, setScoreMap] = useState({});
   const [isModified, setIsModified] = useState(false);
+
+  const isPublished = useMemo(() => {
+    return grades.some(g => g.classId === classData.id && g.term === term && g.date === selectedDate);
+  }, [grades, classData.id, term, selectedDate]);
 
   // Merge permanent grades with local drafts
   const combinedGrades = useMemo(() => {
@@ -208,20 +227,21 @@ export const GradesModal = ({ classData, students, onClose }) => {
 
   // Determine subjects based on class level
   const subjects = useMemo(() => {
-    const existing = Array.from(new Set(combinedGrades.filter(g => g.classId === classData.id && g.term === term).map(g => g.subject)));
-    if (existing.length > 0) return existing;
+    const existing = combinedGrades.filter(g => g.classId === classData.id && g.term === term && g.date === selectedDate).map(g => g.subject);
     const category = /^K\s*\d+/.test((classData.level || "").trim().toUpperCase()) ? "Kid" : "JuniorSenior";
-    return globalSubjects[category] || [];
-  }, [combinedGrades, classData.id, classData.level, term, globalSubjects]);
+    const defaults = globalSubjects[category] || [];
+    // Union existing with defaults to prevent subjects from disappearing
+    return Array.from(new Set([...defaults, ...existing]));
+  }, [combinedGrades, classData.id, classData.level, term, selectedDate, globalSubjects]);
 
   // Initialize score map
   const lastLoadedRef = useRef(""); // term|classId
 
   useEffect(() => {
-    const contextKey = `${term}|${classData.id}`;
+    const contextKey = `${term}|${classData.id}|${selectedDate}`;
     if (lastLoadedRef.current === contextKey) return;
 
-    const relevant = combinedGrades.filter(g => g.term === term && g.classId === classData.id);
+    const relevant = combinedGrades.filter(g => g.term === term && g.classId === classData.id && g.date === selectedDate);
     const map = Object.fromEntries(students.map(s => [
       s.id, Object.fromEntries(subjects.map(sub => [
         sub, relevant.find(g => g.studentId === s.id && g.subject === sub)?.score ?? ""
@@ -230,43 +250,60 @@ export const GradesModal = ({ classData, students, onClose }) => {
     setScoreMap(map);
     setIsModified(false);
     lastLoadedRef.current = contextKey;
-  }, [term, students, combinedGrades, subjects, classData.id]);
+  }, [term, selectedDate, students, combinedGrades, subjects, classData.id]);
 
   // Auto-save effect
   useEffect(() => {
     if (!isModified) return;
     const timer = setTimeout(() => {
-      const existing = combinedGrades.filter(g => g.term === term && g.classId === classData.id);
+      const existing = combinedGrades.filter(g => g.term === term && g.classId === classData.id && g.date === selectedDate);
       const records = students.flatMap(s => 
-        subjects.filter(sub => scoreMap[s.id]?.[sub] !== "" && scoreMap[s.id]?.[sub] !== undefined)
-          .map(sub => {
-            const found = existing.find(g => g.studentId === s.id && g.subject === sub);
-            return {
-              id: found?.id ?? gradeId(classData.id, s.id, sub, term),
-              studentId: s.id,
-              classId: classData.id,
-              subject: sub,
-              score: Number(scoreMap[s.id][sub]),
-              term
-            };
-          })
+        subjects.map(sub => {
+          const scoreStr = scoreMap[s.id]?.[sub];
+          const found = existing.find(g => g.studentId === s.id && g.subject === sub);
+          const score = (scoreStr === "" || scoreStr === undefined) ? null : Number(scoreStr);
+          
+          return {
+            id: found?.id ?? gradeId(classData.id, s.id, sub, term, selectedDate),
+            studentId: s.id,
+            classId: classData.id,
+            subject: sub,
+            score,
+            term,
+            date: selectedDate
+          };
+        })
       );
       if (records.length > 0) saveDraftGradeBatch(records);
     }, 2000);
     return () => clearTimeout(timer);
-  }, [scoreMap, isModified, students, subjects, term, classData.id, combinedGrades, saveDraftGradeBatch]);
+  }, [scoreMap, isModified, students, subjects, term, selectedDate, classData.id, combinedGrades, saveDraftGradeBatch]);
 
   const handleSave = () => {
-    const existing = combinedGrades.filter(g => g.term === term && g.classId === classData.id);
+    const existing = combinedGrades.filter(g => g.term === term && g.classId === classData.id && g.date === selectedDate);
     const records = students.flatMap(s => 
-      subjects.filter(sub => scoreMap[s.id]?.[sub] !== "" && scoreMap[s.id]?.[sub] !== undefined)
-        .map(sub => ({
-          id: existing.find(g => g.studentId === s.id && g.subject === sub)?.id ?? gradeId(classData.id, s.id, sub, term),
-          studentId: s.id, classId: classData.id, subject: sub, score: Number(scoreMap[s.id][sub]), term
-        }))
+      subjects.map(sub => {
+        const scoreStr = scoreMap[s.id]?.[sub];
+        const score = (scoreStr === "" || scoreStr === undefined) ? null : Number(scoreStr);
+        return {
+          id: existing.find(g => g.studentId === s.id && g.subject === sub)?.id ?? gradeId(classData.id, s.id, sub, term, selectedDate),
+          studentId: s.id, 
+          classId: classData.id, 
+          subject: sub, 
+          score, 
+          term,
+          date: selectedDate
+        };
+      })
     );
+    
     saveDraftGradeBatch(records);
     setIsModified(false);
+    onClose();
+  };
+
+  const handleDiscard = () => {
+    clearDraftGrades(classData.id, term, selectedDate);
     onClose();
   };
 
@@ -295,11 +332,31 @@ export const GradesModal = ({ classData, students, onClose }) => {
         onClose={onClose}
         icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5L6 9v6l5 4V5zM15.5 8.5a4.5 4.5 0 010 7M19 6a8.5 8.5 0 010 12" /></svg>}
       >
-        <div className="flex items-center gap-2">
-          <label htmlFor="academic-term" className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:block">Term</label>
-          <select id="academic-term" value={term} onChange={e => setTerm(e.target.value)} className="px-4 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-primary-500">
-            {terms.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+        <div className="flex flex-wrap items-center gap-4">
+          {isPublished && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full border border-primary-100 dark:border-primary-800 animate-in fade-in zoom-in duration-500">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="text-[10px] font-black uppercase tracking-widest">Locked / Published</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <label htmlFor="academic-term" className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:block">Term</label>
+            <select id="academic-term" value={term} onChange={e => setTerm(e.target.value)} className="px-4 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-primary-500">
+              {terms.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="exam-date" className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:block">Date</label>
+            <input 
+              type="date" 
+              id="exam-date"
+              value={selectedDate} 
+              onChange={e => setSelectedDate(e.target.value)}
+              className="px-4 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-primary-500 text-slate-700 dark:text-slate-200"
+            />
+          </div>
         </div>
       </ModalHeader>
 
@@ -351,8 +408,9 @@ export const GradesModal = ({ classData, students, onClose }) => {
                             setScoreMap(p => ({ ...p, [student.id]: { ...p[student.id], [sub]: v } }));
                             setIsModified(true);
                           }}
+                          readOnly={isPublished}
                           className={`w-full text-center py-2.5 rounded-xl border-2 font-black text-sm outline-none transition-all 
-                            focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500/50 focus:bg-white dark:focus:bg-slate-800
+                            ${isPublished ? 'cursor-not-allowed opacity-80' : 'focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500/50 focus:bg-white dark:focus:bg-slate-800'}
                             ${getScoreStyle(scoreMap[student.id]?.[sub])}`}
                           placeholder="—"
                         />
@@ -383,8 +441,15 @@ export const GradesModal = ({ classData, students, onClose }) => {
           )}
         </div>
         <div className="flex gap-3">
-          <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Discard</button>
-          <button onClick={handleSave} className="px-10 py-2.5 bg-primary-600 text-white rounded-2xl font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/25 transition-all">Save Marks</button>
+          {!isPublished && <button onClick={handleDiscard} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-rose-500 transition-colors">Discard</button>}
+          <button 
+            onClick={isPublished ? onClose : handleSave} 
+            className={`px-10 py-2.5 rounded-2xl font-bold transition-all shadow-lg ${isPublished 
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-200 shadow-none' 
+              : 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-500/25'}`}
+          >
+            {isPublished ? 'Close Sheet' : 'Save Marks'}
+          </button>
         </div>
       </div>
     </Modal>

@@ -339,7 +339,7 @@ const ClassesPage = () => {
   // --- Utility Functions ---
   const getTeacherName = (teacherId, cls) => {
     const staffMember = staff.find((t) => t.id === teacherId);
-    if (!staffMember || staffMember.name.length < 5) {
+    if (!staffMember) {
       return cls?.teacherName || 'Unassigned';
     }
     return staffMember.name;

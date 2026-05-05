@@ -262,9 +262,11 @@ export const useStudentActions = (dependencies) => {
         warnings,
       });
 
-      addActivityLog({
-        action: `Imported ${finalAdd.length} students ${finalUpdate.length > 0 ? `and updated ${finalUpdate.length} records` : ''}`
-      });
+      if (addActivityLog) {
+        addActivityLog({
+          action: `Imported ${finalAdd.length} students ${finalUpdate.length > 0 ? `and updated ${finalUpdate.length} records` : ''}`
+        });
+      }
     } catch (e) {
       console.error(e);
       alert('Failed to save imported data.');

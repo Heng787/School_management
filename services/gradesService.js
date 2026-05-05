@@ -48,7 +48,8 @@ export const gradesService = {
     subjects,
     grades,
     selectedClassId,
-    selectedTerm
+    selectedTerm,
+    selectedDate
   ) {
     const recordsToSave = [];
 
@@ -62,13 +63,14 @@ export const gradesService = {
             g.studentId === studentId &&
             g.subject === subject &&
             g.classId === selectedClassId &&
-            g.term === selectedTerm
+            g.term === selectedTerm &&
+            (g.date === selectedDate || (!g.date && !grades.some(other => other.studentId === studentId && other.subject === subject && other.classId === selectedClassId && other.term === selectedTerm && other.date === selectedDate)))
           );
         });
 
         const id = existingGrade
           ? existingGrade.id
-          : gradeId(selectedClassId, studentId, subject, selectedTerm);
+          : gradeId(selectedClassId, studentId, subject, selectedTerm, selectedDate);
 
         recordsToSave.push({
           id,
@@ -77,6 +79,7 @@ export const gradesService = {
           subject,
           score,
           term: selectedTerm,
+          date: selectedDate
         });
       }
     }
@@ -94,7 +97,8 @@ export const gradesService = {
     subjects,
     grades,
     selectedClassId,
-    selectedTerm
+    selectedTerm,
+    selectedDate
   ) {
     const initialGrades = {};
 
@@ -107,7 +111,8 @@ export const gradesService = {
             g.studentId === student.id &&
             g.subject === subject &&
             g.classId === selectedClassId &&
-            g.term === selectedTerm
+            g.term === selectedTerm &&
+            (g.date === selectedDate || (!g.date && !grades.some(other => other.studentId === student.id && other.subject === subject && other.classId === selectedClassId && other.term === selectedTerm && other.date === selectedDate)))
           );
         });
 

@@ -30,8 +30,12 @@ const Autosuggest = ({ label, value, onChange, suggestions, onSelect, placeholde
 
   const handleInputChange = (e) => {
     onChange(e.target.value);
-    setIsOpen(e.target.value.length > 0);
+    setIsOpen(true);
     setActiveIndex(-1);
+  };
+
+  const handleFocus = () => {
+    setIsOpen(true);
   };
 
   const handleKeyDown = (e) => {
@@ -66,6 +70,7 @@ const Autosuggest = ({ label, value, onChange, suggestions, onSelect, placeholde
           type="text"
           value={value}
           onChange={handleInputChange}
+          onFocus={handleFocus}
           onKeyDown={handleKeyDown}
           className={inputCls}
           placeholder={placeholder}
@@ -79,7 +84,7 @@ const Autosuggest = ({ label, value, onChange, suggestions, onSelect, placeholde
         <ul 
           id={`${id}-listbox`}
           role="listbox"
-          className="absolute z-60 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {suggestions.length > 0 ? (
             suggestions.map((item, idx) => (
@@ -222,17 +227,24 @@ const ClassModal = ({ classData, onClose }) => {
 
     // --- HANDLERS ---
   const handleTeacherSearch = (query) => {
-    const trimmed = query.trimStart(); // Allow trailing spaces during typing
+    const trimmed = query.trimStart(); 
     setTeacherSearch(trimmed);
     setFormData(prev => ({ ...prev, teacherId: '' }));
-    setTeacherSuggestions(trimmed.trim() ? availableTeachers.filter(t => t.name.toLowerCase().includes(trimmed.trim().toLowerCase())) : []);
+    const filtered = availableTeachers.filter(t => 
+      t.name.toLowerCase().includes(trimmed.trim().toLowerCase())
+    );
+    setTeacherSuggestions(filtered);
   };
 
   const handleStudentSearch = (query) => {
     const trimmed = query.trimStart();
     setStudentSearch(trimmed);
     const selectedIds = new Set(selectedStudents.map(s => s.id));
-    setStudentSuggestions(trimmed.trim() ? students.filter(s => !selectedIds.has(s.id) && s.name.toLowerCase().includes(trimmed.trim().toLowerCase())) : []);
+    const filtered = students.filter(s => 
+      !selectedIds.has(s.id) && 
+      s.name.toLowerCase().includes(trimmed.trim().toLowerCase())
+    );
+    setStudentSuggestions(filtered);
   };
 
   const handleSubmit = async (e) => {
