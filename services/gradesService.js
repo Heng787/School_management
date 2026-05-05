@@ -64,7 +64,7 @@ export const gradesService = {
             g.subject === subject &&
             g.classId === selectedClassId &&
             g.term === selectedTerm &&
-            (g.date === selectedDate || (!g.date && !grades.some(other => other.studentId === studentId && other.subject === subject && other.classId === selectedClassId && other.term === selectedTerm && other.date === selectedDate)))
+            g.date === selectedDate
           );
         });
 
@@ -112,7 +112,7 @@ export const gradesService = {
             g.subject === subject &&
             g.classId === selectedClassId &&
             g.term === selectedTerm &&
-            (g.date === selectedDate || (!g.date && !grades.some(other => other.studentId === student.id && other.subject === subject && other.classId === selectedClassId && other.term === selectedTerm && other.date === selectedDate)))
+            g.date === selectedDate
           );
         });
 
