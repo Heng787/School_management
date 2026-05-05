@@ -170,8 +170,9 @@ const MessagesPage = () => {
 
     const contacts = filteredStaff.map((s) => {
       const msgs = messages.filter(
-        (m) => (m.senderId === s.id && m.recipientId === ADMIN_KEY) ||
-               (m.senderId === ADMIN_KEY && m.recipientId === s.id),
+        (m) => ((m.senderId === s.id && m.recipientId === ADMIN_KEY) ||
+               (m.senderId === ADMIN_KEY && m.recipientId === s.id)) &&
+               m.recipientId !== 'all' && m.type !== 'announcement',
       );
       const lastMsg = msgs[msgs.length - 1];
       const unread = msgs.filter(
@@ -200,7 +201,8 @@ const MessagesPage = () => {
 
     if (!isAdmin) {
       const adminMsgs = messages.filter(
-        (m) => m.senderId === ADMIN_KEY || m.recipientId === ADMIN_KEY,
+        (m) => (m.senderId === ADMIN_KEY || m.recipientId === ADMIN_KEY) &&
+               m.recipientId !== 'all' && m.type !== 'announcement',
       );
       const lastMsg = adminMsgs[adminMsgs.length - 1];
       const unread = adminMsgs.filter(
