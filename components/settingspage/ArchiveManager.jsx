@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import { useData } from "../../context/DataContext";
 import ConfirmModal from "../ConfirmModal";
-import { 
-  Archive, 
-  Users, 
-  GraduationCap, 
-  UserRound, 
-  RefreshCw, 
-  Trash2, 
+import {
+  Archive,
+  Users,
+  GraduationCap,
+  UserRound,
+  RefreshCw,
+  Trash2,
   Inbox,
   Search,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -39,9 +39,10 @@ const ArchiveManager = () => {
 
   const getFilteredItems = (items) => {
     if (!searchQuery) return items;
-    return items.filter(item => 
-      item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.id?.toString().includes(searchQuery)
+    return items.filter(
+      (item) =>
+        item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.id?.toString().includes(searchQuery),
     );
   };
 
@@ -70,10 +71,14 @@ const ArchiveManager = () => {
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case "class": return <Archive className="w-5 h-5" />;
-      case "student": return <GraduationCap className="w-5 h-5" />;
-      case "staff": return <UserRound className="w-5 h-5" />;
-      default: return <Inbox className="w-5 h-5" />;
+      case "class":
+        return <Archive className="w-5 h-5" />;
+      case "student":
+        return <GraduationCap className="w-5 h-5" />;
+      case "staff":
+        return <UserRound className="w-5 h-5" />;
+      default:
+        return <Inbox className="w-5 h-5" />;
     }
   };
 
@@ -82,7 +87,7 @@ const ArchiveManager = () => {
 
     if (items.length === 0) {
       return (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center justify-center py-20 bg-slate-50/50 dark:bg-slate-800/30 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700/50"
@@ -90,9 +95,12 @@ const ArchiveManager = () => {
           <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 text-slate-400 dark:text-slate-500">
             <Inbox className="w-10 h-10" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">No Archived {type}s</h3>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+            No Archived {type}s
+          </h3>
           <p className="text-slate-500 dark:text-slate-400 font-medium text-center max-w-xs">
-            Any {type} you archive will appear here for restoration or permanent deletion.
+            Any {type} you archive will appear here for restoration or permanent
+            deletion.
           </p>
         </motion.div>
       );
@@ -119,11 +127,15 @@ const ArchiveManager = () => {
               className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl hover:border-primary-200 dark:hover:border-primary-800 hover:shadow-xl hover:shadow-primary-500/5 transition-all gap-4"
             >
               <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-xl ${
-                  type === 'class' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' :
-                  type === 'student' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' :
-                  'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400'
-                }`}>
+                <div
+                  className={`p-3 rounded-xl ${
+                    type === "class"
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                      : type === "student"
+                        ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400"
+                        : "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                  }`}
+                >
                   {getTypeIcon(type)}
                 </div>
                 <div>
@@ -179,7 +191,7 @@ const ArchiveManager = () => {
     <div className="bg-white dark:bg-slate-900 p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] shadow-sm border border-slate-100 dark:border-slate-800 transition-all overflow-hidden relative">
       {/* Background Accent */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
-      
+
       <div className="relative z-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>
@@ -191,13 +203,14 @@ const ArchiveManager = () => {
               System Archive
             </h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium max-w-lg">
-              Manage non-destructive deletions. Restore items to their original place or permanently remove them from the system.
+              Manage non-destructive deletions. Restore items to their original
+              place or permanently remove them from the system.
             </p>
           </div>
 
           <div className="relative group min-w-[280px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary-500 transition-colors" />
-            <input 
+            <input
               type="text"
               placeholder="Search archived items..."
               value={searchQuery}
@@ -210,9 +223,24 @@ const ArchiveManager = () => {
         {/* Internal Tabs */}
         <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl mb-8 w-fit border border-slate-200 dark:border-slate-700/30">
           {[
-            { id: "classes", label: "Classes", count: archivedClasses.length, icon: <Archive className="w-4 h-4" /> },
-            { id: "students", label: "Students", count: archivedStudents.length, icon: <GraduationCap className="w-4 h-4" /> },
-            { id: "staff", label: "Staff", count: archivedStaff.length, icon: <UserRound className="w-4 h-4" /> },
+            {
+              id: "classes",
+              label: "Classes",
+              count: archivedClasses.length,
+              icon: <Archive className="w-4 h-4" />,
+            },
+            {
+              id: "students",
+              label: "Students",
+              count: archivedStudents.length,
+              icon: <GraduationCap className="w-4 h-4" />,
+            },
+            {
+              id: "staff",
+              label: "Staff",
+              count: archivedStaff.length,
+              icon: <UserRound className="w-4 h-4" />,
+            },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -224,7 +252,7 @@ const ArchiveManager = () => {
               }`}
             >
               {activeTab === tab.id && (
-                <motion.div 
+                <motion.div
                   layoutId="activeTabBg"
                   className="absolute inset-0 bg-white dark:bg-slate-700 rounded-xl shadow-sm"
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
@@ -259,10 +287,12 @@ const ArchiveManager = () => {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === "classes" && renderArchiveList(archivedClasses, "class")}
+              {activeTab === "classes" &&
+                renderArchiveList(archivedClasses, "class")}
               {activeTab === "students" &&
                 renderArchiveList(archivedStudents, "student")}
-              {activeTab === "staff" && renderArchiveList(archivedStaff, "staff")}
+              {activeTab === "staff" &&
+                renderArchiveList(archivedStaff, "staff")}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -281,4 +311,3 @@ const ArchiveManager = () => {
 };
 
 export default ArchiveManager;
-
