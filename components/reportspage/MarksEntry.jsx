@@ -98,14 +98,22 @@ const MarksEntry = () => {
     const contextKey = `${selectedClassId}|${selectedTerm}|${selectedDate}`;
     const isNewContext = lastLoadedRef.current !== contextKey;
 
-    if (isNewContext) {
+    // Only load from DB if:
+    // 1. We just switched to a new class/term/date (isNewContext)
+    // 2. OR we haven't started editing yet (modifiedIds.size === 0)
+    // This allows the initial load to succeed once 'combinedGrades' arrives,
+    // but prevents background syncs from wiping out active typing.
+    if (isNewContext || modifiedIds.size === 0) {
       const initial = gradesService.initializeLocalGrades(classStudents, classSubjects, combinedGrades, selectedClassId, selectedTerm, selectedDate);
       setLocalGrades(initial);
-      setModifiedIds(new Set());
-      setSaveSuccess(false);
-      lastLoadedRef.current = contextKey;
+      
+      if (isNewContext) {
+        setModifiedIds(new Set());
+        setSaveSuccess(false);
+        lastLoadedRef.current = contextKey;
+      }
     }
-  }, [classStudents, classSubjects, selectedClassId, selectedTerm, selectedDate]); // Removed 'grades' to prevent sync-induced resets
+  }, [classStudents, classSubjects, selectedClassId, selectedTerm, selectedDate, combinedGrades]); 
 
   // --- HANDLERS ---
   const handleGradeChange = (studentId, subject, value) => {
