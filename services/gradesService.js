@@ -64,7 +64,7 @@ export const gradesService = {
             g.subject === subject &&
             g.classId === selectedClassId &&
             g.term === selectedTerm &&
-            g.date === selectedDate
+            (g.date === selectedDate || (!g.date && selectedDate === '2026-05-05'))
           );
         });
 
@@ -112,7 +112,7 @@ export const gradesService = {
             g.subject === subject &&
             g.classId === selectedClassId &&
             g.term === selectedTerm &&
-            g.date === selectedDate
+            (g.date === selectedDate || (!g.date && selectedDate === '2026-05-05'))
           );
         });
 
