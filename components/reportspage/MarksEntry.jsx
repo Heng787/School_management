@@ -191,15 +191,41 @@ const MarksEntry = () => {
               {["Midterm", "Finals", "Q1", "Q2", "Q3", "Q4"].map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-64">
             <label htmlFor="academic-date-select" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Exam Date</label>
-            <input 
-              type="date" 
-              id="academic-date-select" 
-              value={selectedDate} 
-              onChange={e => setSelectedDate(e.target.value)} 
-              className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white outline-none"
-            />
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  const d = new Date(selectedDate);
+                  d.setDate(d.getDate() - 1);
+                  setSelectedDate(d.toISOString().split('T')[0]);
+                }}
+                className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 hover:text-primary-500 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all active:scale-90"
+                title="Previous Day"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              
+              <input 
+                type="date" 
+                id="academic-date-select" 
+                value={selectedDate} 
+                onChange={e => setSelectedDate(e.target.value)} 
+                className="flex-1 min-w-0 px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white outline-none"
+              />
+
+              <button 
+                onClick={() => {
+                  const d = new Date(selectedDate);
+                  d.setDate(d.getDate() + 1);
+                  setSelectedDate(d.toISOString().split('T')[0]);
+                }}
+                className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 hover:text-primary-500 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all active:scale-90"
+                title="Next Day"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
           </div>
         </div>
 
