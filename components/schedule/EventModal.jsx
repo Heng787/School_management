@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useData } from "../../context/DataContext";
-import { EventType } from "../../types";
+import { EventType, UserRole } from "../../types";
 
 /**
  * COMPONENT: EventModal
@@ -8,7 +8,7 @@ import { EventType } from "../../types";
  */
 const EventModal = ({ eventData, selectedDate, onClose }) => {
   // --- STATE & DATA ---
-  const { addEvent, updateEvent, deleteEvent } = useData();
+  const { addEvent, updateEvent, deleteEvent, currentUser } = useData();
   const [formData, setFormData] = useState({
     title: "",
     date: selectedDate || new Date().toISOString().split("T")[0],
@@ -50,7 +50,7 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
       if (eventData) {
         await updateEvent({ ...eventData, ...formData });
       } else {
-        await addEvent(formData);
+        await addEvent(formData, { id: currentUser?.id, role: currentUser?.role });
       }
       onClose();
     } catch (err) {
@@ -141,6 +141,17 @@ const EventModal = ({ eventData, selectedDate, onClose }) => {
               required
             />
           </div>
+
+          {currentUser?.role === UserRole.Teacher && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 rounded-lg transition-colors">
+              <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">
+                🔒 Private Event
+              </span>
+              <span className="text-[10px] text-amber-500 dark:text-amber-500 font-medium">
+                Only you and admins will see this.
+              </span>
+            </div>
+          )}
 
           {error && <p className="text-sm text-red-600 dark:text-red-400 transition-colors">{error}</p>}
 

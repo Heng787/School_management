@@ -279,6 +279,29 @@ export const DataProvider = ({ children }) => {
     return staffOps.deleteStaff(id);
   }, [staffOps, academicOps]);
 
+  // Apply visibility rules to events
+  const filteredEvents = useMemo(() => {
+    const rawEvents = operationalOps.events;
+    if (!currentUser) return rawEvents;
+    
+    return rawEvents.filter(event => {
+      // 1. Legacy/System events (no creatorRole) are visible to everyone
+      if (!event.creatorRole) return true;
+      
+      // 2. Admin & Office Staff events are public
+      if (event.creatorRole === UserRole.Admin || event.creatorRole === UserRole.OfficeWorker) {
+        return true;
+      }
+      
+      // 3. Teacher events are private to the creator (Admins can still see for management)
+      if (event.creatorRole === UserRole.Teacher) {
+        return event.creatorId === currentUser.id || currentUser.role === UserRole.Admin;
+      }
+      
+      return true;
+    });
+  }, [operationalOps.events, currentUser]);
+
   const value = useMemo(() => ({
     ...studentOps,
     ...staffOps,
@@ -286,6 +309,7 @@ export const DataProvider = ({ children }) => {
     ...configOps,
     ...operationalOps,
     ...syncOps,
+    events: filteredEvents, // Override raw events with filtered version
     deleteStudent, // Override with wrapped version
     deleteStaff,   // Override with wrapped version
     loading,

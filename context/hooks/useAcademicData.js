@@ -66,7 +66,7 @@ export const useAcademicData = (setError) => {
     const archiveClass = useCallback((id) => {
         const cls = classes.find(c => c.id === id);
         if (cls) {
-            updateClass({ ...cls, isArchived: true });
+            updateClass({ ...cls, isArchived: true, archivedAt: new Date().toISOString() });
         }
     }, [classes, updateClass]);
 

@@ -12,6 +12,8 @@ import {
   AlertCircle,
   CheckSquare,
   Square,
+  Clock,
+  ArrowUpDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,6 +35,7 @@ const ArchiveManager = () => {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest"); // newest, oldest, name
 
   // Bulk selection state (keyed by tab)
   const [selectedIds, setSelectedIds] = useState({ classes: new Set(), students: new Set(), staff: new Set() });
@@ -46,12 +49,21 @@ const ArchiveManager = () => {
   const currentType  = activeTab === "classes" ? "class"          : activeTab === "students" ? "student"         : "staff";
 
   const getFilteredItems = (items) => {
-    if (!searchQuery) return items;
-    return items.filter(
-      (item) =>
-        item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.id?.toString().includes(searchQuery),
-    );
+    let result = items;
+    if (searchQuery) {
+      result = items.filter(
+        (item) =>
+          item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.id?.toString().includes(searchQuery),
+      );
+    }
+
+    return [...result].sort((a, b) => {
+      if (sortBy === "newest") return new Date(b.archivedAt || 0) - new Date(a.archivedAt || 0);
+      if (sortBy === "oldest") return new Date(a.archivedAt || 0) - new Date(b.archivedAt || 0);
+      if (sortBy === "name")   return (a.name || "").localeCompare(b.name || "");
+      return 0;
+    });
   };
 
   // --- Single item actions ---
@@ -280,6 +292,12 @@ const ArchiveManager = () => {
                             {item.role}
                           </span>
                         )}
+                        {item.archivedAt && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 rounded-md text-[10px] font-bold tracking-wider uppercase">
+                            <Clock className="w-2.5 h-2.5" />
+                            Archived {new Date(item.archivedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -319,30 +337,51 @@ const ArchiveManager = () => {
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
 
       <div className="relative z-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div className="mb-12 space-y-8">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full text-xs font-bold mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 text-amber-600 dark:text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-amber-500/20 shadow-sm">
               <AlertCircle className="w-3 h-3" />
-              Administrative Tool
+              Administrative Control Center
             </div>
-            <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight mb-2">
+            
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-800 dark:text-white tracking-tight mb-4 flex items-center gap-4 whitespace-nowrap">
               System Archive
+              <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent dark:from-slate-800 hidden sm:block" />
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 font-medium max-w-lg">
-              Manage non-destructive deletions. Restore items to their original
-              place or permanently remove them from the system.
+            
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg sm:text-xl leading-relaxed max-w-4xl">
+              Maintain complete control over your data. Restore archived records to their 
+              original context or perform <span className="text-red-500 dark:text-red-400 font-bold">permanent deletions</span> to clear system space.
             </p>
           </div>
 
-          <div className="relative group min-w-[280px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Search archived items..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); clearSelection(); }}
-              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary-500/20 transition-all"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="relative group flex-1 max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary-500 transition-colors pointer-events-none z-10" />
+              <input
+                type="text"
+                placeholder="Search archived items..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); clearSelection(); }}
+                className="w-full px-12 py-4 bg-slate-50 dark:bg-slate-800/40 border-2 border-transparent focus:border-primary-500/20 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-100 focus:ring-4 focus:ring-primary-500/10 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-center"
+              />
+            </div>
+            
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border-2 border-transparent w-fit">
+              <ArrowUpDown className="w-4 h-4 text-slate-400" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sort By</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-transparent border-none text-sm font-black text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer p-0 pr-8"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name">Alphabetical</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 

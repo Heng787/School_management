@@ -11,11 +11,19 @@ export const useOperationalData = (setError) => {
     const [tasks, setTasks] = useState(() => localStore.get('tasks', []));
     const [activityLogs, setActivityLogs] = useState(() => localStore.get('activity_logs', []));
 
-    const addEvent = useCallback((data) =>
+    const addEvent = useCallback((data, creator = null) =>
         performDataUpdate(
             (d) => apiService.saveEvents(d),
             setEvents,
-            (prev) => [...prev, { ...data, id: `evt_${Date.now()}` }].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+            (prev) => [
+                ...prev, 
+                { 
+                    ...data, 
+                    id: `evt_${Date.now()}`,
+                    creatorId: creator?.id,
+                    creatorRole: creator?.role
+                }
+            ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
             (err) => setError(`Event save failed: ${err.message}`)
         ), [setError]);
 

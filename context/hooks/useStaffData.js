@@ -38,7 +38,7 @@ export const useStaffData = (setError) => {
     const archiveStaff = useCallback((id) => {
         const staffMember = staff.find(s => s.id === id);
         if (staffMember) {
-            updateStaff({ ...staffMember, isArchived: true });
+            updateStaff({ ...staffMember, isArchived: true, archivedAt: new Date().toISOString() });
         }
     }, [staff, updateStaff]);
 

@@ -51,7 +51,7 @@ export const useStudentData = (setError) => {
     const archiveStudent = useCallback((id) => {
         const student = students.find(s => s.id === id);
         if (student) {
-            updateStudent({ ...student, isArchived: true });
+            updateStudent({ ...student, isArchived: true, archivedAt: new Date().toISOString() });
         }
     }, [students, updateStudent]);
 
