@@ -177,22 +177,53 @@ const ArchiveManager = () => {
 
     return (
       <div className="space-y-3">
-        {/* Select All row */}
-        <div className="flex items-center justify-between px-2 pb-1 border-b border-slate-100 dark:border-slate-800">
-          <button
-            onClick={toggleSelectAll}
-            className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-          >
-            {allFilteredSelected
-              ? <CheckSquare className="w-4 h-4 text-primary-500" />
-              : <Square className="w-4 h-4" />}
-            {allFilteredSelected ? "Deselect All" : "Select All"} ({filtered.length})
-          </button>
-          {currentSelected.size > 0 && (
-            <span className="text-xs text-primary-600 dark:text-primary-400 font-bold">
-              {currentSelected.size} selected
-            </span>
-          )}
+        {/* Bulk Action Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 pb-3 gap-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            >
+              {allFilteredSelected
+                ? <CheckSquare className="w-4 h-4 text-primary-500" />
+                : <Square className="w-4 h-4" />}
+              {allFilteredSelected ? "Deselect All" : "Select All"} ({filtered.length})
+            </button>
+            {currentSelected.size > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <span className="text-xs text-primary-600 dark:text-primary-400 font-bold">
+                  {currentSelected.size} selected
+                </span>
+              </div>
+            )}
+          </div>
+
+          <AnimatePresence>
+            {currentSelected.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="flex items-center gap-2"
+              >
+                <button
+                  onClick={handleBulkRestore}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all rounded-xl font-bold text-xs"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Restore Selected
+                </button>
+                <button
+                  onClick={() => setIsBulkDeleteOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all rounded-xl font-bold text-xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Selected
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -373,47 +404,7 @@ const ArchiveManager = () => {
         </div>
       </div>
 
-      {/* ── Floating Bulk Action Toolbar ── */}
-      <AnimatePresence>
-        {currentSelected.size > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24 }}
-            transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl shadow-2xl shadow-slate-900/40 border border-slate-700"
-          >
-            <span className="text-sm font-black text-slate-300 mr-1">
-              {currentSelected.size} selected
-            </span>
 
-            <button
-              onClick={clearSelection}
-              className="text-xs font-bold text-slate-400 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-slate-700"
-            >
-              Clear
-            </button>
-
-            <div className="w-px h-6 bg-slate-700" />
-
-            <button
-              onClick={handleBulkRestore}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/30"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Restore All
-            </button>
-
-            <button
-              onClick={() => setIsBulkDeleteOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-400 text-white rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg shadow-red-500/30"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete All
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Single delete confirm */}
       <ConfirmModal
