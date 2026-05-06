@@ -9,6 +9,8 @@ const TeacherHeaderActions = ({
   onDownloadTemplate,
   onImportClick,
   onAddStaff,
+  onBulkArchive,
+  selectedCount = 0,
   fileInputRef,
 }) => {
   return (
@@ -25,6 +27,19 @@ const TeacherHeaderActions = ({
 
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
+        {/* Bulk Archive */}
+        {selectedCount > 0 && (
+          <button
+            onClick={onBulkArchive}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-bold rounded-xl transition-all
+              text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            Archive Selected ({selectedCount})
+          </button>
+        )}
 
         {/* Template */}
         <button

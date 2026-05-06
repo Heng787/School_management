@@ -10,6 +10,8 @@ import { BookOpen, Calendar, Clock, ChevronRight, GraduationCap } from "lucide-r
 const TeacherTableRow = ({
   staff,
   isHighlighted,
+  isSelected,
+  onToggleSelect,
   isOnLeave,
   isAdmin,
   isRestricted,
@@ -90,9 +92,19 @@ const TeacherTableRow = ({
       <tr
         ref={highlightedRowRef}
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`transition-all duration-300 cursor-pointer ${rowHighlight} ${isExpanded ? 'shadow-inner' : ''}`}
+        className={`transition-all duration-300 cursor-pointer ${rowHighlight} ${isExpanded ? 'shadow-inner' : ''} ${isSelected ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''}`}
         style={isHighlighted ? { boxShadow: "inset 3px 0 0 #0ea5e9" } : {}}
       >
+        {/* Selection Checkbox */}
+        <td className="px-5 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            className="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500 cursor-pointer"
+            checked={isSelected}
+            onChange={onToggleSelect}
+            aria-label={`Select ${staff.name}`}
+          />
+        </td>
         {/* Name */}
         <td className="px-5 py-4 whitespace-nowrap">
           <div className="flex items-center gap-3">
@@ -192,7 +204,7 @@ const TeacherTableRow = ({
       <AnimatePresence>
         {isExpanded && (
           <tr>
-            <td colSpan={6} className="p-0 border-none">
+            <td colSpan={7} className="p-0 border-none">
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}

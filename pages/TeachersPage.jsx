@@ -56,6 +56,40 @@ const TeachersPage = () => {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState(null);
   const [isAllPermissionModalOpen, setIsAllPermissionModalOpen] = useState(false);
+  const [selectedStaffIds, setSelectedStaffIds] = useState(new Set());
+
+  // --- Selection Handlers ---
+  const toggleSelect = (id) => {
+    setSelectedStaffIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (ids) => {
+    const allOnPageSelected = ids.every(id => selectedStaffIds.has(id));
+    setSelectedStaffIds(prev => {
+      const next = new Set(prev);
+      if (allOnPageSelected) {
+        ids.forEach(id => next.delete(id));
+      } else {
+        ids.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBulkArchive = async () => {
+    const ids = Array.from(selectedStaffIds);
+    for (const id of ids) {
+      await archiveStaff(id);
+    }
+    setSelectedStaffIds(new Set());
+    setIsBulkDeleteOpen(false);
+  };
+
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
   // --- Custom Hooks for Actions ---
   const teacherActions = useTeacherActions({
@@ -125,7 +159,9 @@ const TeachersPage = () => {
       {/* Header with Actions */}
       <TeacherHeaderActions
         fileInputRef={fileInputRef}
+        selectedCount={selectedStaffIds.size}
         onAddStaff={() => handleOpenModal()}
+        onBulkArchive={() => setIsBulkDeleteOpen(true)}
         onDownloadReport={teacherActions.handleDownloadReport}
         onDownloadTemplate={teacherActions.handleDownloadTemplate}
         onImportClick={() => fileInputRef.current?.click()}
@@ -168,6 +204,9 @@ const TeachersPage = () => {
           currentPage={currentPage}
           staffPermissions={staffPermissions}
           highlightedStaffId={highlightedStaffId}
+          selectedStaffIds={selectedStaffIds}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
           onDelete={(staffMember) => {
             setStaffToDelete(staffMember);
             setIsConfirmDeleteOpen(true);
@@ -227,6 +266,16 @@ const TeachersPage = () => {
           setIsConfirmDeleteOpen(false);
         }}
         onClose={() => setIsConfirmDeleteOpen(false)}
+      />
+
+      <ConfirmModal
+        isOpen={isBulkDeleteOpen}
+        title="Archive Selected Staff"
+        message={`Are you sure you want to archive ${selectedStaffIds.size} selected staff members? They will be hidden from the main list but can be restored later.`}
+        confirmText={`Archive ${selectedStaffIds.size} Staff`}
+        confirmColor="amber"
+        onConfirm={handleBulkArchive}
+        onClose={() => setIsBulkDeleteOpen(false)}
       />
     </div>
   );

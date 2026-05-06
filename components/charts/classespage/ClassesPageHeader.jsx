@@ -11,6 +11,7 @@ import {
 const ClassesPageHeader = ({
   selectedClassIds,
   isAdmin,
+  isOffice,
   isConfigOpen,
   onDeleteSelected,
   onExportSelected,
@@ -32,7 +33,7 @@ const ClassesPageHeader = ({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2 pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 w-[calc(100%+2rem)] md:w-auto">
-        {selectedClassIds.size > 0 && isAdmin && (
+        {selectedClassIds.size > 0 && (isAdmin || isOffice) && (
           <div className="flex items-center gap-2">
             <DeleteSelectedButton
               selectedCount={selectedClassIds.size}
@@ -44,7 +45,7 @@ const ClassesPageHeader = ({
             />
           </div>
         )}
-        {isAdmin && (
+        {(isAdmin || isOffice) && (
           <>
             <TemplateButton onDownload={onDownloadTemplate} />
             <ImportButton onImport={onImportClick} />
@@ -55,12 +56,16 @@ const ClassesPageHeader = ({
               accept=".csv, .xlsx, .xls"
               className="hidden"
             />
-            <ClassSettingsButton
-              isOpen={isConfigOpen}
-              onToggle={onToggleConfig}
-            />
-            <AddClassButton onAdd={onAddClass} />
           </>
+        )}
+        {isAdmin && (
+          <ClassSettingsButton
+            isOpen={isConfigOpen}
+            onToggle={onToggleConfig}
+          />
+        )}
+        {(isAdmin || isOffice) && (
+          <AddClassButton onAdd={onAddClass} />
         )}
       </div>
     </div>

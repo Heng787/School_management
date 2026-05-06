@@ -13,6 +13,9 @@ const TeacherTable = ({
   currentPage,
   setCurrentPage,
   highlightedStaffId,
+  selectedStaffIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll,
   staffPermissions,
   isAdmin,
   isRestricted,
@@ -42,6 +45,15 @@ const TeacherTable = ({
           {/* Header */}
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-300 dark:border-slate-700/60">
+              <th className="px-5 py-3 text-left w-10">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500 cursor-pointer"
+                  checked={paginatedStaff.length > 0 && paginatedStaff.every(s => selectedStaffIds.has(s.id))}
+                  onChange={() => onToggleSelectAll(paginatedStaff.map(s => s.id))}
+                  aria-label="Select all staff on this page"
+                />
+              </th>
               <th {...getColHeaderProps()}>Name</th>
               <th {...getColHeaderProps()}>Role</th>
               <th {...getColHeaderProps()}>Date of Birth</th>
@@ -66,6 +78,8 @@ const TeacherTable = ({
                   key={s.id}
                   staff={s}
                   isHighlighted={isHighlighted}
+                  isSelected={selectedStaffIds.has(s.id)}
+                  onToggleSelect={() => onToggleSelect(s.id)}
                   isOnLeave={isOnLeave}
                   isAdmin={isAdmin}
                   isRestricted={isRestricted}
@@ -81,7 +95,7 @@ const TeacherTable = ({
 
             {filteredStaff.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-20 text-center">
+                <td colSpan={7} className="py-20 text-center">
                   <div className="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-600">
                     <svg className="w-10 h-10 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"

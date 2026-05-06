@@ -413,6 +413,7 @@ const ClassesPage = () => {
         <ClassesPageHeader
           selectedClassIds={state.selectedClassIds}
           isAdmin={isAdmin}
+          isOffice={isOffice}
           isConfigOpen={state.isConfigOpen}
           onDeleteSelected={handleArchiveSelected}
           onExportSelected={handleExportSelected}
