@@ -9,7 +9,7 @@ import { useSyncEngine } from './hooks/useSyncEngine';
 
 import { apiService } from '../services/apiService';
 
-import { UserRole } from '../types';
+import { UserRole, StudentStatus } from '../types';
 import { generateHolidays } from '../utils/dataUtils';
 
 export const DataContext = createContext(undefined);
@@ -270,6 +270,21 @@ export const DataProvider = ({ children }) => {
     });
   }, [studentOps, academicOps]);
 
+  // Wrap updateStudent to handle status-based cascading cleanup
+  const updateStudent = useCallback(async (updated) => {
+    const res = await studentOps.updateStudent(updated);
+    
+    // If status changed to Dropout or Suspended, remove from all classes
+    if (updated.status === StudentStatus.Dropout || updated.status === StudentStatus.Suspended) {
+      academicOps.setEnrollments(prev => prev.filter(e => e.studentId !== updated.id));
+      // Optional: Add activity log for auto-removal
+      operationalOps.addActivityLog({
+        action: `Student "${updated.name}" automatically removed from classes due to status change to ${updated.status}`
+      });
+    }
+    return res;
+  }, [studentOps, academicOps, operationalOps]);
+
   // Wrap deleteStaff to include potential cleanup (e.g. unassigning from classes)
   const deleteStaff = useCallback(async (id) => {
     // Before deleting staff, unassign them from any classes they teach
@@ -311,6 +326,7 @@ export const DataProvider = ({ children }) => {
     ...syncOps,
     events: filteredEvents, // Override raw events with filtered version
     deleteStudent, // Override with wrapped version
+    updateStudent, // Override with wrapped version
     deleteStaff,   // Override with wrapped version
     loading,
     error,
@@ -330,7 +346,7 @@ export const DataProvider = ({ children }) => {
     studentOps, staffOps, academicOps, configOps, operationalOps, syncOps,
     loading, error, currentUser, highlightedStudentId, highlightedStaffId, 
     highlightedClassId, setError, handleSetCurrentUser, importAllData, deleteAllData,
-    deleteStudent, deleteStaff
+    deleteStudent, deleteStaff, updateStudent
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

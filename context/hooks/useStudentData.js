@@ -22,7 +22,10 @@ export const useStudentData = (setError) => {
                     if (data.id && !data.id.startsWith('stu_imp_')) return data;
                     return { ...data, id: `s${++lastIdInt}` };
                 });
-                return [...current, ...newOnes];
+                const next = [...current, ...newOnes];
+                // Ensure uniqueness by ID
+                const uniqueMap = new Map(next.map(s => [s.id, s]));
+                return Array.from(uniqueMap.values());
             },
             (err) => setError(`Save failed: ${err.message || err}. Changes kept locally.`)
         ), [setError]);

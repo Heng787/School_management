@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import Modal from './ui/Modal';
-import { StaffRole } from '../types';
+import { StaffRole, StudentStatus } from '../types';
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
 const inputCls = 'mt-1 w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all';
@@ -203,8 +203,8 @@ const ClassModal = ({ classData, onClose }) => {
     if (teacher) setTeacherSearch(teacher.name);
 
     // Resolve enrolled students
-    const enrolledIds = enrollments.filter(e => e.classId === classData.id).map(e => e.studentId);
-    setSelectedStudents(students.filter(s => enrolledIds.includes(s.id)));
+    const enrolledIds = new Set(enrollments.filter(e => e.classId === classData.id).map(e => e.studentId));
+    setSelectedStudents(students.filter(s => enrolledIds.has(s.id)));
 
     // Parse schedule
     if (classData.schedule) {
@@ -242,6 +242,8 @@ const ClassModal = ({ classData, onClose }) => {
     const selectedIds = new Set(selectedStudents.map(s => s.id));
     const filtered = students.filter(s => 
       !selectedIds.has(s.id) && 
+      s.status !== StudentStatus.Dropout && 
+      s.status !== StudentStatus.Suspended &&
       s.name.toLowerCase().includes(trimmed.trim().toLowerCase())
     );
     setStudentSuggestions(filtered);
@@ -364,6 +366,14 @@ const ClassModal = ({ classData, onClose }) => {
             onChange={handleStudentSearch}
             suggestions={studentSuggestions}
             onSelect={(s) => { 
+              if (s.status === StudentStatus.Pending) {
+                const proceed = window.confirm(`This student is currently PENDING. Are you sure you want to enroll them?`);
+                if (!proceed) return;
+              }
+              if (selectedStudents.some(x => x.id === s.id)) {
+                setError(`The student "${s.name}" is already in the enrollment list.`);
+                return;
+              }
               const existingEnr = enrollments.find(e => e.studentId === s.id && (classData ? e.classId !== classData.id : true));
               if (existingEnr) {
                 const enrolledClass = classes.find(c => c.id === existingEnr.classId);
@@ -377,7 +387,10 @@ const ClassModal = ({ classData, onClose }) => {
             placeholder="Search students to enroll..."
             renderItem={(s) => (
               <>
-                <span className="font-bold">{s.name}</span>
+                <div className="flex flex-col">
+                  <span className="font-bold">{s.name}</span>
+                  <span className="text-[10px] text-slate-500">{s.status}</span>
+                </div>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">{s.level}</span>
               </>
             )}
