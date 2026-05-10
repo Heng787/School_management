@@ -137,7 +137,7 @@ const ClassRow = ({
                   </span>
                 </span>
               </div>
-              <div 
+              <div
                 role="progressbar"
                 aria-valuenow={studentCount}
                 aria-valuemin="0"
@@ -146,12 +146,12 @@ const ClassRow = ({
                 className="w-full bg-slate-200/80 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner flex"
               >
                 <div
-                  className={`h-2 rounded-full transition-all duration-1000 ease-out ${
+                  className={`h-2 rounded-full transition-all duration-1000 ease-out shadow-xs ${
                     percentage >= 100
-                      ? "bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_12px_rgba(239,68,68,0.8)]"
+                      ? "bg-gradient-to-r from-red-600 to-red-400"
                       : percentage > 80
-                        ? "bg-gradient-to-r from-amber-500 to-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                        : "bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                        ? "bg-gradient-to-r from-amber-500 to-amber-300"
+                        : "bg-gradient-to-r from-emerald-500 to-emerald-300"
                   }`}
                   style={{ width: `${percentage}%` }}
                 ></div>

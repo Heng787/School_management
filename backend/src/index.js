@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const syncRoutes = require('./routes/syncRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const studentRoutes = require('./routes/studentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/students', studentRoutes);
 
 // Global Error Handler
 app.use(errorMiddleware);

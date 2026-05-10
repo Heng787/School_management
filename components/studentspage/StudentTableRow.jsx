@@ -63,21 +63,29 @@ const StudentTableRow = ({
 
   const statusBadge = getStatusBadge(student.status);
 
-  // Gender display
-  const isFemale = (student.sex || "").toLowerCase().startsWith("f");
-  const genderColor = isFemale
-    ? "text-pink-500 dark:text-pink-400"
-    : "text-blue-500 dark:text-blue-400";
-  const genderLabel = isFemale ? "Female" : "Male";
-  const genderIcon = isFemale ? (
-    <svg className={`w-3.5 h-3.5 ${genderColor}`} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2a5 5 0 100 10A5 5 0 0012 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/>
-    </svg>
-  ) : (
-    <svg className={`w-3.5 h-3.5 ${genderColor}`} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2a5 5 0 100 10A5 5 0 0012 2zm0 12c-5.33 0-8 2.67-8 4v2h16v-2c0-1.33-2.67-4-8-4z"/>
-    </svg>
-  );
+  // Gender display logic
+  const studentSex = (student.sex || student.gender || "").trim().toLowerCase();
+  const isGirl = ["female", "f", "girl"].includes(studentSex);
+
+  const genderConfig = isGirl
+    ? {
+        label: "Female",
+        cls: "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 border-pink-100 dark:border-pink-800/50",
+        icon: (
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+            <circle cx="12" cy="8" r="4"/><line x1="12" y1="12" x2="12" y2="20"/><line x1="9" y1="17" x2="15" y2="17"/>
+          </svg>
+        )
+      }
+    : {
+        label: "Male",
+        cls: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800/50",
+        icon: (
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+            <circle cx="10" cy="14" r="4"/><line x1="21" y1="3" x2="15" y2="9"/><polyline points="15 3 21 3 21 9"/>
+          </svg>
+        )
+      };
 
   const rowBg = isHighlighted
     ? "bg-primary-50 dark:bg-primary-900/15"
@@ -146,17 +154,9 @@ const StudentTableRow = ({
 
       {/* Gender */}
       <td className="px-5 py-3.5 whitespace-nowrap">
-        <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${isFemale ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 border-pink-100 dark:border-pink-800/50' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800/50'}`}>
-          {isFemale ? (
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-              <circle cx="12" cy="8" r="4"/><line x1="12" y1="12" x2="12" y2="20"/><line x1="9" y1="17" x2="15" y2="17"/>
-            </svg>
-          ) : (
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-              <circle cx="10" cy="14" r="4"/><line x1="21" y1="3" x2="15" y2="9"/><polyline points="15 3 21 3 21 9"/>
-            </svg>
-          )}
-          {genderLabel}
+        <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${genderConfig.cls}`}>
+          {genderConfig.icon}
+          {genderConfig.label}
         </span>
       </td>
 

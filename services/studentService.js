@@ -1,4 +1,4 @@
-import { fetchCollection, pushCollection } from './core';
+import { fetchCollection, pushCollection, post } from './core';
 import {
   mapStudent,
   mapGrade,
@@ -18,6 +18,10 @@ export const studentService = {
 
   saveStudents: async (students) => {
     return pushCollection('students', students, mapStudent.toDb);
+  },
+
+  validateStudent: async (studentData) => {
+    return post('/api/students/validate', studentData);
   },
 
   // --- Academic Data ---

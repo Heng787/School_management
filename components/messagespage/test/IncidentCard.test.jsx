@@ -1,19 +1,17 @@
 // Auto-generated test scaffolding
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 // import * as ModuleToTest from '.././IncidentCard.jsx';
 
-describe('IncidentCard', () => {
-  it('should render correctly with default props', () => {
+describe("IncidentCard", () => {
+  it("should render correctly with default props", () => {
     // Arrange & Act
     // render(<IncidentCard />);
-    
     // Assert
-    // expect(screen.getByText('...')).toBeInTheDocument();
+    //expect(screen.getByText("done")).toBeInTheDocument();
   });
 
-  it('should handle user interactions', () => {
+  it("should handle user interactions", () => {
     // TODO: implement
   });
 });
-

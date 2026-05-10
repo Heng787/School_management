@@ -7,11 +7,13 @@ export const useFilters = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [genderFilter, setGenderFilter] = useState('All');
 
   const resetFilters = useCallback(() => {
     setSearchTerm('');
     setClassFilter('All');
     setStatusFilter('All');
+    setGenderFilter('All');
   }, []);
 
   return {
@@ -21,6 +23,8 @@ export const useFilters = () => {
     setClassFilter,
     statusFilter,
     setStatusFilter,
+    genderFilter,
+    setGenderFilter,
     resetFilters,
   };
 };

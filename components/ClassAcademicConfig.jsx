@@ -164,7 +164,7 @@ export const LevelManager = () => {
             <option value="Senior">Senior</option>
             <option value="Custom">Custom</option>
           </select>
-          <div className="flex-grow">
+          <div className="grow">
             <label htmlFor="level-name-input" className="sr-only">Level Name</label>
             <input
               id="level-name-input"
@@ -268,7 +268,7 @@ export const SessionManager = () => {
               id="session-type-select"
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
-              className="flex-grow px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-black dark:text-white"
+              className="grow px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-black dark:text-white"
             >
               <option value="weekday">Weekday</option>
               <option value="weekend">Weekend</option>
@@ -398,7 +398,7 @@ export const SubjectManager = () => {
               onChange={(e) => setNewSubject(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAddSubject()}
               placeholder="e.g. History"
-              className="flex-grow px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-500 transition-all"
+              className="grow px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-500 transition-all"
             />
             <button
               onClick={handleAddSubject}

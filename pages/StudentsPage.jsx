@@ -97,6 +97,7 @@ const StudentsPage = () => {
         searchTerm: filters.searchTerm,
         classFilter: filters.classFilter,
         statusFilter: filters.statusFilter,
+        genderFilter: filters.genderFilter,
       },
     ),
   });
@@ -116,6 +117,7 @@ const StudentsPage = () => {
         searchTerm: filters.searchTerm,
         classFilter: filters.classFilter,
         statusFilter: filters.statusFilter,
+        genderFilter: filters.genderFilter,
       }),
     [
       students,
@@ -125,6 +127,7 @@ const StudentsPage = () => {
       filters.searchTerm,
       filters.classFilter,
       filters.statusFilter,
+      filters.genderFilter,
     ],
   );
 
@@ -146,6 +149,7 @@ const StudentsPage = () => {
     filters.searchTerm,
     filters.classFilter,
     filters.statusFilter,
+    filters.genderFilter,
     pagination.pageSize,
   ]);
 
@@ -329,6 +333,43 @@ const StudentsPage = () => {
               <option value="All">All Status</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
+            </select>
+
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div className="relative flex-1 sm:flex-none">
+            <label
+              htmlFor="gender-filter"
+              className="sr-only"
+            >
+              Filter by Gender
+            </label>
+
+            <select
+              id="gender-filter"
+              className="w-full appearance-none pl-4 pr-10 py-2.5 bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              value={filters.genderFilter}
+              onChange={(e) => filters.setGenderFilter(e.target.value)}
+            >
+              <option value="All">All Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
             </select>
 
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">

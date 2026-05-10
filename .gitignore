@@ -28,3 +28,22 @@ dist-ssr
 !.env.staging.example
 !.env.production.example
 *.docx
+
+# Confidential & Local-Only
+.agents/
+.qodo/
+scratch/
+debug_data.json
+build_output*.txt
+enr-ids*.txt
+metadata.json
+*.pem
+*.key
+*.cert
+*.sqlite
+*.db
+
+# Test Reports
+test-results/
+playwright-report/
+coverage/

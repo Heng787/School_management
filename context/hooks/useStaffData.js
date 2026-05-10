@@ -15,10 +15,21 @@ export const useStaffData = (setError) => {
             setStaff,
             (current) => {
                 const newItems = newData.map((data, idx) => {
-                    if (data.id) return data;
-                    const shortName = data.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'staff';
-                    const suffix = Date.now().toString().slice(-3) + idx;
-                    return { ...data, id: `${shortName}_${suffix}` };
+                    const item = { ...data };
+                    
+                    // Generate ID if missing
+                    if (!item.id) {
+                        const shortName = item.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'staff';
+                        const suffix = Date.now().toString().slice(-3) + idx;
+                        item.id = `${shortName}_${suffix}`;
+                    }
+                    
+                    // Set default password if missing
+                    if (!item.password) {
+                        item.password = '123456';
+                    }
+                    
+                    return item;
                 });
                 return [...current, ...newItems];
             },

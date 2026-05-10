@@ -1,4 +1,4 @@
-import { UserRole } from '../types';
+import { UserRole } from "../types";
 
 // --- Access Filtering ---
 
@@ -9,7 +9,7 @@ export const filterStudentsByRole = (
   students,
   currentUser,
   classes,
-  enrollments
+  enrollments,
 ) => {
   if (!currentUser) return students;
 
@@ -23,7 +23,7 @@ export const filterStudentsByRole = (
     const teacherStudentIds = new Set(
       enrollments
         .filter((e) => teacherClassIds.has(e.classId))
-        .map((e) => e.studentId)
+        .map((e) => e.studentId),
     );
 
     return students.filter((s) => teacherStudentIds.has(s.id));
@@ -61,7 +61,7 @@ export const filterStudentsBySearch = (students, searchTerm) => {
  * Filters students by status.
  */
 export const filterStudentsByStatus = (students, status) => {
-  if (status === 'All') return students;
+  if (status === "All") return students;
   return students.filter((s) => s.status === status);
 };
 
@@ -69,12 +69,10 @@ export const filterStudentsByStatus = (students, status) => {
  * Filters students by class enrollment.
  */
 export const filterStudentsByClass = (students, classId, enrollments) => {
-  if (classId === 'All') return students;
+  if (classId === "All") return students;
 
   const enrolledStudentIds = new Set(
-    enrollments
-      .filter((e) => e.classId === classId)
-      .map((e) => e.studentId)
+    enrollments.filter((e) => e.classId === classId).map((e) => e.studentId),
   );
 
   return students.filter((s) => enrolledStudentIds.has(s.id));
@@ -90,31 +88,29 @@ export const applyAllFilters = (
   currentUser,
   classes,
   enrollments,
-  { searchTerm, classFilter, statusFilter }
+  { searchTerm, classFilter, statusFilter, genderFilter },
 ) => {
   if (!currentUser) return [];
 
   let accessSet = null;
   if (currentUser.role === UserRole.Teacher) {
     const teacherClassIds = new Set(
-      classes
-        .filter((c) => c.teacherId === currentUser.id)
-        .map((c) => c.id)
+      classes.filter((c) => c.teacherId === currentUser.id).map((c) => c.id),
     );
 
     accessSet = new Set(
       enrollments
         .filter((e) => teacherClassIds.has(e.classId))
-        .map((e) => e.studentId)
+        .map((e) => e.studentId),
     );
   }
 
   let classSet = null;
-  if (classFilter !== 'All') {
+  if (classFilter !== "All") {
     classSet = new Set(
       enrollments
         .filter((e) => e.classId === classFilter)
-        .map((e) => e.studentId)
+        .map((e) => e.studentId),
     );
   }
 
@@ -128,8 +124,20 @@ export const applyAllFilters = (
     if (accessSet && !accessSet.has(s.id)) return false;
 
     // Attribute filters
-    if (statusFilter !== 'All' && s.status !== statusFilter) return false;
+    if (statusFilter !== "All" && s.status !== statusFilter) return false;
     if (classSet && !classSet.has(s.id)) return false;
+
+    // Gender filter
+    if (genderFilter && genderFilter !== "All") {
+      const studentSex = (s.sex || s.gender || "").trim().toLowerCase();
+      const filterSex = genderFilter.toLowerCase();
+
+      const isMale = ["male", "m", "boy"].includes(studentSex);
+      const isFemale = ["female", "f", "girl"].includes(studentSex);
+
+      if (filterSex === "male" && !isMale) return false;
+      if (filterSex === "female" && !isFemale) return false;
+    }
 
     // Text search
     if (lowerSearch) {
@@ -153,7 +161,7 @@ export const buildDisplayClassesMap = (
   students,
   currentUser,
   classes,
-  enrollments
+  enrollments,
 ) => {
   const map = {};
 
@@ -171,9 +179,7 @@ export const buildDisplayClassesMap = (
   let teacherClassIds = null;
   if (currentUser?.role === UserRole.Teacher) {
     teacherClassIds = new Set(
-      classes
-        .filter((c) => c.teacherId === currentUser.id)
-        .map((c) => c.id)
+      classes.filter((c) => c.teacherId === currentUser.id).map((c) => c.id),
     );
   }
 

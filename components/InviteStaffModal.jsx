@@ -74,7 +74,8 @@ const InviteStaffModal = ({ staff, onClose }) => {
                         </div>
                         <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
                             Setting a password here will allow <strong>{staff.name}</strong>{" "}
-                            to log in using their contact <strong>{staff.contact}</strong>.
+                            to log in using their contact <strong>{staff.contact}</strong>. 
+                            The default password for new staff is <strong>123456</strong>.
                         </p>
                     </div>
                 </div>

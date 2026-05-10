@@ -192,6 +192,10 @@ const TeacherModal = ({ staffData, onClose }) => {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-2">
+            Note: New staff accounts are automatically created with the default password: <span className="font-bold text-primary-500">123456</span>
+        </p>
+
         <div className="flex justify-end pt-4 space-x-4">
           <button
             type="button"

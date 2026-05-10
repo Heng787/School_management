@@ -74,12 +74,14 @@ const validate = ({ name, sex, dob, enrollmentDate }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const StudentModal = ({ studentData, onClose }) => {
-  const { addStudent, updateStudent, levels, addActivityLog } = useData();
+  const { addStudent, updateStudent, levels, addActivityLog, apiService } = useData();
   const [formData, setFormData] = useState(
     () => studentData ?? defaultForm(levels),
   );
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState(null); // Collision warning
   const [isSaving, setIsSaving] = useState(false);
+  const [ignoreCollision, setIgnoreCollision] = useState(false);
 
   useEffect(() => {
     if (studentData) setFormData(studentData);
@@ -90,6 +92,7 @@ const StudentModal = ({ studentData, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     const err = validate(formData);
     if (err) {
       setError(err);
@@ -98,6 +101,19 @@ const StudentModal = ({ studentData, onClose }) => {
 
     setIsSaving(true);
     try {
+      // Identity Collision Check (Only for new students, unless name/dob changed)
+      if (!studentData && !ignoreCollision) {
+        const validation = await apiService.validateStudent(formData);
+        if (validation.isPotentialDuplicate) {
+          setWarning({
+            message: `Potential identity collision detected! ${validation.collisions.length} student(s) with the same Name and DOB already exist.`,
+            details: validation.collisions
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+
       await (studentData
         ? updateStudent({ ...studentData, ...formData })
         : addStudent(formData));
@@ -108,8 +124,9 @@ const StudentModal = ({ studentData, onClose }) => {
         });
       }
       onClose();
-    } catch {
-      setError("Save failed. Please check your connection and try again.");
+    } catch (e) {
+      console.error("Save Error:", e);
+      setError(e.message || "Save failed. Please check your connection and try again.");
     } finally {
       setIsSaving(false);
     }
@@ -177,6 +194,37 @@ const StudentModal = ({ studentData, onClose }) => {
         </div>
 
         {error && <ErrorBanner message={error} />}
+
+        {warning && (
+          <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl space-y-3">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-amber-800">{warning.message}</p>
+                <div className="text-[10px] font-medium text-amber-700/80 bg-white/50 p-2 rounded-lg border border-amber-100/50">
+                  {warning.details.map(c => (
+                    <div key={c.id} className="flex justify-between gap-4 py-0.5 first:pt-0 last:pb-0 border-b border-amber-100/30 last:border-0">
+                      <span className="font-bold">{c.id}</span>
+                      <span>{c.phone || 'No phone'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIgnoreCollision(true);
+                setWarning(null);
+              }}
+              className="w-full py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 text-[11px] font-black uppercase tracking-widest rounded-lg transition-colors"
+            >
+              It's a different person - Save Anyway
+            </button>
+          </div>
+        )}
 
         <div className="flex justify-end pt-6 space-x-3">
           <button

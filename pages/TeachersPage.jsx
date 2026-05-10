@@ -1,20 +1,20 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from "react";
 
-import AllStaffPermissionModal from '../components/AllStaffPermissionModal';
-import ConfirmModal from '../components/ConfirmModal';
-import ImportResultsModal from '../components/ImportResultsModal';
-import InviteStaffModal from '../components/InviteStaffModal';
-import StaffPermissionModal from '../components/StaffPermissionModal';
-import TeacherFiltersSection from '../components/teacherspage/TeacherFiltersSection';
-import TeacherHeaderActions from '../components/teacherspage/TeacherHeaderActions';
-import TeacherModal from '../components/teacherspage/TeacherModal';
-import TeacherStatsGrid from '../components/teacherspage/TeacherStatsGrid';
-import TeacherTable from '../components/teacherspage/TeacherTable';
-import LoadingOverlay from '../components/ui/LoadingOverlay';
-import { useData } from '../context/DataContext';
-import { useTeacherActions } from '../hooks/useTeacherActions';
+import AllStaffPermissionModal from "../components/AllStaffPermissionModal";
+import ConfirmModal from "../components/ConfirmModal";
+import ImportResultsModal from "../components/ImportResultsModal";
+import InviteStaffModal from "../components/InviteStaffModal";
+import StaffPermissionModal from "../components/StaffPermissionModal";
+import TeacherFiltersSection from "../components/teacherspage/TeacherFiltersSection";
+import TeacherHeaderActions from "../components/teacherspage/TeacherHeaderActions";
+import TeacherModal from "../components/teacherspage/TeacherModal";
+import TeacherStatsGrid from "../components/teacherspage/TeacherStatsGrid";
+import TeacherTable from "../components/teacherspage/TeacherTable";
+import LoadingOverlay from "../components/ui/LoadingOverlay";
+import { useData } from "../context/DataContext";
+import { useTeacherActions } from "../hooks/useTeacherActions";
 
-import { StaffRole, UserRole } from '../types';
+import { StaffRole, UserRole } from "../types";
 
 /**
  * PAGE: TeachersPage
@@ -23,7 +23,7 @@ import { StaffRole, UserRole } from '../types';
 const TeachersPage = () => {
   // --- Accessibility & Title ---
   useEffect(() => {
-    document.title = 'Staff Management | SchoolAdmin Dashboard';
+    document.title = "Staff Management | SchoolAdmin Dashboard";
   }, []);
 
   // --- State & Data ---
@@ -46,8 +46,8 @@ const TeachersPage = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [permissionStaff, setPermissionStaff] = useState(null);
   const [inviteStaff, setInviteStaff] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Import State
@@ -55,7 +55,8 @@ const TeachersPage = () => {
   const [importResults, setImportResults] = useState(null);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState(null);
-  const [isAllPermissionModalOpen, setIsAllPermissionModalOpen] = useState(false);
+  const [isAllPermissionModalOpen, setIsAllPermissionModalOpen] =
+    useState(false);
   const [selectedStaffIds, setSelectedStaffIds] = useState(new Set());
 
   // --- Selection Handlers ---
@@ -68,13 +69,13 @@ const TeachersPage = () => {
   };
 
   const toggleSelectAll = (ids) => {
-    const allOnPageSelected = ids.every(id => selectedStaffIds.has(id));
-    setSelectedStaffIds(prev => {
+    const allOnPageSelected = ids.every((id) => selectedStaffIds.has(id));
+    setSelectedStaffIds((prev) => {
       const next = new Set(prev);
       if (allOnPageSelected) {
-        ids.forEach(id => next.delete(id));
+        ids.forEach((id) => next.delete(id));
       } else {
-        ids.forEach(id => next.add(id));
+        ids.forEach((id) => next.add(id));
       }
       return next;
     });
@@ -106,16 +107,16 @@ const TeachersPage = () => {
     return staff.filter((s) => {
       if (s.isArchived) return false;
       const matchesSearch =
-        (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s.contact || '').toLowerCase().includes(searchQuery.toLowerCase());
+        (s.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.contact || "").toLowerCase().includes(searchQuery.toLowerCase());
 
       const isTeaching =
         s.role === StaffRole.Teacher || s.role === StaffRole.AssistantTeacher;
       const matchesTab =
-        activeTab === 'all' ||
+        activeTab === "all" ||
         s.role === activeTab ||
-        (activeTab === 'teaching' && isTeaching) ||
-        (activeTab === 'support' && !isTeaching);
+        (activeTab === "teaching" && isTeaching) ||
+        (activeTab === "support" && !isTeaching);
       return matchesSearch && matchesTab;
     });
   }, [staff, searchQuery, activeTab]);
@@ -146,7 +147,7 @@ const TeachersPage = () => {
       {/* Skip to Main Content */}
       <a
         href="#main-staff-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:bg-primary-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:m-4 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:bg-primary-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:m-4 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
       >
         Skip to Staff Content
       </a>
@@ -190,11 +191,7 @@ const TeachersPage = () => {
         onPermissionHistoryClick={() => setIsAllPermissionModalOpen(true)}
       />
 
-      <main
-        id="main-staff-content"
-        className="outline-none"
-        tabIndex="-1"
-      >
+      <main id="main-staff-content" className="outline-none" tabIndex="-1">
         {/* Staff Table */}
         <TeacherTable
           isAdmin={isAdmin}

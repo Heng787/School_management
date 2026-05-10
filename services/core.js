@@ -17,6 +17,27 @@ const getAuthHeaders = () => {
   return headers;
 };
 
+const getApiUrl = () => {
+  return import.meta.env.VITE_API_URL || 'http://localhost:5000';
+};
+
+/**
+ * Generic POST request for server-side endpoints.
+ */
+export async function post(endpoint, body) {
+  const response = await fetch(`${getApiUrl()}${endpoint}`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body),
+  });
+
+  const json = await response.json();
+  if (!response.ok) {
+    throw new Error(json.error || 'Server request failed');
+  }
+  return json.data;
+}
+
 /**
  * Unified LocalStorage interface for the application.
  */

@@ -6,7 +6,9 @@ import AttendancePrintModal from "./AttendancePrintModal";
 // ─── HELPERS & UTILS ──────────────────────────────────────────────────────────
 
 const useSession = (key, fallback = "") => {
-  const [value, setValue] = useState(() => sessionStorage.getItem(key) || fallback);
+  const [value, setValue] = useState(
+    () => sessionStorage.getItem(key) || fallback,
+  );
   const set = (v) => {
     setValue(v);
     v ? sessionStorage.setItem(key, v) : sessionStorage.removeItem(key);
@@ -27,24 +29,35 @@ const getCutoffDate = (timeRange) => {
   return d.toLocaleDateString("en-CA");
 };
 
-
 const formatDate = (dateStr) =>
   new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
-    weekday: "short", month: "short", day: "2-digit"
+    weekday: "short",
+    month: "short",
+    day: "2-digit",
   });
 
 // ─── REUSABLE UI COMPONENTS ───────────────────────────────────────────────────
 
 const Card = ({ children, className = "" }) => (
-  <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all duration-300 ${className}`}>
+  <div
+    className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all duration-300 ${className}`}
+  >
     {children}
   </div>
 );
 
 const StatBadge = ({ label, value, colorClass }) => (
   <div className="text-center group">
-    <p className={`text-[10px] font-black uppercase tracking-widest mb-0.5 opacity-60`}>{label}</p>
-    <p className={`text-xl font-black ${colorClass} group-hover:scale-110 transition-transform`}>{value}</p>
+    <p
+      className={`text-[10px] font-black uppercase tracking-widest mb-0.5 opacity-60`}
+    >
+      {label}
+    </p>
+    <p
+      className={`text-xl font-black ${colorClass} group-hover:scale-110 transition-transform`}
+    >
+      {value}
+    </p>
   </div>
 );
 
@@ -56,12 +69,16 @@ const TopAbsenceItem = ({ student, count }) => (
       {student.name.charAt(0).toUpperCase()}
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{student.name}</p>
+      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+        {student.name}
+      </p>
       <p className="text-[10px] font-medium text-slate-500">ID: {student.id}</p>
     </div>
     <div className="text-right border-l border-slate-200 dark:border-slate-700 pl-4">
       <p className="text-2xl font-black text-rose-600 leading-none">{count}</p>
-      <p className="text-[9px] font-black text-rose-400 uppercase tracking-tighter">Absences</p>
+      <p className="text-[9px] font-black text-rose-400 uppercase tracking-tighter">
+        Absences
+      </p>
     </div>
   </div>
 );
@@ -73,10 +90,14 @@ const HistoryRecord = ({ record, onExcuse }) => {
 
   return (
     <div className="relative pl-6">
-      <div className={`absolute -left-[7px] top-2.5 w-3.5 h-3.5 rounded-full border-4 bg-${color}-500 border-${color}-50 dark:border-slate-900`} />
+      <div
+        className={`absolute left-[7px] top-2.5 w-3.5 h-3.5 rounded-full border-4 bg-${color}-500 border-${color}-50 dark:border-slate-900`}
+      />
       <div className="flex items-center justify-between bg-white dark:bg-slate-900 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group hover:shadow-md transition-all">
         <div>
-          <span className={`text-[11px] font-black uppercase tracking-widest text-${color}-600 dark:text-${color}-400`}>
+          <span
+            className={`text-[11px] font-black uppercase tracking-widest text-${color}-600 dark:text-${color}-400`}
+          >
             {record.status}
           </span>
           <span className="ml-3 text-xs font-bold text-slate-500 dark:text-slate-400">
@@ -97,15 +118,27 @@ const HistoryRecord = ({ record, onExcuse }) => {
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const AttendanceReport = () => {
-  const { 
-    students, classes, attendance, enrollments, 
-    updateAttendance, currentUser, staff,
-    draftAttendance, publishClassAttendance, addActivityLog
+  const {
+    students,
+    classes,
+    attendance,
+    enrollments,
+    updateAttendance,
+    currentUser,
+    staff,
+    draftAttendance,
+    publishClassAttendance,
+    addActivityLog,
   } = useData();
 
   // --- PERSISTED FILTERS ---
-  const [selectedClassId, setSelectedClassId] = useSession("reports_attendance_class");
-  const [timeRange, setTimeRange] = useSession("reports_attendance_time", "30days");
+  const [selectedClassId, setSelectedClassId] = useSession(
+    "reports_attendance_class",
+  );
+  const [timeRange, setTimeRange] = useSession(
+    "reports_attendance_time",
+    "30days",
+  );
   const [exportMonth, setExportMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -116,65 +149,86 @@ const AttendanceReport = () => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState("daily"); // "daily" (summary) or "monthly" (grid)
 
-  const isAdminOrOffice = ["Admin", "Office Worker"].includes(currentUser?.role);
+  const isAdminOrOffice = ["Admin", "Office Worker"].includes(
+    currentUser?.role,
+  );
 
   const accessibleClasses = useMemo(() => {
     if (isAdminOrOffice) return classes;
-    return classes.filter(c => c.teacherId === currentUser?.id);
+    return classes.filter((c) => c.teacherId === currentUser?.id);
   }, [classes, isAdminOrOffice, currentUser]);
 
   // --- DERIVED DATA ---
   const filteredAttendance = useMemo(() => {
     const cutoff = getCutoffDate(timeRange);
-    return attendance.filter(a => a.date >= cutoff);
+    return attendance.filter((a) => a.date >= cutoff);
   }, [attendance, timeRange]);
 
   const topAbsences = useMemo(() => {
     const counts = {};
-    filteredAttendance.forEach(a => {
-      if (a.status === AttendanceStatus.Absent) counts[a.studentId] = (counts[a.studentId] || 0) + 1;
+    filteredAttendance.forEach((a) => {
+      if (a.status === AttendanceStatus.Absent)
+        counts[a.studentId] = (counts[a.studentId] || 0) + 1;
     });
     return Object.entries(counts)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 6)
-      .map(([id, count]) => ({ student: students.find(s => s.id === id), count }))
-      .filter(x => x.student);
+      .map(([id, count]) => ({
+        student: students.find((s) => s.id === id),
+        count,
+      }))
+      .filter((x) => x.student);
   }, [filteredAttendance, students]);
 
-  const selectedClass = useMemo(() => accessibleClasses.find(c => c.id === selectedClassId), [accessibleClasses, selectedClassId]);
+  const selectedClass = useMemo(
+    () => accessibleClasses.find((c) => c.id === selectedClassId),
+    [accessibleClasses, selectedClassId],
+  );
 
   const classStats = useMemo(() => {
     if (!selectedClass) return [];
-    const enrolledIds = new Set(enrollments.filter(e => e.classId === selectedClass.id).map(e => e.studentId));
-    
-    return students.filter(s => enrolledIds.has(s.id)).map(student => {
-      const recs = attendance.filter(a => 
-        a.studentId === student.id && 
-        (a.classId === selectedClass.id || !a.classId) &&
-        a.date.startsWith(exportMonth)
-      );
-      const getCount = (s) => recs.filter(a => a.status === s).length;
-      
-      return {
-        student,
-        present: getCount(AttendanceStatus.Present),
-        absent: getCount(AttendanceStatus.Absent),
-        late: getCount(AttendanceStatus.Late),
-        permission: getCount(AttendanceStatus.Permission),
-        history: recs.filter(a => a.status !== AttendanceStatus.Present).sort((a, b) => b.date.localeCompare(a.date))
-      };
-    });
+    const enrolledIds = new Set(
+      enrollments
+        .filter((e) => e.classId === selectedClass.id)
+        .map((e) => e.studentId),
+    );
+
+    return students
+      .filter((s) => enrolledIds.has(s.id))
+      .map((student) => {
+        const recs = attendance.filter(
+          (a) =>
+            a.studentId === student.id &&
+            (a.classId === selectedClass.id || !a.classId) &&
+            a.date.startsWith(exportMonth),
+        );
+        const getCount = (s) => recs.filter((a) => a.status === s).length;
+
+        return {
+          student,
+          present: getCount(AttendanceStatus.Present),
+          absent: getCount(AttendanceStatus.Absent),
+          late: getCount(AttendanceStatus.Late),
+          permission: getCount(AttendanceStatus.Permission),
+          history: recs
+            .filter((a) => a.status !== AttendanceStatus.Present)
+            .sort((a, b) => b.date.localeCompare(a.date)),
+        };
+      });
   }, [students, selectedClass, enrollments, attendance, exportMonth]);
 
   const draftCount = useMemo(() => {
     if (!selectedClassId || !draftAttendance) return 0;
-    return draftAttendance.filter(a => a.classId === selectedClassId).length;
+    return draftAttendance.filter((a) => a.classId === selectedClassId).length;
   }, [draftAttendance, selectedClassId]);
 
   const hasOverdueDrafts = useMemo(() => {
     if (!selectedClassId || !draftAttendance) return false;
     const currentMonth = new Date().toISOString().substring(0, 7);
-    return draftAttendance.some(a => a.classId === selectedClassId && a.date.substring(0, 7) < currentMonth);
+    return draftAttendance.some(
+      (a) =>
+        a.classId === selectedClassId && a.date.substring(0, 7) < currentMonth,
+    );
   }, [draftAttendance, selectedClassId]);
 
   // --- HANDLERS ---
@@ -186,7 +240,7 @@ const AttendanceReport = () => {
     try {
       await publishClassAttendance(selectedClassId);
       addActivityLog({
-        action: `Teacher "${currentUser.name}" submitted monthly attendance for ${selectedClass?.name}`
+        action: `Teacher "${currentUser.name}" submitted monthly attendance for ${selectedClass?.name}`,
       });
       alert("Attendance submitted successfully!");
     } catch (err) {
@@ -198,21 +252,25 @@ const AttendanceReport = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
       {/* ─── TOP ANALYTICS SECTION ─── */}
       <Card className="p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-              <span className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-xl">⚠️</span>
+              <span className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-xl">
+                ⚠️
+              </span>
               High Absence Alert
             </h3>
-            <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-widest">Identifying risk patterns in the last {timeRange.replace('days', ' days')}</p>
+            <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-widest">
+              Identifying risk patterns in the last{" "}
+              {timeRange.replace("days", " days")}
+            </p>
           </div>
-          <select 
+          <select
             aria-label="Select Time Range"
-            value={timeRange} 
-            onChange={e => setTimeRange(e.target.value)}
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
             className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-4 focus:ring-primary-500/10 transition-all shadow-sm"
           >
             <option value="today">Today</option>
@@ -226,11 +284,15 @@ const AttendanceReport = () => {
 
         {topAbsences.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topAbsences.map(item => <TopAbsenceItem key={item.student.id} {...item} />)}
+            {topAbsences.map((item) => (
+              <TopAbsenceItem key={item.student.id} {...item} />
+            ))}
           </div>
         ) : (
           <div className="py-12 text-center bg-slate-50 dark:bg-slate-950/20 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-500">All students have excellent attendance for this timeframe! 🎉</p>
+            <p className="text-sm font-bold text-slate-500">
+              All students have excellent attendance for this timeframe! 🎉
+            </p>
           </div>
         )}
       </Card>
@@ -239,34 +301,51 @@ const AttendanceReport = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 p-6 flex flex-col sm:flex-row items-center gap-6">
           <div className="flex-1 w-full">
-            <label htmlFor="class-select" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Class Selection</label>
+            <label
+              htmlFor="class-select"
+              className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block"
+            >
+              Class Selection
+            </label>
             <select
               id="class-select"
               value={selectedClassId}
-              onChange={e => { setSelectedClassId(e.target.value); setExpandedStudentId(null); }}
+              onChange={(e) => {
+                setSelectedClassId(e.target.value);
+                setExpandedStudentId(null);
+              }}
               className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-primary-500/10 transition-all shadow-sm"
             >
               <option value="">Select a class to view report...</option>
-              {accessibleClasses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.level}) — {c.schedule}</option>)}
+              {accessibleClasses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.level}) — {c.schedule}
+                </option>
+              ))}
             </select>
           </div>
           {selectedClassId && (
             <div className="flex items-center gap-3 shrink-0 pt-6 sm:pt-0">
               {!isAdminOrOffice && draftCount > 0 && (
-                <button 
-                  onClick={handlePublish} 
+                <button
+                  onClick={handlePublish}
                   disabled={isPublishing}
                   className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-xl ${
-                    hasOverdueDrafts 
-                      ? "bg-rose-600 text-white hover:bg-rose-700 shadow-rose-500/20" 
+                    hasOverdueDrafts
+                      ? "bg-rose-600 text-white hover:bg-rose-700 shadow-rose-500/20"
                       : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20"
                   }`}
                 >
-                  {isPublishing ? "Submitting..." : `Submit Monthly (${draftCount})`}
+                  {isPublishing
+                    ? "Submitting..."
+                    : `Submit Monthly (${draftCount})`}
                 </button>
               )}
               <div className="h-10 w-px bg-slate-100 dark:bg-slate-800 mx-2 hidden sm:block" />
-              <button onClick={() => setIsPrintModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all active:scale-95">
+              <button
+                onClick={() => setIsPrintModalOpen(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all active:scale-95"
+              >
                 Print Report
               </button>
             </div>
@@ -275,33 +354,42 @@ const AttendanceReport = () => {
 
         {selectedClassId && (
           <Card className="p-6">
-            <label htmlFor="export-month" className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Data Export</label>
+            <label
+              htmlFor="export-month"
+              className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block"
+            >
+              Data Export
+            </label>
             <div className="flex gap-2 items-center">
-              <button 
+              <button
                 onClick={() => {
-                  const d = new Date(exportMonth + '-01');
+                  const d = new Date(exportMonth + "-01");
                   d.setMonth(d.getMonth() - 1);
-                  setExportMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+                  setExportMonth(
+                    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+                  );
                 }}
-                className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-slate-600 dark:text-slate-300 flex-shrink-0"
+                className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-slate-600 dark:text-slate-300 shrink-0"
                 title="Previous Month"
               >
                 ◀
               </button>
-              <input 
-                id="export-month" 
-                type="month" 
-                value={exportMonth} 
-                onChange={e => setExportMonth(e.target.value)} 
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold outline-none text-center" 
+              <input
+                id="export-month"
+                type="month"
+                value={exportMonth}
+                onChange={(e) => setExportMonth(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold outline-none text-center"
               />
-              <button 
+              <button
                 onClick={() => {
-                  const d = new Date(exportMonth + '-01');
+                  const d = new Date(exportMonth + "-01");
                   d.setMonth(d.getMonth() + 1);
-                  setExportMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+                  setExportMonth(
+                    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+                  );
                 }}
-                className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-slate-600 dark:text-slate-300 flex-shrink-0"
+                className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors text-slate-600 dark:text-slate-300 shrink-0"
                 title="Next Month"
               >
                 ▶
@@ -309,8 +397,18 @@ const AttendanceReport = () => {
             </div>
             {isAdminOrOffice && (
               <div className="flex gap-2 mt-4">
-                <button onClick={() => setViewMode("daily")} className={`flex-1 py-2 text-[10px] font-black rounded-lg uppercase ${viewMode === "daily" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>Daily</button>
-                <button onClick={() => setViewMode("monthly")} className={`flex-1 py-2 text-[10px] font-black rounded-lg uppercase ${viewMode === "monthly" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}>Grid</button>
+                <button
+                  onClick={() => setViewMode("daily")}
+                  className={`flex-1 py-2 text-[10px] font-black rounded-lg uppercase ${viewMode === "daily" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}
+                >
+                  Daily
+                </button>
+                <button
+                  onClick={() => setViewMode("monthly")}
+                  className={`flex-1 py-2 text-[10px] font-black rounded-lg uppercase ${viewMode === "monthly" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}
+                >
+                  Grid
+                </button>
               </div>
             )}
           </Card>
@@ -321,74 +419,151 @@ const AttendanceReport = () => {
       {selectedClassId && viewMode === "daily" && (
         <Card>
           <div className="px-8 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap gap-8 justify-center sm:justify-end">
-            <StatBadge label="Present" value={classStats.reduce((a, s) => a + s.present, 0)} colorClass="text-emerald-500" />
-            <StatBadge label="Absent" value={classStats.reduce((a, s) => a + s.absent, 0)} colorClass="text-rose-500" />
-            <StatBadge label="Late" value={classStats.reduce((a, s) => a + s.late, 0)} colorClass="text-amber-500" />
-            <StatBadge label="Permission" value={classStats.reduce((a, s) => a + s.permission, 0)} colorClass="text-purple-500" />
+            <StatBadge
+              label="Present"
+              value={classStats.reduce((a, s) => a + s.present, 0)}
+              colorClass="text-emerald-500"
+            />
+            <StatBadge
+              label="Absent"
+              value={classStats.reduce((a, s) => a + s.absent, 0)}
+              colorClass="text-rose-500"
+            />
+            <StatBadge
+              label="Late"
+              value={classStats.reduce((a, s) => a + s.late, 0)}
+              colorClass="text-amber-500"
+            />
+            <StatBadge
+              label="Permission"
+              value={classStats.reduce((a, s) => a + s.permission, 0)}
+              colorClass="text-purple-500"
+            />
           </div>
-          
+
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full border-separate border-spacing-0">
               <thead className="bg-slate-50 dark:bg-slate-800/50">
                 <tr>
-                  <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest">Student</th>
-                  {["Present", "Absent", "Late", "Perm"].map(h => (
-                    <th key={h} className="px-4 py-4 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest">{h}</th>
+                  <th className="px-8 py-4 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    Student
+                  </th>
+                  {["Present", "Absent", "Late", "Perm"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-4 text-center text-[11px] font-black text-slate-500 uppercase tracking-widest"
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {classStats.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-sm font-bold text-slate-300 uppercase tracking-widest">No students found in this class</td></tr>
-                ) : classStats.map(stat => (
-                  <React.Fragment key={stat.student.id}>
-                    <tr 
-                      role="button"
-                      tabIndex={0}
-                      aria-expanded={expandedStudentId === stat.student.id}
-                      onClick={() => setExpandedStudentId(expandedStudentId === stat.student.id ? null : stat.student.id)} 
-                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setExpandedStudentId(expandedStudentId === stat.student.id ? null : stat.student.id))}
-                      className={`cursor-pointer transition-colors ${expandedStudentId === stat.student.id ? 'bg-primary-50 dark:bg-primary-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-12 text-center text-sm font-bold text-slate-300 uppercase tracking-widest"
                     >
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${stat.absent >= 3 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                            {stat.student.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{stat.student.name}</p>
-                            <p className="text-[10px] font-medium text-slate-500">{stat.student.id}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-5 text-center font-black text-sm text-emerald-600">{stat.present}</td>
-                      <td className="px-4 py-5 text-center font-black text-sm text-rose-600">{stat.absent}</td>
-                      <td className="px-4 py-5 text-center font-black text-sm text-amber-600">{stat.late}</td>
-                      <td className="px-4 py-5 text-center font-black text-sm text-purple-600">{stat.permission}</td>
-                    </tr>
-                    {expandedStudentId === stat.student.id && (
-                      <tr className="bg-slate-50/50 dark:bg-slate-900/50">
-                        <td colSpan={5} className="px-12 py-8 border-t border-slate-100 dark:border-slate-800">
-                          <div className="flex items-center justify-between mb-6">
-                            <h4 className="text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-[0.2em]">Detailed Attendance History</h4>
-                          </div>
-                          {stat.history.length > 0 ? (
-                            <div className="border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-4">
-                              {stat.history.map((rec, i) => (
-                                <HistoryRecord key={i} record={rec} onExcuse={r => updateAttendance({ ...r, status: AttendanceStatus.Present })} />
-                              ))}
+                      No students found in this class
+                    </td>
+                  </tr>
+                ) : (
+                  classStats.map((stat) => (
+                    <React.Fragment key={stat.student.id}>
+                      <tr
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expandedStudentId === stat.student.id}
+                        onClick={() =>
+                          setExpandedStudentId(
+                            expandedStudentId === stat.student.id
+                              ? null
+                              : stat.student.id,
+                          )
+                        }
+                        onKeyDown={(e) =>
+                          (e.key === "Enter" || e.key === " ") &&
+                          (e.preventDefault(),
+                          setExpandedStudentId(
+                            expandedStudentId === stat.student.id
+                              ? null
+                              : stat.student.id,
+                          ))
+                        }
+                        className={`cursor-pointer transition-colors ${expandedStudentId === stat.student.id ? "bg-primary-50 dark:bg-primary-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/40"}`}
+                      >
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-4">
+                            <div
+                              className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${stat.absent >= 3 ? "bg-rose-100 text-rose-600" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}
+                            >
+                              {stat.student.name.charAt(0).toUpperCase()}
                             </div>
-                          ) : (
-                            <div className="p-6 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
-                              <span className="text-xl">🌟</span>
-                              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Perfect attendance record! No absence or late records found.</p>
+                            <div>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                {stat.student.name}
+                              </p>
+                              <p className="text-[10px] font-medium text-slate-500">
+                                {stat.student.id}
+                              </p>
                             </div>
-                          )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-5 text-center font-black text-sm text-emerald-600">
+                          {stat.present}
+                        </td>
+                        <td className="px-4 py-5 text-center font-black text-sm text-rose-600">
+                          {stat.absent}
+                        </td>
+                        <td className="px-4 py-5 text-center font-black text-sm text-amber-600">
+                          {stat.late}
+                        </td>
+                        <td className="px-4 py-5 text-center font-black text-sm text-purple-600">
+                          {stat.permission}
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                ))}
+                      {expandedStudentId === stat.student.id && (
+                        <tr className="bg-slate-50/50 dark:bg-slate-900/50">
+                          <td
+                            colSpan={5}
+                            className="px-12 py-8 border-t border-slate-100 dark:border-slate-800"
+                          >
+                            <div className="flex items-center justify-between mb-6">
+                              <h4 className="text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-[0.2em]">
+                                Detailed Attendance History
+                              </h4>
+                            </div>
+                            {stat.history.length > 0 ? (
+                              <div className="border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-4">
+                                {stat.history.map((rec, i) => (
+                                  <HistoryRecord
+                                    key={i}
+                                    record={rec}
+                                    onExcuse={(r) =>
+                                      updateAttendance({
+                                        ...r,
+                                        status: AttendanceStatus.Present,
+                                      })
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-6 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
+                                <span className="text-xl">🌟</span>
+                                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                                  Perfect attendance record! No absence or late
+                                  records found.
+                                </p>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -397,10 +572,14 @@ const AttendanceReport = () => {
 
       {/* ─── MONTHLY GRID VIEW ─── */}
       {selectedClassId && viewMode === "monthly" && (
-        <MonthlyAttendanceGrid 
+        <MonthlyAttendanceGrid
           selectedClass={selectedClass}
           exportMonth={exportMonth}
-          students={students.filter(s => enrollments.some(e => e.classId === selectedClass.id && e.studentId === s.id))}
+          students={students.filter((s) =>
+            enrollments.some(
+              (e) => e.classId === selectedClass.id && e.studentId === s.id,
+            ),
+          )}
           attendance={attendance}
         />
       )}
@@ -411,7 +590,7 @@ const AttendanceReport = () => {
         onClose={() => setIsPrintModalOpen(false)}
         selectedClass={selectedClass}
         exportMonth={exportMonth}
-        students={classStats.map(s => s.student)}
+        students={classStats.map((s) => s.student)}
         attendance={attendance}
         staff={staff}
       />
@@ -419,7 +598,12 @@ const AttendanceReport = () => {
   );
 };
 
-const MonthlyAttendanceGrid = ({ selectedClass, exportMonth, students, attendance }) => {
+const MonthlyAttendanceGrid = ({
+  selectedClass,
+  exportMonth,
+  students,
+  attendance,
+}) => {
   const [yearStr, monthStr] = exportMonth.split("-");
   const year = parseInt(yearStr);
   const monthIdx = parseInt(monthStr) - 1;
@@ -430,9 +614,16 @@ const MonthlyAttendanceGrid = ({ selectedClass, exportMonth, students, attendanc
   const recMap = useMemo(() => {
     const map = {};
     attendance
-      .filter(a => a.date.startsWith(`${yearStr}-${monthStr}`) && (a.classId === selectedClass.id || !a.classId))
-      .forEach(a => {
-        const abbr = { Present: "P", Absent: "A", Late: "L", Permission: "Perm" }[a.status] || a.status.charAt(0);
+      .filter(
+        (a) =>
+          a.date.startsWith(`${yearStr}-${monthStr}`) &&
+          (a.classId === selectedClass.id || !a.classId),
+      )
+      .forEach((a) => {
+        const abbr =
+          { Present: "P", Absent: "A", Late: "L", Permission: "Perm" }[
+            a.status
+          ] || a.status.charAt(0);
         if (!map[a.studentId]) map[a.studentId] = {};
         map[a.studentId][a.date] = { abbr, status: a.status };
       });
@@ -445,41 +636,63 @@ const MonthlyAttendanceGrid = ({ selectedClass, exportMonth, students, attendanc
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50">
-              <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest min-w-[150px]">Student</th>
-              {dayNums.map(d => {
+              <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 px-4 py-3 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest min-w-[150px]">
+                Student
+              </th>
+              {dayNums.map((d) => {
                 const dayName = DOW[new Date(year, monthIdx, d).getDay()];
                 const isWeekend = dayName === "Sa" || dayName === "Su";
                 return (
-                  <th key={d} className={`border-b border-slate-200 dark:border-slate-700 px-2 py-3 text-center min-w-[36px] ${isWeekend ? 'bg-slate-100 dark:bg-slate-800/80' : ''}`}>
-                    <p className="text-[9px] font-black text-slate-400 leading-none mb-1">{dayName}</p>
-                    <p className="text-[11px] font-black text-slate-800 dark:text-white leading-none">{d}</p>
+                  <th
+                    key={d}
+                    className={`border-b border-slate-200 dark:border-slate-700 px-2 py-3 text-center min-w-[36px] ${isWeekend ? "bg-slate-100 dark:bg-slate-800/80" : ""}`}
+                  >
+                    <p className="text-[9px] font-black text-slate-400 leading-none mb-1">
+                      {dayName}
+                    </p>
+                    <p className="text-[11px] font-black text-slate-800 dark:text-white leading-none">
+                      {d}
+                    </p>
                   </th>
                 );
               })}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {students.map(s => {
+            {students.map((s) => {
               const studentRecs = recMap[s.id] || {};
               return (
-                <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <tr
+                  key={s.id}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                >
                   <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                     {s.name}
                   </td>
-                  {dayNums.map(d => {
+                  {dayNums.map((d) => {
                     const dateKey = `${yearStr}-${monthStr}-${String(d).padStart(2, "0")}`;
                     const dayName = DOW[new Date(year, monthIdx, d).getDay()];
                     const isWeekend = dayName === "Sa" || dayName === "Su";
                     const data = studentRecs[dateKey];
-                    
+
                     let colorClass = "text-slate-300 dark:text-slate-700";
-                    if (data?.status === "Present") colorClass = "text-emerald-500 font-black";
-                    if (data?.status === "Absent") colorClass = "text-rose-500 font-black bg-rose-50 dark:bg-rose-900/20";
-                    if (data?.status === "Late") colorClass = "text-amber-500 font-black bg-amber-50 dark:bg-amber-900/20";
-                    if (data?.status === "Permission") colorClass = "text-purple-500 font-black bg-purple-50 dark:bg-purple-900/20";
+                    if (data?.status === "Present")
+                      colorClass = "text-emerald-500 font-black";
+                    if (data?.status === "Absent")
+                      colorClass =
+                        "text-rose-500 font-black bg-rose-50 dark:bg-rose-900/20";
+                    if (data?.status === "Late")
+                      colorClass =
+                        "text-amber-500 font-black bg-amber-50 dark:bg-amber-900/20";
+                    if (data?.status === "Permission")
+                      colorClass =
+                        "text-purple-500 font-black bg-purple-50 dark:bg-purple-900/20";
 
                     return (
-                      <td key={d} className={`px-1 py-3 text-center text-[10px] border-r border-slate-50 dark:border-slate-800/50 ${isWeekend ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''} ${colorClass}`}>
+                      <td
+                        key={d}
+                        className={`px-1 py-3 text-center text-[10px] border-r border-slate-50 dark:border-slate-800/50 ${isWeekend ? "bg-slate-50/50 dark:bg-slate-900/30" : ""} ${colorClass}`}
+                      >
                         {data?.abbr || (isWeekend ? "" : "-")}
                       </td>
                     );
@@ -501,7 +714,8 @@ const MonthlyAttendanceGrid = ({ selectedClass, exportMonth, students, attendanc
           <span className="w-2 h-2 rounded-full bg-amber-500" /> Late (L)
         </div>
         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-          <span className="w-2 h-2 rounded-full bg-purple-500" /> Permission (Perm)
+          <span className="w-2 h-2 rounded-full bg-purple-500" /> Permission
+          (Perm)
         </div>
       </div>
     </Card>
