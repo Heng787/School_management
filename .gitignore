@@ -47,3 +47,5 @@ metadata.json
 test-results/
 playwright-report/
 coverage/
+test/
+database/

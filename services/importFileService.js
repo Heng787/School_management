@@ -286,4 +286,72 @@ export const importFileService = {
       message: `Import complete! Added ${newStaffToCreate.length} new staff, ${classesToAdd.length} new classes, and ${result.grades?.length || 0} marks.`,
     };
   },
+
+  // --- Scoresheet Import (Kid / JuniorSenior) ---
+  
+  async processScoresheetFile(
+    file,
+    students,
+    classes,
+    {
+      saveGradeBatch,
+      parseScoresheet,
+      onProgress,
+      term = "Midterm",
+      date = new Date().toISOString().split('T')[0]
+    }
+  ) {
+    if (onProgress) onProgress("Parsing scoresheet file...");
+    const result = await parseScoresheet(file);
+    
+    // 1. Resolve Class
+    let targetClassId = null;
+    if (result.metadata?.room) {
+      const roomMatch = classes.find(c => (c.name || '').toLowerCase() === result.metadata.room.toLowerCase() || 
+                                          (c.level || '').toLowerCase() === result.metadata.room.toLowerCase());
+      if (roomMatch) targetClassId = roomMatch.id;
+    }
+
+    const previewStudents = [];
+    const mappedGrades = [];
+
+    if (result.students && result.students.length > 0) {
+      for (const impStu of result.students) {
+        const existingMatches = students.filter(s => s.name.trim().toLowerCase() === impStu.name.trim().toLowerCase());
+        
+        impStu._tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        
+        if (existingMatches.length > 0) {
+          impStu._possibleMatches = existingMatches;
+          const exactMatch = existingMatches.find(s => (s.sex || '').toLowerCase() === (impStu.sex || '').toLowerCase());
+          impStu._selectedMatchId = exactMatch ? exactMatch.id : existingMatches[0].id;
+        } else {
+          impStu._selectedMatchId = 'NEW';
+        }
+        
+        previewStudents.push(impStu);
+      }
+    }
+
+    if (previewStudents.length > 0) {
+      return {
+        requiresPreview: true,
+        previewData: {
+          type: 'scoresheet',
+          studentsToPreview: previewStudents,
+          targetClassId,
+          term,
+          date,
+          errors: result.errors || []
+        }
+      };
+    }
+
+    return {
+      successCount: 0,
+      errorCount: result.errors?.length || 0,
+      errors: result.errors || [],
+      message: "No valid students found in scoresheet."
+    };
+  }
 };
